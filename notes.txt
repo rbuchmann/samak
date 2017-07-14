@@ -1,0 +1,18 @@
+# Hello World
+
+stdout = "hello world"
+
+# todoMVC v2
+
+add-todo | reductions(conj []) | todo-list
+
+render-list = #f[:ul mapv(#f[:li id])]
+
+app = #f[:div add-todo-form render-list(todo-list)])
+
+add-todo-form = #f[:form
+                    [:input.todo-text]
+                    [:button {:click !add-todo(".todo-text .-value")]}]]
+
+
+map :: (a -> b) -> ([a] -> [b])
