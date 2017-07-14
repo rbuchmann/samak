@@ -1,6 +1,9 @@
 The MIT License (MIT)
 =====================
 
+Copyright © `2015-2017` `Rasmus Buchmann`
+
+Based on https://github.com/Gonzih/cljs-electron
 Copyright © `2015-2017` `Max Gonzih gonzih @ gmail.com`
 
 Permission is hereby granted, free of charge, to any person
