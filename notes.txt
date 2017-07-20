@@ -6,13 +6,10 @@ stdout = "hello world"
 
 add-todo | reductions(conj []) | todo-list
 
-render-list = #f[:ul mapv(#f[:li id])]
+render-list = #[:ul !map(#[:li !id])]
 
-app = #f[:div add-todo-form render-list(todo-list)])
+app = #f[:div [add-todo-form] [render-list @todo-list])
 
-add-todo-form = #f[:form
-                    [:input.todo-text]
-                    [:button {:click !add-todo(".todo-text .-value")]}]]
-
-
-map :: (a -> b) -> ([a] -> [b])
+add-todo-form = [:form
+                  [:input.todo-text]
+                  [:button {:click #h[add-todo [".todo-text .-value"]]}]]

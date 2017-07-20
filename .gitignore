@@ -11,7 +11,7 @@ pom.xml.asc
 .lein-plugins/
 .lein-failures
 .nrepl-port
-resources/
+resources/public/js
 *-init.clj
 figwheel_server.log
 node_modules/
