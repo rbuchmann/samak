@@ -7,6 +7,7 @@
                  [org.clojure/clojurescript "1.9.542"]
                  [figwheel "0.5.10"]
                  [reagent "0.6.1"]
+                 [garden "1.3.2"]
                  [ring/ring-core "1.6.1"]
                  [org.clojure/core.async "0.3.443"]
                  [org.clojure/core.logic "0.8.11"]
@@ -15,12 +16,17 @@
                  [com.stuartsierra/dependency "0.2.0"]]
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.10"]
-            [lein-cooper "1.2.2"]]
+            [lein-cooper "1.2.2"]
+            [lein-garden "0.3.0"]]
 
   :clean-targets ^{:protect false} ["resources/main.js"
                                     "resources/public/js/ui-core.js"
                                     "resources/public/js/ui-core.js.map"
                                     "resources/public/js/ui-out"]
+  :garden
+  {:builds [{:source-paths ["ui_src"]
+             :stylesheet ui.styles/style
+             :compiler {:output-to "resources/public/css/main.css"}}]}
   :cljsbuild
   {:builds
    [{:source-paths ["electron_src"]
