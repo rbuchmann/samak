@@ -5,7 +5,9 @@
             [ui.samak.emit   :as emit]
             [ui.samak.app]
             [clojure.string  :as string :refer [split-lines]]
-            [ui.components   :as ui :refer [grid row col editor button panel listing]]))
+            [ui.components   :as ui :refer [grid row col editor
+                                            button panel listing
+                                            button-group]]))
 
 (set! *warn-on-infer* true)
 
@@ -24,7 +26,12 @@
 
 (defonce fs (js/require "fs"))
 
+(def read-file (aget fs "readFileSync"))
+
 (def write-file (aget fs "writeFile"))
+
+(def logo-txt (r/atom (read-file "resources/samak-logo.txt" "utf-8")))
+
 
 (def app-path "ui_src/ui/samak/app.cljs")
 
@@ -40,6 +47,14 @@
   [:div
    [grid {:fluid true}
     [row
+     [col {:md 12}
+      [ui/jumbotron {:style {:background-color "#337ab7"}}
+       [:pre.text-center {:style {:background-color :transparent
+                                  :border :transparent
+                                  :font-size "7px"
+                                  :color :white}}
+        @logo-txt]]]]
+    [row
      [col {:md 1}
       #_[:h2 "Cmds"]]
      [col {:md 3}
@@ -50,16 +65,17 @@
       [:h1 "Emitted code"]]]
     [row
      [col {:md 1}
-      [button {:on-click emit-to-file
-               :bs-style "primary"} "Emit"]
-      [button {:on-click reset-app
-               :bs-style "primary"} "Reset"]]
+      [button-group {:vertical true}
+       [button {:on-click emit-to-file
+                :bs-style :primary} "Emit"]
+       [button {:on-click reset-app
+                :bs-style :primary} "Reset"]]]
      [col {:md 3}
       [editor program-src]]
      [col {:md 4}
       [:pre @parsed-str]]
      [col {:md 4}
-        [listing emitted]]]]])
+      [listing emitted]]]]])
 
 (r/render
   [root-component]

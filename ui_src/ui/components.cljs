@@ -13,25 +13,24 @@
 (defonce row (to-reagent "Row"))
 (defonce col (to-reagent "Col"))
 (defonce panel (to-reagent "Panel"))
+(defonce button-group (to-reagent "ButtonGroup"))
+(defonce jumbotron (to-reagent "Jumbotron"))
 
-(def listing-base-component (.-default (js/require "react-codemirror2")))
-(def codemirror-component (js/require "react-codemirror"))
+(def codemirror-base-component (.-default (js/require "react-codemirror2")))
 
 #_(println code-mirror-component)
-(defonce haskell-mode (js/require "codemirror/mode/haskell/haskell"))
-(defonce clojure-mode (js/require "codemirror/mode/clojure/clojure"))
+(def clojure-mode (js/require "codemirror/mode/clojure/clojure"))
 
-(def listing-base (reagent/adapt-react-class listing-base-component))
-(def codemirror (reagent/adapt-react-class codemirror-component))
+(def codemirror-base (reagent/adapt-react-class codemirror-base-component))
 
 (defn editor [state]
-  [codemirror {:value @state
-                :on-change #(reset! state %)
-                :options {:mode "clojure"
-                          :lineNumbers true}}])
+  [codemirror-base {:value @state
+                    :on-value-change (fn [_ _ value] (reset! state value))
+                    :options {:mode "clojure"
+                              :lineNumbers true}}])
 
 (defn listing [state]
-  [listing-base {:value @state
-                 :options {:mode "clojure"
-                           :lineNumbers true
-                           :readOnly "nocursor"}}])
+  [codemirror-base {:value @state
+                    :options {:mode "clojure"
+                              :lineNumbers true
+                              :readOnly "nocursor"}}])
