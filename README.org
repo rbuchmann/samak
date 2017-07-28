@@ -1,0 +1,94 @@
+* Samak - 사막
+
+
+#+BEGIN_QUOTE
+“No doubt you are wondering what you will find, out there.' The
+Commandant said it for me.  'Well, it would be useless for me to try
+and tell you. The desert tells a different story every time one
+ventures on it...”
+
+― Robert Edison Fulton Jr., One Man Caravan
+#+END_QUOTE
+
+* How to run
+#+BEGIN_SRC bash
+$ lein cooper
+
+$ lein electron # in another tab
+#+END_SRC
+
+* Todos, roughly sorted by ascending awesomeness*difficulty
+
+- Better state cleanup for reloading
+- Less awful layout
+- Pipe instrumentation, debugging
+- Program structure graph (Pipe layout with e.g. klayjs). Could show
+  latest channel state with comment boxes.
+- Allow sending of messages to channels for testing/debugging
+- Pipe configs instead of parameters, to allow different settings for testing etc.
+- Improved single arg function support, e.g. #{:foo id} -> (fn [x] {:foo x})
+- async requests, easy to model with core.async's "pipeline-async"
+- Type checker (Either piggybacking on core.typed or hand-rolled with
+  core.logic, haven't decided)
+- Typed pipes (related)
+- Code in datascript db: Already works, needs sexpress like editing
+  though, not very useful when everything gets parsed from scratch
+  every time
+- More backends, python, maybe Go, everything that's easy to generate and has channels
+- Auto conversion between languages, e.g. input pipe from python,
+  output to browser, should be easy to automatically link
+- Disallow lambda, only backus style function composition: Probably
+  needs zero type annotations with this change
+- Related: Allow fat pipes (title is work in progress ;) ), like
+  e.g. a pipe that not only provides a client to a db but also runs a
+  docker image for it
+- Assisted pipeline synthesis from tests a la [[https://github.com/webyrd/Barliman][barliman]]
+
+* Rationale
+
+Samak is a collection of ideas around changing the way we program. For
+better or worse, you decide. The core ideas of Samak are:
+
+** Are files and libraries really the best basic units of code?
+- In Samak, libraries are abstract collections of functions. Thats
+  where Samak (Korean for desert) gets its name, because it fluidly
+  recombines small grains in infinite variations.
+- When you work on something, you want to see what it affects, and
+  what affects it, not what happens to be above and below in the same
+  file
+- If someone writes a nice helper, or a useful interface and some
+  functions that work on that interface, why should you have to
+  download and worry about all the rest of his library?
+- Text has very, very limited use for visualizing what's going on in
+  your program.
+
+**  Stream or event based systems allow for great flexibility
+- Samak is not a classical stream based language, actually it isn't a
+  traditional language at all, but since all programs essentially
+  transform input into output, Samak strongly emphasizes sources,
+  sinks and stores as well as what happens between them.
+- Events are great for instrumentation, like logging everything, or
+  even rewinding and replaying a program.
+
+** Is traditional scoping of variables still necessary?
+- If a considerable effort in design is spent on transporting data
+  from a to b, something is going wrong. Maybe this is just another
+  instance of place oriented programming we need to reconsider.
+
+** The mind is not a turing machine.
+- The less we have to replay changing states mentally, the better.
+- If something can be represented as a stream transformation, it
+  should be. That doesn't mean that branching is unnecessary, but
+  that map/reduce/filter can structure programs on a high level.
+- Additionally, streams scale well
+
+** What if we had only a few simple but powerful interfaces for IO?
+- Can we define an abstraction to access databases in a unified manner?
+- More generally: Is there a good abstraction for stateful external
+  dependencies?
+
+** Tools to understand code are abysmal
+- Complicated syntax is part of the problem: If I can't write or
+  easily access a parser, how can I write an analyzer?
+- What are better ways to see a complex programs structure? Call
+  graphs, automatic examples, searchable tests...?
