@@ -55,4 +55,5 @@
 (defn unordered-list [children]
   [:ul (map-indexed
         (fn [i child]
-          [:li {:key (str i)} child]))])
+          [:li {:key (str i)} child])
+        children)])
