@@ -15,6 +15,8 @@
 (defonce panel (to-reagent "Panel"))
 (defonce button-group (to-reagent "ButtonGroup"))
 (defonce jumbotron (to-reagent "Jumbotron"))
+(defonce form-group (to-reagent "FormGroup"))
+(defonce form-control (to-reagent "FormControl"))
 
 (def codemirror-base-component (.-default (js/require "react-codemirror2")))
 
@@ -34,3 +36,23 @@
                     :options {:mode "clojure"
                               :lineNumbers true
                               :readOnly "nocursor"}}])
+
+
+(defn form [id & args]
+  [:form [form-group args]])
+
+(defn form-input [id placeholder]
+  (let [val (reagent/atom "")]
+    (fn []
+      [form-control {:key (str "form-input-" id)
+                     :type :text
+                     :id id
+                     :value @val
+                     :placeholder placeholder
+                     :on-change #(reset! val (-> % .-target .-value))}])))
+
+
+(defn unordered-list [children]
+  [:ul (map-indexed
+        (fn [i child]
+          [:li {:key (str i)} child]))])

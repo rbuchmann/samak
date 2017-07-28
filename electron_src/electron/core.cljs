@@ -18,7 +18,7 @@
   (.on ^js/electron.BrowserWindow @main-window "closed" #(reset! main-window nil)))
 
 ; CrashReporter can just be omitted
-(.start crash-reporter
+#_(.start crash-reporter
         (clj->js
           {:companyName "MyAwesomeCompany"
            :productName "MyAwesomeApp"

@@ -13,7 +13,25 @@
 
 (enable-console-print!)
 
-(defonce program-src (r/atom "foo = 1"))
+(def demo "
+chans add-todo;
+chan app = ui()
+chan initial-todos = from-seq([\"Do foo\" \"Do bar\"])
+
+add-todo-form = () -> [ui/form :todo-form
+                        [ui/form-input :todo-text \"Enter Todo!\"]
+                        [ui/button {:on-click add-todo ! #todo-text.value
+                                    :key \"submit-button\"} \"Add todo!\"]]
+
+initial-todos | add-todo
+
+add-todo
+  | std/reductions-tx(conj [])
+  | map(list -> [:div [add-todo-form] [ui/unordered-list list]])
+  | app
+")
+
+(defonce program-src (r/atom demo))
 
 (def parse-tree (reaction (parser/safe-parse @program-src)))
 
@@ -30,9 +48,6 @@
 
 (def write-file (aget fs "writeFile"))
 
-(def logo-txt (r/atom (read-file "resources/samak-logo.txt" "utf-8")))
-
-
 (def app-path "ui_src/ui/samak/app.cljs")
 
 (defn emit-to-file []
@@ -47,22 +62,14 @@
   [:div
    [grid {:fluid true}
     [row
-     [col {:md 12}
-      [ui/jumbotron {:style {:background-color "#337ab7"}}
-       [:pre.text-center {:style {:background-color :transparent
-                                  :border :transparent
-                                  :font-size "7px"
-                                  :color :white}}
-        @logo-txt]]]]
-    [row
      [col {:md 1}
-      #_[:h2 "Cmds"]]
+      [:h1 "사막"]]
      [col {:md 3}
-      [:h1 "Code"]]
+      [:h2 "Code"]]
      [col {:md 4}
-      [:h1 "Parse tree"]]
+      [:h2 "Parse tree"]]
      [col {:md 4}
-      [:h1 "Emitted code"]]]
+      [:h2 "Emitted code"]]]
     [row
      [col {:md 1}
       [button-group {:vertical true}

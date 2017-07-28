@@ -21,6 +21,13 @@
 (defn parse-bool [s]
   (= "true" s))
 
+(defn ordered [items]
+  (into []
+        (map-indexed
+         (fn [i item]
+           (assoc item :order i))
+         items)))
+
 (def transforms
   (merge
    (to-xforms
@@ -43,11 +50,7 @@
                        :definitions (vec args)})
     :vector         (fn [& args]
                       {:kind     :vector
-                       :children (into []
-                                       (map-indexed
-                                        (fn [i item]
-                                          (assoc item :order i))
-                                        args))})
+                       :children (ordered args)})
     :pipe-def (fn [from transducers to]
                 {:kind :pipe-def
                  :transducers transducers
@@ -55,11 +58,7 @@
                  :to to})
     :transducers    (fn [& args]
                       {:kind     :transducers
-                       :children (into []
-                                       (map-indexed
-                                        (fn [i item]
-                                          (assoc item :order i))
-                                        args))})
+                       :children (ordered args)})
     :def            (fn [name rhs]
                       {:kind :def
                        :name (:value name)
@@ -71,23 +70,41 @@
     :fn-call        (fn [name & args]
                       {:kind      :fn-call
                        :name      (:value name)
-                       :arguments (into []
-                                        (map-indexed
-                                         (fn [i item]
-                                           (assoc item :order i))
-                                         args))})}))
+                       :arguments (ordered args)})
+    :lambda (fn [[_ & params] rhs]
+              {:kind :lambda
+               :params (if (map? params)
+                         [(assoc params :order 0)]
+                         (ordered params))
+               :rhs rhs})
+    :handler (fn [ch field-id]
+               {:kind :handler
+                :channel (:value ch)
+                :field-id field-id})
+    :field-id (fn [id field]
+                {:kind :field-id
+                 :id (:value id)
+                 :field (:value field)})
+    :chan-declare (fn [& chans]
+                    {:kind :chan-declare
+                     :chans (mapv :value chans)})}))
 
 (def whitespace
   (insta/parser
-   "whitespace = #'\\s+'"))
+   "whitespace = #'(\\s|,)+'"))
 
 (def parser
   (insta/parser
    "
 program = statement*
-<statement> = fn-call / def / chan-def / literal / pipe-def
-<expression> = fn-call / literal / chan-ref / tagged-literal
-chan-def = <'channel'> var <'='> fn-call
+<statement> = def / chan-def / pipe-def / chan-declare
+<expression> = fn-call / literal / chan-ref / tagged-literal / lambda / handler
+handler = var <'!'> field-id
+chan-declare = <'chans'> var+ <';'>
+field-id = <'#'> var <'.'> var
+lambda = params <'->'> expression
+params = ( var | <'('> var* <')'> )
+chan-def = <'chan'> var <'='> fn-call
 pipe-def = var <'|'> transducers var
 transducers = (fn-call <'|'>)*
 fn-call = (var <'('> expression* <')'>) | (var <'$'> fn-call)
@@ -98,7 +115,7 @@ string = ( <'\"'>#'[^\"]*'<'\"'> ) | ( <'\\''>#'[^\\']*'<'\\''> )
 boolean = 'true' | 'false'
 integer = #'[0-9]+'
 float = #'[0-9]+(.[0-9]+)?'
-identifier = #'[a-z][a-z0-9-]*'
+identifier = #'[a-z][a-z0-9-#/]*'
 var = identifier
 chan-ref = <'?'> identifier
 keyword = <':'> identifier
