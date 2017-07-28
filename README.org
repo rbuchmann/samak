@@ -14,7 +14,7 @@ ventures on it...”
 #+BEGIN_SRC bash
 $ lein cooper
 
-$ lein electron # in another tab
+$ electron . # in another tab
 #+END_SRC
 
 * Todos, roughly sorted by ascending awesomeness*difficulty
