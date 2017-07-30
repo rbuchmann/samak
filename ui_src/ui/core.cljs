@@ -18,6 +18,8 @@ chans(add-todo)
 app = pipes/ui()
 initial-todos = pipes/from-seq([\"Do foo\" \"Do bar\"])
 
+chan http = http()
+
 add-todo-form = () -> [ui/form :todo-form
                         [ui/form-input :todo-text \"Enter Todo!\"]
                         [ui/button {:on-click add-todo <- #todo-text.value
@@ -26,9 +28,16 @@ add-todo-form = () -> [ui/form :todo-form
 initial-todos | add-todo
 
 add-todo
+  | map(joke -> {:a 1})
+  | http
+
+http | todos
+
+todos
   | std/reductions-tx(conj [])
   | map(list -> [:div [add-todo-form] [ui/unordered-list list]])
   | app
+
 ")
 
 (defonce program-src (r/atom demo))
