@@ -41,6 +41,11 @@
 (defn transduction-pipe [xf]
   (pipe (chan 1 xf)))
 
+(defn async-pipe [in-chan xf]
+  (let [out-chan (chan)]
+    (a/pipeline-async 1 out-chan xf in-chan)
+    (Pipethrough. in-chan (a/mult out-chan))))
+
 (def ports (juxt in-port out-port))
 
 (defn fire! [pipe event]

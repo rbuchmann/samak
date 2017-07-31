@@ -2,6 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [cljs.core.async :as a :refer [put! chan <! >! timeout close!]]
             [ui.samak.stdlib :as std]
+            [cljs-http.client :as http]
             [reagent.core    :as r]))
 
 (defn from-seq [col]
@@ -35,3 +36,16 @@
           (r/render x node))
         (recur)))
     (std/sink ui-chan)))
+
+(defn parse
+  [response]
+  (:body response))
+
+
+(defn http-call [request res]
+  (go (let [req (http/get (:url request))]
+        (a/pipeline 1 res (map parse) req))))
+
+(defn http []
+  (let [http-chan (chan)]
+    (std/async-pipe http-chan http-call)))
