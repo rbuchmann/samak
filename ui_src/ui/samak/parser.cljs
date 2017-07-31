@@ -91,7 +91,7 @@
 
 (def whitespace
   (insta/parser
-   "whitespace = #'(\\s|,)+'"))
+   "whitespace = #'(\\s|,|;[^\\n]*\\n)+'"))
 
 (def parser
   (insta/parser
@@ -99,8 +99,8 @@
 program = statement*
 <statement> = def / chan-def / pipe-def / chan-declare
 <expression> = fn-call / literal / chan-ref / tagged-literal / lambda / handler
-handler = var <'!'> field-id
-chan-declare = <'chans'> var+ <';'>
+handler = var <'<-'> field-id
+chan-declare = <'chans'> <'('> var+ <')'>
 field-id = <'#'> var <'.'> var
 lambda = params <'->'> expression
 params = ( var | <'('> var* <')'> )
