@@ -16,24 +16,27 @@
 (def add-todo-form
  (fn [] [ui/form
          :todo-form
-         [ui/form-input :todo-text "Enter Todo!"]
+         [ui/form-input :todo-text "Enter Number!"]
          [ui/button
           {:key "submit-button",
            :on-click
            (cljs.core/fn
-             [& args__37142__auto__]
+             [& args__29819__auto__]
              (std/fire!
                add-todo
                (cljs.core/aget
                  (js/document.getElementById "todo-text")
                  "value")))} 
-          "Add todo!"]]))
+          "Fetch joke!"]]))
 
 (std/link initial-todos [] add-todo)
 
-(std/link add-todo [(map (fn [joke] {:a 1}))] http)
+(std/link
+  add-todo
+  [(map (fn [joke] {:url (str "http://api.icndb.com/jokes/" joke)}))]
+  http)
 
-(std/link http [] todos)
+(std/link http [(map (fn [r] (get-in r [:value :joke] "error")))] todos)
 
 (std/link
   todos

@@ -38,15 +38,12 @@
     (std/sink ui-chan)))
 
 (defn parse
-  ""
   [response]
-  (.log js/console (str "response: " response))
   (:body response))
 
 
 (defn http-call [request res]
-  (.log js/console (str "req: " request))
-  (go (let [req (http/get (str "http://api.icndb.com/jokes/1"))]
+  (go (let [req (http/get (:url request))]
         (a/pipeline 1 res (map parse) req))))
 
 (defn http []

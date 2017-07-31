@@ -14,24 +14,26 @@
 (enable-console-print!)
 
 (def demo "
-chans(add-todo)
+chans(add-todo todos)
 app = pipes/ui()
-initial-todos = pipes/from-seq([\"Do foo\" \"Do bar\"])
+initial-todos = pipes/from-seq([\"1\" \"2\"])
 
-chan http = http()
+http = pipes/http()
 
 add-todo-form = () -> [ui/form :todo-form
-                        [ui/form-input :todo-text \"Enter Todo!\"]
+                        [ui/form-input :todo-text \"Enter Number!\"]
                         [ui/button {:on-click add-todo <- #todo-text.value
-                                    :key \"submit-button\"} \"Add todo!\"]]
+                                    :key \"submit-button\"} \"Fetch joke!\"]]
 
 initial-todos | add-todo
 
 add-todo
-  | map(joke -> {:a 1})
+  | map(joke -> {:url str(\"http://api.icndb.com/jokes/\" joke)})
   | http
 
-http | todos
+http
+  | map(r -> get-in(r [:value :joke] \"error\"))
+  | todos
 
 todos
   | std/reductions-tx(conj [])

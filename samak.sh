@@ -1,0 +1,1 @@
+electron --disable-gpu .
