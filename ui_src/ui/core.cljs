@@ -13,6 +13,7 @@
 
 (enable-console-print!)
 
+
 (def demo "
 chans(add-todo todos)
 app = pipes/ui()
@@ -20,12 +21,17 @@ initial-todos = pipes/from-seq([\"1\" \"2\"])
 
 http = pipes/http()
 
-add-todo-form = () -> [ui/form :todo-form
+; ! + literal = (constantly literal)
+add-todo-form = ![ui/form :todo-form
                         [ui/form-input :todo-text \"Enter Number!\"]
                         [ui/button {:on-click add-todo <- #todo-text.value
                                     :key \"submit-button\"} \"Fetch joke!\"]]
 
 initial-todos | add-todo
+
+; #{...} is a function of one argument that will populate every key
+; in the result map with the application of the value to the
+; argument, provided the value isn't a literal
 
 add-todo
   | map(joke -> {:url str(\"http://api.icndb.com/jokes/\" joke)})
@@ -37,7 +43,7 @@ http
 
 todos
   | std/reductions-tx(conj [])
-  | map(list -> [:div [add-todo-form] [ui/unordered-list list]])
+  | map(#[:div [add-todo-form] ui/unordered-list])
   | app
 
 ")

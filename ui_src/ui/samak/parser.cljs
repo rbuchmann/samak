@@ -31,14 +31,16 @@
 (def transforms
   (merge
    (to-xforms
-    {:integer    parse-int
-     :boolean    parse-bool
-     :float      parse-float
-     :string     str
-     :keyword    :value
-     :var        :value
-     :map        (fn [& args] (apply hash-map args))
-     :identifier str})
+    {:integer       parse-int
+     :boolean       parse-bool
+     :float         parse-float
+     :string        str
+     :keyword       :value
+     :var           :value
+     :fn-literal    identity
+     :const-literal identity
+     :map           (fn [& args] (apply hash-map args))
+     :identifier    str})
    {:tagged-literal (fn [tag literal]
                       {:kind    :tagged-literal
                        :tag     (:value tag)
@@ -49,11 +51,11 @@
     :vector         (fn [& args]
                       {:kind     :vector
                        :children (ordered args)})
-    :pipe-def (fn [from transducers to]
-                {:kind :pipe-def
-                 :transducers transducers
-                 :from from
-                 :to to})
+    :pipe-def       (fn [from transducers to]
+                      {:kind        :pipe-def
+                       :transducers transducers
+                       :from        from
+                       :to          to})
     :transducers    (fn [& args]
                       {:kind     :transducers
                        :children (ordered args)})
@@ -65,23 +67,23 @@
                       {:kind      :fn-call
                        :name      (:value name)
                        :arguments (ordered args)})
-    :lambda (fn [[_ & params] rhs]
-              {:kind :lambda
-               :params (if (map? params)
-                         [(assoc params :order 0)]
-                         (ordered params))
-               :rhs rhs})
-    :handler (fn [ch field-id]
-               {:kind :handler
-                :channel (:value ch)
-                :field-id field-id})
-    :field-id (fn [id field]
-                {:kind :field-id
-                 :id (:value id)
-                 :field (:value field)})
-    :chan-declare (fn [& chans]
-                    {:kind :chan-declare
-                     :chans (mapv :value chans)})}))
+    :lambda         (fn [[_ & params] rhs]
+                      {:kind   :lambda
+                       :params (if (map? params)
+                                 [(assoc params :order 0)]
+                                 (ordered params))
+                       :rhs    rhs})
+    :handler        (fn [ch field-id]
+                      {:kind     :handler
+                       :channel  (:value ch)
+                       :field-id field-id})
+    :field-id       (fn [id field]
+                      {:kind  :field-id
+                       :id    (:value id)
+                       :field (:value field)})
+    :chan-declare   (fn [& chans]
+                      {:kind  :chan-declare
+                       :chans (mapv :value chans)})}))
 
 (def whitespace
   (insta/parser
@@ -92,7 +94,9 @@
    "
 program = statement*
 <statement> = def / pipe-def / chan-declare
-<expression> = fn-call / literal / tagged-literal / lambda / handler
+<expression> = fn-call / literal / lambda / handler / fn-literal / const-literal
+const-literal = <'!'> literal
+fn-literal = <'#'> (map | vector)
 handler = var <'<-'> field-id
 chan-declare = <'chans'> <'('> var+ <')'>
 field-id = <'#'> var <'.'> var
@@ -103,7 +107,6 @@ transducers = (fn-call <'|'>)*
 fn-call = (var <'('> expression* <')'>) | (var <'$'> fn-call)
 def = var <'='> expression
 <literal> = string / integer / float / map / vector / keyword / boolean / var
-tagged-literal = <'#'> var literal
 string = ( <'\"'>#'[^\"]*'<'\"'> ) | ( <'\\''>#'[^\\']*'<'\\''> )
 boolean = 'true' | 'false'
 integer = #'[0-9]+'

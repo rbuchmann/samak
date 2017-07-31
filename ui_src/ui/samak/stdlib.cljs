@@ -3,6 +3,32 @@
   (:require [cljs.core.async   :as a :refer [put! chan <! >! timeout close!]]
             [net.cgrand.xforms :as x]))
 
+;; Helpers
+
+(defn apply-fn [f x]
+  (if (or (map?     f)
+          (vector?  f)
+          (string?  f)
+          (number?  f)
+          (boolean? f)
+          (keyword? f))
+    f
+    (f x)))
+
+(defn map->fn [m]
+  (fn [x]
+    (into {}
+          (for [[k f] m]
+            [k (apply-fn f x)]))))
+
+(defn vec->fn [v]
+  (fn [x]
+    (mapv (fn [f] (apply-fn f x)) v)))
+
+(def reductions-tx x/reductions)
+
+;; Pipes and flow control
+
 (def start-chan (a/promise-chan))
 
 (defn new-tap [mult-ch]
@@ -68,5 +94,3 @@
 
 (defn start []
   (put! start-chan :go))
-
-(def reductions-tx x/reductions)

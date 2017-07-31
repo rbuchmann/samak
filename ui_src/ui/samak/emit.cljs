@@ -49,6 +49,14 @@
   (let [{:keys [id field]} field-id]
     `(fn [& args#] (~'std/fire! ~(symbol channel) (aget (js/document.getElementById ~id) ~field)))))
 
+(defmethod emit :fn-literal [{:keys [value]}]
+  (if (= :map (:kind value))
+    `(~'std/map->fn ~(emit value))
+    `(~'std/vec->fn ~(emit value))))
+
+(defmethod emit :const-literal [{:keys [value]}]
+  `(constantly ~(emit value)))
+
 (defmethod emit :chan-declare [{:keys [chans]}]
   `(do
      ~@(for [chan chans]
