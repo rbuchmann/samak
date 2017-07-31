@@ -38,9 +38,7 @@
      :keyword    :value
      :var        :value
      :map        (fn [& args] (apply hash-map args))
-     :identifier str
-     :chan-ref   :value
-     :chan-src   :value})
+     :identifier str})
    {:tagged-literal (fn [tag literal]
                       {:kind    :tagged-literal
                        :tag     (:value tag)
@@ -61,10 +59,6 @@
                        :children (ordered args)})
     :def            (fn [name rhs]
                       {:kind :def
-                       :name (:value name)
-                       :rhs  rhs})
-    :chan-def       (fn [name rhs]
-                      {:kind :chan-def
                        :name (:value name)
                        :rhs  rhs})
     :fn-call        (fn [name & args]
@@ -97,14 +91,13 @@
   (insta/parser
    "
 program = statement*
-<statement> = def / chan-def / pipe-def / chan-declare
-<expression> = fn-call / literal / chan-ref / tagged-literal / lambda / handler
+<statement> = def / pipe-def / chan-declare
+<expression> = fn-call / literal / tagged-literal / lambda / handler
 handler = var <'<-'> field-id
 chan-declare = <'chans'> <'('> var+ <')'>
 field-id = <'#'> var <'.'> var
 lambda = params <'->'> expression
 params = ( var | <'('> var* <')'> )
-chan-def = <'chan'> var <'='> fn-call
 pipe-def = var <'|'> transducers var
 transducers = (fn-call <'|'>)*
 fn-call = (var <'('> expression* <')'>) | (var <'$'> fn-call)
@@ -117,7 +110,6 @@ integer = #'[0-9]+'
 float = #'[0-9]+(.[0-9]+)?'
 identifier = #'[a-z][a-z0-9-#/]*'
 var = identifier
-chan-ref = <'?'> identifier
 keyword = <':'> identifier
 map = <'{'> (expression  expression)* <'}'>
 vector = <'['> expression* <']'>

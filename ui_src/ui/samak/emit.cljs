@@ -39,9 +39,6 @@
   (into {} (for [item (:value node)]
              (mapv emit item))))
 
-(defmethod emit :chan-def [{:keys [name rhs]}]
-  (list 'def (symbol name) (emit (update rhs :name #(str "pipes/" %)))))
-
 (defmethod emit :pipe-def [{:keys [from to transducers]}]
   (list* 'std/link (map emit [from (assoc transducers :kind :vector) to])))
 
