@@ -1,5 +1,6 @@
 (ns ui.components
-  (:require [reagent.core :as reagent]))
+  (:require [reagent.core   :as reagent]
+            [goog.functions :as f]))
 
 (defonce react-bootstrap (js/require "react-bootstrap"))
 
@@ -27,7 +28,7 @@
 
 (defn editor [state]
   [codemirror-base {:value @state
-                    :on-value-change (fn [_ _ value] (reset! state value))
+                    :on-value-change (f/debounce (fn [_ _ value] (reset! state value)) 500 nil)
                     :options {:mode "clojure"
                               :lineNumbers true}}])
 
