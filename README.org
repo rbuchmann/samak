@@ -12,6 +12,8 @@ ventures on it...”
 
 * How to run
 #+BEGIN_SRC bash
+$ npm install # or yarn, you know, whatever
+
 $ lein cooper
 
 $ electron . # in another tab
@@ -21,12 +23,13 @@ $ electron . # in another tab
 
 - Better state cleanup for reloading
 - Less awful layout
+- Get rid of multiple react versions -.-
 - Pipe instrumentation, debugging
 - Program structure graph (Pipe layout with e.g. klayjs). Could show
   latest channel state with comment boxes.
 - Allow sending of messages to channels for testing/debugging
 - Pipe configs instead of parameters, to allow different settings for testing etc.
-- Improved single arg function support, e.g. #{:foo id} -> (fn [x] {:foo x})
+- Improved single arg function support, e.g. #{:foo id} -> (fn [x] {:foo x}) ✔
 - async requests, easy to model with core.async's "pipeline-async"
 - Type checker (Either piggybacking on core.typed or hand-rolled with
   core.logic, haven't decided)
