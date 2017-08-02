@@ -1,7 +1,7 @@
 (ns ui.samak.stdlib
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
-  (:require [cljs.core.async   :as a :refer [put! chan <! >! timeout close!]]
-            [net.cgrand.xforms :as x]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]
+                   [ui.samak.stdlib :refer [link]])
+  (:require [cljs.core.async :as a :refer [put! chan <! >! timeout close!]]))
 
 ;; Helpers
 
@@ -24,8 +24,6 @@
 (defn vec->fn [v]
   (fn [x]
     (mapv (fn [f] (apply-fn f x)) v)))
-
-(def reductions-tx x/reductions)
 
 ;; Pipes and flow control
 
@@ -79,18 +77,22 @@
   (let [intake (in-port pipe)]
     (put! intake event)))
 
-(defn link [from transducers to]
+(defrecord CompositePipe [a b]
+  Pipe
+  (in-port [_] (in-port a))
+  (out-port [_] (out-port b)))
+
+(defn composite-pipe [a b]
+  (CompositePipe. a b))
+
+(defn link* [from from-form to to-form]
+  (println "linking: " from-form "," to-form)
   (let [source (out-port from)
-        sink (in-port to)
-        xf-pipe (ports
-                 (if (empty? transducers)
-                   (pipe (chan))
-                   (transduction-pipe (apply comp transducers))))
-        [pipe-in pipe-out] xf-pipe]
+        sink (in-port to)]
     (go
       (<! start-chan)
-      (a/pipe source pipe-in false))
-    (a/pipe pipe-out sink false)))
+      (a/pipe source sink false))
+    (composite-pipe from to)))
 
 (defn start []
   (put! start-chan :go))

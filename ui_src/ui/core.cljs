@@ -15,7 +15,7 @@
 
 
 (def demo "
-chans(add-todo todos)
+chans(add-todo)
 app = pipes/ui()
 initial-todos = pipes/from-seq([\"1\" \"2\"])
 
@@ -34,16 +34,11 @@ initial-todos | add-todo
 ; argument, provided the value isn't a literal
 
 add-todo
-  | map(joke -> {:url str(\"http://api.icndb.com/jokes/\" joke)})
+  | map*(joke -> {:url str(\"http://api.icndb.com/jokes/\" joke)})
   | http
-
-http
-  | map(r -> get-in(r [:value :joke] \"error\"))
-  | todos
-
-todos
-  | std/reductions-tx(conj [])
-  | map(#[:div [add-todo-form] ui/unordered-list])
+  | map*(r -> get-in(r [:value :joke] \"error\"))
+  | reductions*(conj [])
+  | map*(#[:div [add-todo-form] ui/unordered-list])
   | app
 
 ")

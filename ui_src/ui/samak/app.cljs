@@ -1,11 +1,12 @@
 (ns ui.samak.app
   (:require [ui.samak.stdlib :as std]
-            [ui.samak.pipes  :as pipes]
-            [ui.components   :as ui]
+            [ui.samak.pipes :as pipes]
+            [ui.samak.core :refer [map* reductions*]]
+            [ui.components :as ui]
             [cljs.core.async :as a :refer
                              [put! chan <! >! timeout close!]]))
 
-(do (def add-todo (std/pipe (chan))) (def todos (std/pipe (chan))))
+(do (def add-todo (std/pipe (chan))))
 
 (def app (pipes/ui))
 
@@ -22,27 +23,30 @@
      {:key "submit-button",
       :on-click
       (cljs.core/fn
-        [& args__43824__auto__]
+        [& args__31266__auto__]
         (std/fire!
           add-todo
           (cljs.core/aget
             (js/document.getElementById "todo-text")
-            "value")))}
+            "value")))} 
      "Fetch joke!"]]))
 
-(std/link initial-todos [] add-todo)
+(std/link initial-todos add-todo)
 
 (std/link
   add-todo
-  [(map (fn [joke] {:url (str "http://api.icndb.com/jokes/" joke)}))]
-  http)
-
-(std/link http [(map (fn [r] (get-in r [:value :joke] "error")))] todos)
-
-(std/link
-  todos
-  [(std/reductions-tx conj [])
-   (map (std/vec->fn [:div [add-todo-form] ui/unordered-list]))]
-  app)
+  (std/link
+    (std/link
+      (std/link
+        (std/link
+          (std/link
+            (map*
+              (fn [joke]
+                {:url (str "http://api.icndb.com/jokes/" joke)}))
+            http)
+          (map* (fn [r] (get-in r [:value :joke] "error"))))
+        (reductions* conj []))
+      (map* (std/vec->fn [:div [add-todo-form] ui/unordered-list])))
+    app))
 
 (std/start)

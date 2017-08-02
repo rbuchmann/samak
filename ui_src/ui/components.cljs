@@ -38,7 +38,6 @@
                               :lineNumbers true
                               :readOnly "nocursor"}}])
 
-
 (defn form [id & args]
   [:form [form-group args]])
 
@@ -51,7 +50,6 @@
                      :value @val
                      :placeholder placeholder
                      :on-change #(reset! val (-> % .-target .-value))}])))
-
 
 (defn unordered-list [children]
   [:ul (map-indexed

@@ -40,25 +40,24 @@
      :fn-literal    identity
      :const-literal identity
      :map           (fn [& args] (apply hash-map args))
-     :identifier    str})
+     :identifier    str
+     :bin-operator  identity})
    {:tagged-literal (fn [tag literal]
                       {:kind    :tagged-literal
                        :tag     (:value tag)
                        :literal literal})
+    :bin-op (fn [lhs op rhs]
+              {:kind :bin-op
+               :operator (:value op)
+               :lhs lhs
+               :rhs rhs})
     :program        (fn [& args]
                       {:kind        :program
                        :definitions (vec args)})
     :vector         (fn [& args]
                       {:kind     :vector
                        :children (ordered args)})
-    :pipe-def       (fn [from transducers to]
-                      {:kind        :pipe-def
-                       :transducers transducers
-                       :from        from
-                       :to          to})
-    :transducers    (fn [& args]
-                      {:kind     :transducers
-                       :children (ordered args)})
+
     :def            (fn [name rhs]
                       {:kind :def
                        :name (:value name)
@@ -93,8 +92,10 @@
   (insta/parser
    "
 program = statement*
-<statement> = def / pipe-def / chan-declare
-<expression> = fn-call / literal / lambda / handler / fn-literal / const-literal
+<statement> = def / chan-declare / bin-op
+<expression> = fn-call / literal / lambda / handler / fn-literal / const-literal / bin-op
+bin-op = expression bin-operator expression
+bin-operator = '|'
 const-literal = <'!'> literal
 fn-literal = <'#'> (map | vector)
 handler = var <'<-'> field-id
@@ -102,8 +103,6 @@ chan-declare = <'chans'> <'('> var+ <')'>
 field-id = <'#'> var <'.'> var
 lambda = params <'->'> expression
 params = ( var | <'('> var* <')'> )
-pipe-def = var <'|'> transducers var
-transducers = (fn-call <'|'>)*
 fn-call = (var <'('> expression* <')'>) | (var <'$'> fn-call)
 def = var <'='> expression
 <literal> = string / integer / float / map / vector / keyword / boolean / var
@@ -111,7 +110,7 @@ string = ( <'\"'>#'[^\"]*'<'\"'> ) | ( <'\\''>#'[^\\']*'<'\\''> )
 boolean = 'true' | 'false'
 integer = #'[0-9]+'
 float = #'[0-9]+(.[0-9]+)?'
-identifier = #'[a-z][a-z0-9-#/]*'
+identifier = #'[a-z][a-z0-9-#/*]*'
 var = identifier
 keyword = <':'> identifier
 map = <'{'> (expression  expression)* <'}'>

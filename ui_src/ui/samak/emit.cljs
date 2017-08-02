@@ -62,12 +62,23 @@
      ~@(for [chan chans]
          `(def ~(symbol chan) (~'std/pipe (~'chan))))))
 
+(def ops->fns
+  {"|" 'std/link})
+
+(defmethod emit :bin-op [{:keys [lhs rhs operator]}]
+  (list (ops->fns operator) (emit lhs) (emit rhs)))
+
 (defn clj->str [form]
   (with-out-str
     (pp/with-pprint-dispatch pp/code-dispatch
       (pp/pprint form))))
 
-(def header '(ns ui.samak.app (:require [ui.samak.stdlib :as std] [ui.samak.pipes :as pipes] [ui.components :as ui] [cljs.core.async :as a :refer [put! chan <! >! timeout close!]])))
+(def header '(ns ui.samak.app
+               (:require [ui.samak.stdlib :as std]
+                         [ui.samak.pipes  :as pipes]
+                         [ui.samak.core   :refer [map* reductions*]]
+                         [ui.components   :as ui]
+                         [cljs.core.async :as a :refer [put! chan <! >! timeout close!]])))
 
 (defn prepend-header [forms]
   (cons header forms))
