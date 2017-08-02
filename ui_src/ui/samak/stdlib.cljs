@@ -65,8 +65,9 @@
 (defn transduction-pipe [xf]
   (pipe (chan 1 xf)))
 
-(defn async-pipe [in-chan xf]
-  (let [out-chan (chan)]
+(defn async-pipe [xf]
+  (let [in-chan (chan)
+        out-chan (chan)]
     (a/pipeline-async 1 out-chan xf in-chan)
     (Pipethrough. in-chan (a/mult out-chan))))
 

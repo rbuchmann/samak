@@ -1,9 +1,9 @@
 (ns ui.samak.pipes
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
-  (:require [cljs.core.async :as a :refer [put! chan <! >! timeout close!]]
-            [ui.samak.stdlib :as std]
+  (:require [cljs.core.async  :as a :refer [put! chan <! >! timeout close!]]
+            [ui.samak.stdlib  :as std]
             [cljs-http.client :as http]
-            [reagent.core    :as r]))
+            [reagent.core     :as r]))
 
 (defn from-seq [col]
   (std/source (a/to-chan col)))
@@ -47,5 +47,4 @@
         (a/pipeline 1 res (map parse) req))))
 
 (defn http []
-  (let [http-chan (chan)]
-    (std/async-pipe http-chan http-call)))
+  (std/async-pipe http-call))
