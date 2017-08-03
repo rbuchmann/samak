@@ -6,7 +6,9 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.542"]
                  [figwheel "0.5.10"]
-                 [reagent "0.6.1"]
+                 [reagent "0.6.1" :exclusions [cljsjs/react
+                                               cljsjs/react-dom
+                                               cljsjs/react-dom-server]]
                  [garden "1.3.2"]
                  [ring/ring-core "1.6.1"]
                  [org.clojure/core.async "0.3.443"]
