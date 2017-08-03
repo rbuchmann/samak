@@ -1,6 +1,5 @@
 (ns ui.samak.stdlib
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]
-                   [ui.samak.stdlib :refer [link]])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [cljs.core.async :as a :refer [put! chan <! >! timeout close!]]))
 
 ;; Helpers
@@ -86,8 +85,7 @@
 (defn composite-pipe [a b]
   (CompositePipe. a b))
 
-(defn link* [from from-form to to-form]
-  (println "linking: " from-form "," to-form)
+(defn link [from to]
   (let [source (out-port from)
         sink (in-port to)]
     (go
