@@ -2,10 +2,16 @@
   "name": "hello-world",
   "version": "0.1.0",
   "main": "resources/main.js",
+  "scripts": {
+    "start": "./node_modules/.bin/electron ."
+  },
   "dependencies": {
     "react": "^15.2.1",
     "react-bootstrap": "^0.31.0",
     "react-codemirror2": "0.0.9",
     "react-dom": "^15.2.1"
+  },
+  "devDependencies": {
+    "electron": "^1.6.11"
   }
 }
