@@ -19,7 +19,7 @@ $ lein cooper
 $ electron . # in another tab
 #+END_SRC
 
-In case you don't have electron installed globally, run `npm run start`.
+In case you don't have electron installed globally, run =npm run start=.
 
 * Todos, roughly sorted by ascending awesomeness*difficulty
 
