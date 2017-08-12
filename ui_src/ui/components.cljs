@@ -1,23 +1,33 @@
 (ns ui.components
   (:require [reagent.core   :as reagent]
-            [goog.functions :as f]))
+            [goog.functions :as f])
+  (:require-macros [ui.components :refer [adapt-components]]))
 
 (defonce react-bootstrap (js/require "react-bootstrap"))
 
-(defn to-reagent [s]
-  (->> s
-       (aget react-bootstrap)
-       reagent/adapt-react-class))
+(adapt-components
+ react-bootstrap
+ "Button"
+ "Grid"
+ "Row"
+ "Col"
+ "Panel"
+ "ButtonGroup"
+ "Jumbotron"
+ "FormGroup"
+ "FormControl"
+ "NavBar"
+ "Nav"
+ "NavItem")
 
-(defonce button (to-reagent "Button"))
-(defonce grid (to-reagent "Grid"))
-(defonce row (to-reagent "Row"))
-(defonce col (to-reagent "Col"))
-(defonce panel (to-reagent "Panel"))
-(defonce button-group (to-reagent "ButtonGroup"))
-(defonce jumbotron (to-reagent "Jumbotron"))
-(defonce form-group (to-reagent "FormGroup"))
-(defonce form-control (to-reagent "FormControl"))
+(def nav-header (aget nav-bar "Header"))
+(def nav-brand (aget nav-bar "Brand"))
+
+(defn menu-bar [brand items]
+  [nav-bar
+   [nav-header [nav-brand brand]]
+   [nav
+    items]])
 
 (def codemirror-base-component (.-default (js/require "react-codemirror2")))
 
