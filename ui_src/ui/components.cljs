@@ -16,15 +16,21 @@
  "Jumbotron"
  "FormGroup"
  "FormControl"
- "NavBar"
+ "Navbar"
  "Nav"
  "NavItem")
 
-(def nav-header (aget nav-bar "Header"))
-(def nav-brand (aget nav-bar "Brand"))
+(def nav-bar navbar) ; Consistent naming in react bootstrap ftw.
 
-(defn menu-bar [brand items]
-  [nav-bar
+(def nav-header (-> "react-bootstrap/lib/NavbarHeader"
+                    js/require
+                    reagent/adapt-react-class))
+(def nav-brand (-> "react-bootstrap/lib/NavbarBrand"
+                   js/require
+                   reagent/adapt-react-class))
+
+(defn menu-bar [brand & items]
+  [nav-bar {:inverse true}
    [nav-header [nav-brand brand]]
    [nav
     items]])
