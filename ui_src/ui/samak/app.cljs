@@ -1,52 +1,7 @@
 (ns ui.samak.app
   (:require [ui.samak.stdlib :as std]
-            [ui.samak.pipes :as pipes]
-            [ui.samak.core :refer [map* reductions*]]
-            [ui.components :as ui]
+            [ui.samak.pipes  :as pipes]
+            [ui.samak.core   :refer [map* reductions*]]
+            [ui.components   :as ui]
             [cljs.core.async :as a :refer
                              [put! chan <! >! timeout close!]]))
-
-(do (def add-todo (std/pipe (chan))))
-
-(def app (pipes/ui))
-
-(def initial-todos (pipes/from-seq ["1" "2"]))
-
-(def http (pipes/http))
-
-(def add-todo-form
- (cljs.core/constantly
-   [ui/form
-    :todo-form
-    [ui/form-input :todo-text "Enter Number!"]
-    [ui/button
-     {:key "submit-button",
-      :on-click
-      (cljs.core/fn
-        [& args__31266__auto__]
-        (std/fire!
-          add-todo
-          (cljs.core/aget
-            (js/document.getElementById "todo-text")
-            "value")))} 
-     "Fetch joke!"]]))
-
-(std/link initial-todos add-todo)
-
-(std/link
-  add-todo
-  (std/link
-    (std/link
-      (std/link
-        (std/link
-          (std/link
-            (map*
-              (fn [joke]
-                {:url (str "http://api.icndb.com/jokes/" joke)}))
-            http)
-          (map* (fn [r] (get-in r [:value :joke] "error"))))
-        (reductions* conj []))
-      (map* (std/vec->fn [:div [add-todo-form] ui/unordered-list])))
-    app))
-
-(std/start)

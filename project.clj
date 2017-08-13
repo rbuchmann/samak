@@ -19,6 +19,7 @@
                  [net.cgrand/xforms "0.9.2"]
                  [cljs-http "0.1.43"]
                  [automat "0.2.2"]
+                 [cljsjs/klayjs "0.3.2-0"]
                  [camel-snake-kebab "0.4.0"]]
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.10"]

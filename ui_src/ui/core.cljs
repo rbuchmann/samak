@@ -7,7 +7,8 @@
             [clojure.string  :as string :refer [split-lines]]
             [ui.components   :as ui :refer [grid row col editor
                                             button panel listing
-                                            button-group]]))
+                                            button-group]]
+            [ui.editor       :refer [editor-root]]))
 
 (set! *warn-on-infer* true)
 
@@ -97,5 +98,5 @@ add-todo
       [listing emitted]]]]])
 
 (r/render
-  [root-component]
+  [editor-root]
   (js/document.getElementById "app-container"))
