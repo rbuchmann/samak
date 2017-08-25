@@ -1,5 +1,5 @@
 (ns ui.components
-  (:require [reagent.core   :as reagent]
+  (:require [reagent.core   :as r]
             [goog.functions :as f])
   (:require-macros [ui.components :refer [adapt-components]]))
 
@@ -18,16 +18,17 @@
  "FormControl"
  "Navbar"
  "Nav"
- "NavItem")
+ "NavItem"
+ "Badge")
 
 (def nav-bar navbar) ; Consistent naming in react bootstrap ftw.
 
 (def nav-header (-> "react-bootstrap/lib/NavbarHeader"
                     js/require
-                    reagent/adapt-react-class))
+                    r/adapt-react-class))
 (def nav-brand (-> "react-bootstrap/lib/NavbarBrand"
                    js/require
-                   reagent/adapt-react-class))
+                   r/adapt-react-class))
 
 (defn menu-bar [brand & items]
   [nav-bar {:inverse true}
@@ -35,12 +36,33 @@
    [nav
     items]])
 
+(defn stacked-nav [active-key handler items]
+  [nav {:bs-style :pills
+        :stacked true
+        :active-key active-key
+        :on-select handler}
+   (map-indexed (fn [i item]
+                  [nav-item {:event-key i :key i} item [badge {:pull-right true} i]])
+                items)])
+
+(defn autofocused-input []
+  (let [state (r/atom "")
+        focus-ref (r/atom nil)]
+    (r/create-class
+     {:display-name "focus-input"
+      :component-did-mount (fn [] (some-> @focus-ref .focus))
+      :reagent-render (fn []
+                        [form-control
+                         {:type :text
+                          :input-ref #(reset! focus-ref %)
+                          :value @state
+                          :on-change #(reset! state (-> % .-target .-value))}])})))
+
 (def codemirror-base-component (.-default (js/require "react-codemirror2")))
 
-#_(println code-mirror-component)
 (def clojure-mode (js/require "codemirror/mode/clojure/clojure"))
 
-(def codemirror-base (reagent/adapt-react-class codemirror-base-component))
+(def codemirror-base (r/adapt-react-class codemirror-base-component))
 
 (defn editor [state]
   [codemirror-base {:value @state
@@ -55,10 +77,11 @@
                               :readOnly "nocursor"}}])
 
 (defn form [id & args]
-  [:form [form-group args]])
+  [:form
+   (into [form-group] args)])
 
 (defn form-input [id placeholder]
-  (let [val (reagent/atom "")]
+  (let [val (r/atom "")]
     (fn []
       [form-control {:key (str "form-input-" id)
                      :type :text

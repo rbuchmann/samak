@@ -8,17 +8,13 @@
                                           {:id "n2" :width 40 :height 40}]
                              :edges      [{:id "e1" :source "n1" :target "n2"}]}))
 
-(defn log-convert [x]
-  (let [res (js->clj x :keywordize-keys true)]
-    (.log js/console (cljs.pprint/pprint res))
-    res))
-
 (defn compute-layout [graph options success error]
+  (js/console.log "Computing layout...")
   (.layout
    js/$klay
    (clj->js {:graph   graph
              :options options
-             :success #(success (log-convert %))
+             :success #(success (js->clj % :keywordize-keys true))
              :error   error})))
 
 (defn draw-nodes [nodes]

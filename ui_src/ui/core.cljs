@@ -8,7 +8,7 @@
             [ui.components   :as ui :refer [grid row col editor
                                             button panel listing
                                             button-group]]
-            [ui.editor       :refer [editor-root]]))
+            [ui.editor       :as editor]))
 
 (set! *warn-on-infer* true)
 
@@ -98,5 +98,5 @@ add-todo
       [listing emitted]]]]])
 
 (r/render
-  [editor-root]
+  [editor/root (editor/make-state)]
   (js/document.getElementById "app-container"))
