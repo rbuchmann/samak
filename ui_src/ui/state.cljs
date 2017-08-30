@@ -1,21 +1,21 @@
 (ns ui.state
-  (:require [reagent.core :as r]
-            [keybind.core :as k]))
+  (:require [reagent.core   :as r]
+            [keybind.core   :as k]
+            [ui.modes       :as modes]
+            [ui.transitions :as transitions]))
 
-(defonce app-state (r/atom {}))
+(defn make-initial-state []
+  {:mode modes/starting-mode
+   :path []})
 
-(defn conj-keybinding [m k]
-  (update m :keybindings conj k))
+(defonce app-state (r/atom (make-initial-state)))
+(defonce keybinds-needed? (atom true))
 
-(defn reset-keybindings! [m]
-  (doseq [[key-string binding-key] (:keybindings @app-state)]
-    (k/unbind! key-string binding-key))
-  (doall
-   (map-indexed (fn [i [key-string handler]]
-                  (let [binding-key (keyword "state" (str "k" i))]
-                    (k/bind! key-string binding-key handler)
-                    (swap! app-state conj-keybinding [key-string binding-key])))
-                m)))
+(defn register-keybindings [state]
+  (doseq [i (range 10)]
+    (k/bind! (str "ctrl-" i)
+             (keyword "state" (str "menu" i))
+             #(transitions/dispatch-event state (dec i)))))
 
-(defn reset-app-state! []
-  (reset! app-state {}))
+(defn reset-state! [state]
+  (reset! state (make-initial-state)))

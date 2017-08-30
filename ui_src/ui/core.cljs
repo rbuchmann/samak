@@ -8,7 +8,8 @@
             [ui.components   :as ui :refer [grid row col editor
                                             button panel listing
                                             button-group]]
-            [ui.editor       :as editor]))
+            [ui.editor       :as editor]
+            [ui.state        :as s]))
 
 (set! *warn-on-infer* true)
 
@@ -97,6 +98,12 @@ add-todo
      [col {:md 4}
       [listing emitted]]]]])
 
-(r/render
-  [editor/root (editor/make-state)]
-  (js/document.getElementById "app-container"))
+(defn setup []
+  (when @s/keybinds-needed?
+    (s/register-keybindings s/app-state)
+    (reset! s/keybinds-needed? false))
+  (r/render
+   [editor/root s/app-state]
+   (js/document.getElementById "app-container")))
+
+(setup)

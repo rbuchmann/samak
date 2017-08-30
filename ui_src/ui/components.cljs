@@ -42,7 +42,7 @@
         :active-key active-key
         :on-select handler}
    (map-indexed (fn [i item]
-                  [nav-item {:event-key i :key i} item [badge {:pull-right true} i]])
+                  [nav-item {:event-key i :key i} item [badge {:pull-right true} (inc i)]])
                 items)])
 
 (defn autofocused-input []
