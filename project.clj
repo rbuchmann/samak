@@ -1,4 +1,4 @@
-(defproject hello-electron "0.1.0-SNAPSHOT"
+(defproject samak "0.1.0-SNAPSHOT"
   :license {:name "The MIT License"
             :url "https://opensource.org/licenses/MIT"}
   :source-paths ["src"]

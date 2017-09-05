@@ -1,10 +1,6 @@
 (ns ui.samak.parser
   (:require [instaparse.core :as insta]))
 
-(defn log [& x]
-  (println x)
-  x)
-
 (defn to-xforms [m]
   (into {}
         (for [[k f] m]
@@ -66,12 +62,6 @@
                       {:kind      :fn-call
                        :name      (:value name)
                        :arguments (ordered args)})
-    :lambda         (fn [[_ & params] rhs]
-                      {:kind   :lambda
-                       :params (if (map? params)
-                                 [(assoc params :order 0)]
-                                 (ordered params))
-                       :rhs    rhs})
     :handler        (fn [ch field-id]
                       {:kind     :handler
                        :channel  (:value ch)
@@ -93,7 +83,7 @@
    "
 program = statement*
 <statement> = def / chan-declare / bin-op
-<expression> = fn-call / literal / lambda / handler / fn-literal / const-literal / bin-op
+<expression> = fn-call / literal / handler / fn-literal / const-literal / bin-op
 bin-op = expression bin-operator expression
 bin-operator = '|'
 const-literal = <'!'> literal
@@ -101,7 +91,6 @@ fn-literal = <'#'> (map | vector)
 handler = var <'<-'> field-id
 chan-declare = <'chans'> <'('> var+ <')'>
 field-id = <'#'> var <'.'> var
-lambda = params <'->'> expression
 params = ( var | <'('> var* <')'> )
 fn-call = (var <'('> expression* <')'>) | (var <'$'> fn-call)
 def = var <'='> expression

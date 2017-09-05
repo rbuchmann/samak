@@ -6,9 +6,11 @@
             [ui.components.graph-view :as graph]
             [ui.transitions           :as transitions]))
 
-(defn root [state]
+(defn root [state db]
   (let [{:keys [mode path]} @state
-        menu-items (get-in m/modes (list* mode path))]
+        menu-items (get-in m/modes (list* mode path))
+        db-state @db]
+    (println db-state)
     [ui/grid {:fluid true}
      [ui/row
       [ui/col {:md 2}

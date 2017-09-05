@@ -42,9 +42,6 @@
 (defmethod emit :pipe-def [{:keys [from to transducers]}]
   (list* 'std/link (map emit [from (assoc transducers :kind :vector) to])))
 
-(defmethod emit :lambda [{:keys [params rhs]}]
-  (list 'fn (->> params (sort-by :order) (mapv emit)) (emit rhs)))
-
 (defmethod emit :handler [{:keys [channel field-id]}]
   (let [{:keys [id field]} field-id]
     `(fn [& args#] (~'std/fire! ~(symbol channel) (aget (js/document.getElementById ~id) ~field)))))
