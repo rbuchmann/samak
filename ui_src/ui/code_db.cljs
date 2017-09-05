@@ -20,6 +20,8 @@
                            :db/valueType   :db.type/ref}
              :chans       {:db/cardinality :db.cardinality/many
                            :db/isComponent true
+                           :db/valueType   :db.type/ref}
+             :expression  {:db/isComponent true
                            :db/valueType   :db.type/ref}})
 
 (defn create-ratom-db [schema]

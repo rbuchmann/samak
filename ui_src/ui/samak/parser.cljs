@@ -113,9 +113,9 @@ vector = <'['> expression* <']'>
   (try
     (parse s)
     (catch :default e
-      "Parse error")))
+      (str "Parse error" e))))
 
-(def debug (comp cljs.pprint/pprint parse))
+(def debug (comp #(with-out-str (cljs.pprint/pprint %)) parse))
 
 
 (def tp (insta/parser "

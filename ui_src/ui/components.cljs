@@ -19,7 +19,8 @@
  "Navbar"
  "Nav"
  "NavItem"
- "Badge")
+ "Badge"
+ "HelpBlock")
 
 (def nav-bar navbar) ; Consistent naming in react bootstrap ftw.
 
@@ -45,9 +46,8 @@
                   [nav-item {:event-key i :key i} item [badge {:pull-right true} (inc i)]])
                 items)])
 
-(defn autofocused-input []
-  (let [state (r/atom "")
-        focus-ref (r/atom nil)]
+(defn autofocused-input [state]
+  (let [focus-ref (r/atom nil)]
     (r/create-class
      {:display-name "focus-input"
       :component-did-mount (fn [] (some-> @focus-ref .focus))

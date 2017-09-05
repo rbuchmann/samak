@@ -1,5 +1,11 @@
 (ns ui.modes
-  (:require [ui.tools :as tools]))
+  (:require [ui.tools                  :as tools]
+            [ui.components.node-editor :refer [node-editor]]
+            [ui.components.node-viewer :refer [node-viewer]]))
+
+(def mode-components
+  {:node-editor node-editor
+   :node-viewer node-viewer})
 
 (defn transition-to [mode]
   (fn [state]

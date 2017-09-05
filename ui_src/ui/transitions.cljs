@@ -2,7 +2,6 @@
   (:require [ui.modes :refer [modes]]))
 
 (defn dispatch-event [state event-key]
-  (println "In dispatch event")
   (let [{:keys [mode path]} @state
         [k action] (some-> modes (get mode) (get-in path) vec (nth event-key))]
     (when action
