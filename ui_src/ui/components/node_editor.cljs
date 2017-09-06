@@ -14,7 +14,7 @@
 (defn node-editor [_ db]
   (let [state (r/atom "")]
     (fn [_ db]
-      (let [parse-result (p/parse @state)
+      (let [parse-result (p/parse-expression @state)
             error? (insta/failure? parse-result)
             validation-state (when error?
                                "error")]

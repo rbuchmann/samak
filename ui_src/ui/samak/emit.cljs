@@ -65,6 +65,9 @@
 (defmethod emit :bin-op [{:keys [lhs rhs operator]}]
   (list (ops->fns operator) (emit lhs) (emit rhs)))
 
+(defmethod emit :expression-root [{:keys [value]}]
+  (emit value))
+
 (defn clj->str [form]
   (with-out-str
     (pp/with-pprint-dispatch pp/code-dispatch
@@ -82,6 +85,8 @@
 
 (defn append-footer [forms]
   (-> forms vec (conj '(std/start))))
+
+(def emit-expression (comp clj->str emit))
 
 (defn emit-clj [program]
   (if (:reason program)

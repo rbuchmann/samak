@@ -1,5 +1,6 @@
 (ns ui.samak.parser
-  (:require [instaparse.core :as insta]))
+  (:require [instaparse.core :as insta]
+            [clojure.string  :as str]))
 
 (defn to-xforms [m]
   (into {}
@@ -27,87 +28,98 @@
 (def transforms
   (merge
    (to-xforms
-    {:integer       parse-int
-     :boolean       parse-bool
-     :float         parse-float
-     :string        str
-     :keyword       :value
-     :var           :value
-     :fn-literal    identity
-     :const-literal identity
-     :map           (fn [& args] (apply hash-map args))
-     :identifier    str
-     :bin-operator  identity})
+    {:expression-root identity
+     :integer         parse-int
+     :boolean         parse-bool
+     :float           parse-float
+     :string          str
+     :keyword         :value
+     :var             :value
+     :fn-literal      identity
+     :const-literal   identity
+     :map             (fn [& args] (apply hash-map args))
+     :identifier      str
+     :bin-operator    identity})
    {:tagged-literal (fn [tag literal]
                       {:kind    :tagged-literal
                        :tag     (:value tag)
                        :literal literal})
-    :bin-op (fn [lhs op rhs]
-              {:kind :bin-op
-               :operator (:value op)
-               :lhs lhs
-               :rhs rhs})
+    :bin-op         (fn [lhs op rhs]
+                      {:kind     :bin-op
+                       :operator (:value op)
+                       :lhs      lhs
+                       :rhs      rhs})
     :program        (fn [& args]
                       {:kind        :program
                        :definitions (vec args)})
     :vector         (fn [& args]
                       {:kind     :vector
                        :children (ordered args)})
-
-    :def            (fn [name rhs]
-                      {:kind :def
-                       :name (:value name)
-                       :rhs  rhs})
-    :fn-call        (fn [name & args]
-                      {:kind      :fn-call
-                       :name      (:value name)
-                       :arguments (ordered args)})
-    :handler        (fn [ch field-id]
-                      {:kind     :handler
-                       :channel  (:value ch)
-                       :field-id field-id})
-    :field-id       (fn [id field]
-                      {:kind  :field-id
-                       :id    (:value id)
-                       :field (:value field)})
-    :chan-declare   (fn [& chans]
-                      {:kind  :chan-declare
-                       :chans (mapv :value chans)})}))
+    :def          (fn [name rhs]
+                    {:kind :def
+                     :name (:value name)
+                     :rhs  rhs})
+    :fn-call      (fn [name & args]
+                    {:kind      :fn-call
+                     :name      (:value name)
+                     :arguments (ordered args)})
+    :handler      (fn [ch field-id]
+                    {:kind     :handler
+                     :channel  (:value ch)
+                     :field-id field-id})
+    :field-id     (fn [id field]
+                    {:kind  :field-id
+                     :id    (:value id)
+                     :field (:value field)})
+    :chan-declare (fn [& chans]
+                    {:kind  :chan-declare
+                     :chans (mapv :value chans)})}))
 
 (def whitespace
   (insta/parser
    "whitespace = #'(\\s|,|;[^\\n]*\\n)+'"))
 
+(def expression-grammar
+  "
+  expression-root = expression?
+  <expression> = fn-call / literal / handler / fn-literal / const-literal / bin-op
+  <literal> = string / integer / float / map / vector / keyword / boolean / var
+  fn-call = (var <'('> expression* <')'>) | (var <'$'> fn-call)
+  fn-literal = <'#'> (map | vector)
+  string = ( <'\"'>#'[^\"]*'<'\"'> ) | ( <'\\''>#'[^\\']*'<'\\''> )
+  boolean = 'true' | 'false'
+  integer = #'[0-9]+'
+  float = #'[0-9]+(.[0-9]+)?'
+  identifier = #'[a-z][a-z0-9-#/*]*'
+  var = identifier
+  keyword = <':'> identifier
+  map = <'{'> (expression  expression)* <'}'>
+  vector = <'['> expression* <']'>
+  handler = var <'<-'> field-id
+  field-id = <'#'> var <'.'> var
+  bin-op = expression bin-operator expression
+  bin-operator = '|'
+  const-literal = <'!'> literal
+  ")
+
+(def program-grammar
+  "
+  program = statement*
+  <statement> = def / chan-declare / bin-op
+  chan-declare = <'chans'> <'('> var+ <')'>
+  def = var <'='> expression
+  ")
+
+(def expression-parser (insta/parser expression-grammar
+                                     :auto-whitespace whitespace))
+
 (def parser
   (insta/parser
-   "
-program = statement*
-<statement> = def / chan-declare / bin-op
-<expression> = fn-call / literal / handler / fn-literal / const-literal / bin-op
-bin-op = expression bin-operator expression
-bin-operator = '|'
-const-literal = <'!'> literal
-fn-literal = <'#'> (map | vector)
-handler = var <'<-'> field-id
-chan-declare = <'chans'> <'('> var+ <')'>
-field-id = <'#'> var <'.'> var
-params = ( var | <'('> var* <')'> )
-fn-call = (var <'('> expression* <')'>) | (var <'$'> fn-call)
-def = var <'='> expression
-<literal> = string / integer / float / map / vector / keyword / boolean / var
-string = ( <'\"'>#'[^\"]*'<'\"'> ) | ( <'\\''>#'[^\\']*'<'\\''> )
-boolean = 'true' | 'false'
-integer = #'[0-9]+'
-float = #'[0-9]+(.[0-9]+)?'
-identifier = #'[a-z][a-z0-9-#/*]*'
-var = identifier
-keyword = <':'> identifier
-map = <'{'> (expression  expression)* <'}'>
-vector = <'['> expression* <']'>
-"
+   (str/join "\n" [program-grammar expression-grammar])
    :auto-whitespace whitespace))
 
 (def parse (comp (partial insta/transform transforms) parser))
+(def parse-expression (comp (partial insta/transform transforms) expression-parser))
 
 (defn safe-parse [s]
   (try
