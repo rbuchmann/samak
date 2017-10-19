@@ -25,7 +25,7 @@ In case you don't have electron installed globally, run =npm run start=.
 
 - Better state cleanup for reloading
 - Less awful layout
-- Get rid of multiple react versions -.-
+- Get rid of multiple react versions -.- ✔
 - Pipe instrumentation, debugging
 - Program structure graph (Pipe layout with e.g. klayjs). Could show
   latest channel state with comment boxes.
@@ -43,7 +43,7 @@ In case you don't have electron installed globally, run =npm run start=.
 - Auto conversion between languages, e.g. input pipe from python,
   output to browser, should be easy to automatically link
 - Disallow lambda, only backus style function composition: Probably
-  needs zero type annotations with this change
+  needs zero type annotations with this change ✔
 - Related: Allow fat pipes (title is work in progress ;) ), like
   e.g. a pipe that not only provides a client to a db but also runs a
   docker image for it

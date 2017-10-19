@@ -4,7 +4,7 @@
   :source-paths ["src"]
   :description "A hello world application for electron"
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.542"]
+                 [org.clojure/clojurescript "1.9.946"]
                  [figwheel "0.5.10"]
                  [reagent "0.6.1" :exclusions [cljsjs/react
                                                cljsjs/react-dom
