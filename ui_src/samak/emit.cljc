@@ -1,6 +1,8 @@
-(ns ui.samak.emit
-  (:require [clojure.string :as str]
-            [cljs.pprint    :as pp]))
+(ns samak.emit
+  (:require [clojure.string           :as str]
+            [#?(:cljs cljs.pprint
+                :clj  clojure.pprint) :as pp]))
+
 
 (defmulti emit :kind)
 
@@ -73,10 +75,10 @@
     (pp/with-pprint-dispatch pp/code-dispatch
       (pp/pprint form))))
 
-(def header '(ns ui.samak.app
-               (:require [ui.samak.stdlib :as std]
-                         [ui.samak.pipes  :as pipes]
-                         [ui.samak.core   :refer [map* reductions*]]
+(def header '(ns samak.app
+               (:require [samak.stdlib :as std]
+                         [samak.pipes  :as pipes]
+                         [samak.core   :refer [map* reductions*]]
                          [ui.components   :as ui]
                          [cljs.core.async :as a :refer [put! chan <! >! timeout close!]])))
 

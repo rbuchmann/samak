@@ -3,7 +3,7 @@
             :url "https://opensource.org/licenses/MIT"}
   :source-paths ["src"]
   :description "A hello world application for electron"
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-beta2"]
                  [org.clojure/clojurescript "1.9.946"]
                  [figwheel "0.5.10"]
                  [reagent "0.6.1" :exclusions [cljsjs/react
@@ -13,15 +13,17 @@
                  [ring/ring-core "1.6.1"]
                  [org.clojure/core.async "0.3.443"]
                  [org.clojure/core.logic "0.8.11"]
-                 [instaparse "1.4.7"]
+                 [instaparse "1.4.8"]
                  [datascript "0.16.1"]
                  [com.stuartsierra/dependency "0.2.0"]
                  [net.cgrand/xforms "0.9.2"]
                  [cljs-http "0.1.43"]
+                 [clj-http "3.7.0"]
                  [automat "0.2.2"]
                  [cljsjs/klayjs "0.3.2-0"]
                  [camel-snake-kebab "0.4.0"]
-                 [keybind "2.1.0"]]
+                 [keybind "2.1.0"]
+                 [org.clojure/test.check "0.9.0"]]
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.10"]
             [lein-cooper "1.2.2"]

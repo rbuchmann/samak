@@ -1,6 +1,6 @@
 (ns ui.components.node-viewer
   (:require [ui.components   :as ui]
-            [ui.samak.emit   :refer [emit-expression]]
+            [samak.emit      :refer [emit-expression]]
             [datascript.core :as d]))
 
 (defn node-viewer [_ db]

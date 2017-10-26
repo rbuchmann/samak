@@ -2,7 +2,7 @@
   (:require [datascript.core    :as d]
             [ui.components      :as ui]
             [reagent.core       :as r]
-            [ui.samak.parser    :as p]
+            [samak.parser       :as p]
             [instaparse.core    :as insta]
             [instaparse.failure :as fail]
             [ui.code-db         :as db]))

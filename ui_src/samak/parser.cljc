@@ -1,4 +1,4 @@
-(ns ui.samak.parser
+(ns samak.parser
   (:require [instaparse.core :as insta]
             [clojure.string  :as str]))
 
@@ -10,10 +10,12 @@
                 :value (apply f args)})])))
 
 (defn parse-int [s]
-  (js/parseInt s))
+  #?(:cljs (js/parseInt s)
+     :clj  (Integer/parseInt s)))
 
 (defn parse-float [s]
-  (js/parseDouble s))
+  #?(:cljs (js/parseDouble s)
+     :clj  (Double/parseDouble s)))
 
 (defn parse-bool [s]
   (= "true" s))
@@ -124,10 +126,12 @@
 (defn safe-parse [s]
   (try
     (parse s)
-    (catch :default e
+    (catch #?(:clj Exception
+              :cljs js/Object) e
       (str "Parse error" e))))
 
-(def debug (comp #(with-out-str (cljs.pprint/pprint %)) parse))
+(def debug (comp #(with-out-str #?(:cljs cljs.pprint/pprint
+                                   :clj clojure.pprint/pprint) %) parse))
 
 
 (def tp (insta/parser "

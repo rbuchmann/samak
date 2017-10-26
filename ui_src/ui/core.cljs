@@ -1,15 +1,15 @@
 (ns ui.core
-  (:require [reagent.core    :as r]
-            [reagent.ratom   :refer [reaction]]
-            [ui.samak.parser :as parser]
-            [ui.samak.emit   :as emit]
-            [ui.samak.app]
-            [clojure.string  :as string :refer [split-lines]]
-            [ui.components   :as ui :refer [grid row col editor
+  (:require [reagent.core   :as r]
+            [reagent.ratom  :refer [reaction]]
+            [samak.parser   :as parser]
+            [samak.emit     :as emit]
+            [samak.app]
+            [clojure.string :as string :refer [split-lines]]
+            [ui.components  :as ui :refer [grid row col editor
                                             button panel listing
                                             button-group]]
-            [ui.editor       :as editor]
-            [ui.state        :as s]))
+            [ui.editor      :as editor]
+            [ui.state       :as s]))
 
 (set! *warn-on-infer* true)
 

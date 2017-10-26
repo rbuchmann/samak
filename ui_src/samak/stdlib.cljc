@@ -1,6 +1,12 @@
-(ns ui.samak.stdlib
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
-  (:require [cljs.core.async :as a :refer [put! chan <! >! timeout close!]]))
+(ns samak.stdlib
+  #?@(:clj
+      [(:require [clojure.core.async :as a :refer [<! chan go put!]]
+                 [samak.tools :refer [log]])]
+      :cljs
+      [(:require [cljs.core.async :as a :refer [<! chan put!]])
+       (:require-macros
+        [cljs.core.async.macros :refer [go]]
+        [samak.tools :refer [log]])]))
 
 ;; Helpers
 
@@ -73,7 +79,7 @@
 (def ports (juxt in-port out-port))
 
 (defn fire! [pipe event]
-  (.log js/console (str "Fired event: " event))
+  (log (str "Fired event: " event))
   (let [intake (in-port pipe)]
     (put! intake event)))
 
