@@ -1,5 +1,5 @@
 (ns samak.core
-  (:require [samak.stdlib   :as std]
+  (:require [samak.stdlib      :as std]
             [net.cgrand.xforms :as x]))
 
 (defn or* [a b]
