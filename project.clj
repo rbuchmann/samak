@@ -1,7 +1,7 @@
 (defproject samak "0.1.0-SNAPSHOT"
   :license {:name "The MIT License"
             :url "https://opensource.org/licenses/MIT"}
-  :source-paths ["src"]
+  :source-paths ["src" "ui_src"]
   :description "A hello world application for electron"
   :dependencies [[org.clojure/clojure "1.9.0-beta2"]
                  [org.clojure/clojurescript "1.9.946"]
@@ -15,6 +15,7 @@
                  [org.clojure/core.logic "0.8.11"]
                  [instaparse "1.4.8"]
                  [datascript "0.16.1"]
+                 [org.blancas/kern "1.1.0"]
                  [com.stuartsierra/dependency "0.2.0"]
                  [net.cgrand/xforms "0.9.2"]
                  [cljs-http "0.1.43"]
@@ -23,7 +24,8 @@
                  [cljsjs/klayjs "0.3.2-0"]
                  [camel-snake-kebab "0.4.0"]
                  [keybind "2.1.0"]
-                 [org.clojure/test.check "0.9.0"]]
+                 [org.clojure/test.check "0.9.0"]
+                 [ru.prepor/kern "1.2.0-SNAPSHOT"]]
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.10"]
             [lein-cooper "1.2.2"]

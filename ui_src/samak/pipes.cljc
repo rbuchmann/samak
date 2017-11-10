@@ -5,8 +5,8 @@
                :clj
                [clojure.core.async     :as a :refer [put! chan <! >! timeout close!
                                                      go go-loop]])
-            [samak.stdlib           :as std]
-            [samak.tools            :as tools]
+            [samak.stdlib              :as std]
+            [samak.tools               :as tools]
             #?(:cljs [cljs-http.client :as http]
                :clj  [clj-http.client  :as http])
             [reagent.core              :as r]))
@@ -22,17 +22,6 @@
         (recur)))
     (std/sink log-chan)))
 
-(defn tick []
-  (let [tick-chan (chan)
-        state (atom 0)]
-    (go-loop []
-      (when (= @state 0)
-        (<! std/start-chan))
-      (>! tick-chan @state)
-      (swap! state inc)
-      (<! (timeout 1000))
-      (recur))
-    (std/source tick-chan)))
 
 #?(:cljs (defn ui []
            (let [ui-chan (chan)]
@@ -43,14 +32,10 @@
                  (recur)))
              (std/sink ui-chan))))
 
-(defn parse
-  [response]
-  (:body response))
-
 
 (defn http-call [request res]
   (go (let [req (http/get (:url request))]
-        (a/pipeline 1 res (map parse) req))))
+        (a/pipeline 1 res (map :body) req))))
 
 (defn http []
   (std/async-pipe http-call))

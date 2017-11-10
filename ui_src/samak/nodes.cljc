@@ -32,30 +32,41 @@
        (sort-by :order)
        (mapv eval-node)))
 
-(def eval-vals (partial map (fn [[k v]] [k (eval-node v)])))
+(def eval-vals (partial map (fn [[k v]] [(::value k) (eval-node v)])))
 
+(defn to-map-fn [m]
+  (fn [x]
+    (->> m
+         (map (fn [[k f]] [k (f x)]))
+         (into {}))))
+
+(defn to-vector-fn [v]
+  (apply juxt v))
+
+(def ^:dynamic *symbol-map* {})
 
 ;; TODO: Make fn literals first class?
 
 (defnode map [::value]
-  :eval-fn (comp eval-vals ::value))
+  :eval-fn (comp to-map-fn eval-vals ::value))
 
 (defnode vector [::children]
-  :eval-fn (comp eval-reordered ::children))
+  :eval-fn (comp to-vector-fn eval-reordered ::children))
 
 (defnode integer [::value]
-  :eval-fn ::value)
+  :eval-fn (comp constantly ::value))
 
 (defnode keyword [::value]
-  :eval-fn ::value)
+  :eval-fn (comp constantly ::value))
 
 (defnode string [::value]
-  :eval-fn ::value)
+  :eval-fn (comp constantly ::value))
 
 (defnode float [::value]
-  :eval-fn ::value)
+  :eval-fn (comp constantly ::value))
 
-(defnode var [::value]
-  :eval-fn ::value)
+(defnode symbol [::value]
+  :eval-fn (comp constantly ::value))
 
-#_(defnode )
+(defnode accessor [::value]
+  :eval-fn ::value)

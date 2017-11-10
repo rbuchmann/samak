@@ -1,34 +1,13 @@
 (ns samak.stdlib
   #?@(:clj
       [(:require [clojure.core.async :as a :refer [<! chan go put!]]
-                 [samak.tools :refer [log]])]
+                 [samak.tools        :refer [log]])]
       :cljs
       [(:require [cljs.core.async :as a :refer [<! chan put!]])
        (:require-macros
         [cljs.core.async.macros :refer [go]]
         [samak.tools :refer [log]])]))
 
-;; Helpers
-
-(defn apply-fn [f x]
-  (if (or (map?     f)
-          (vector?  f)
-          (string?  f)
-          (number?  f)
-          (boolean? f)
-          (keyword? f))
-    f
-    (f x)))
-
-(defn map->fn [m]
-  (fn [x]
-    (into {}
-          (for [[k f] m]
-            [k (apply-fn f x)]))))
-
-(defn vec->fn [v]
-  (fn [x]
-    (mapv (fn [f] (apply-fn f x)) v)))
 
 ;; Pipes and flow control
 
