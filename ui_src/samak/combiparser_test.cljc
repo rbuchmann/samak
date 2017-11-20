@@ -115,4 +115,16 @@
                            :order             0}
                           {:samak.nodes/value 'baz
                            :samak.nodes/type  :samak.nodes/symbol
-                           :order             1}]}]})))
+                           :order             1}]}]}))
+  (is (= (p/value cp/p-toplevel "!foo <- bar {}")
+         #:samak.nodes{:type :samak.nodes/chan-def,
+                       :name
+                       #:samak.nodes{:value :foo,
+                                     :type :samak.nodes/chan-ref},
+                       :op "<-",
+                       :pipe
+                       #:samak.nodes{:type :samak.nodes/fn-call,
+                                     :name 'bar,
+                                     :argument
+                                     #:samak.nodes{:type :samak.nodes/map,
+                                                   :value {}}}})))

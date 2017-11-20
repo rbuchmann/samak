@@ -1,6 +1,7 @@
 (ns samak.nodes
   (:require #?(:clj  [clojure.spec.alpha :as s]
-               :cljs [cljs.spec.alpha    :as s])))
+               :cljs [cljs.spec.alpha    :as s])
+            [samak.core                  :as core]))
 
 (defn symbol->ns-keyword [sym]
   (->> sym
@@ -34,6 +35,8 @@
 
 (def eval-vals (partial map (fn [[k v]] [(::value k) (eval-node v)])))
 
+;; (map (fzip [:-value eval-node]))
+
 (defn to-map-fn [m]
   (fn [x]
     (->> m
@@ -66,7 +69,11 @@
   :eval-fn (comp constantly ::value))
 
 (defnode symbol [::value]
-  :eval-fn (comp constantly ::value))
+  :eval-fn (comp *symbol-map* ::value))
 
 (defnode accessor [::value]
   :eval-fn ::value)
+
+(defnode def [::name ::rhs])
+
+(defnode p-fn-call [::name ::argument])

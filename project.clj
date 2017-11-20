@@ -15,7 +15,6 @@
                  [org.clojure/core.logic "0.8.11"]
                  [instaparse "1.4.8"]
                  [datascript "0.16.1"]
-                 [org.blancas/kern "1.1.0"]
                  [com.stuartsierra/dependency "0.2.0"]
                  [net.cgrand/xforms "0.9.2"]
                  [cljs-http "0.1.43"]

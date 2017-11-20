@@ -14,13 +14,17 @@
 (defliteral keyword [_ (p/<?> (p/sym* \:) "keyword literal")
                      v hs/identifier] (keyword v))
 
+(defliteral chan-ref [_ (p/<?> (p/sym* \!) "channel reference starting with !")
+                      v hs/identifier] (keyword v))
+
 (defliteral integer [v hs/dec-lit] v)
 
 (defliteral float [v hs/float-lit] v)
 
 (defliteral string [v hs/string-lit] v)
 
-(defliteral symbol [v hs/identifier] (symbol v))
+(defliteral symbol [ns (p/optional (p/<:> (p/<*> hs/identifier )))
+                    v hs/identifier] (symbol v))
 
 (def p-map (hs/braces (p/bind [kvs (p/many (p/<*> p-keyword (p/fwd p-simple-expression)))]
                               (p/return
@@ -46,11 +50,11 @@
 
 (def p-simple-expression (p/<|> (p/<:> p-literal) p-grouped))
 
-(defparser p-fn-call [fn-name p-symbol
+(defparser p-fn-call [fn-expression p-simple-expression
                       _ (p/many p/white-space)
                       expression p-simple-expression]
   #:samak.nodes {:type     :samak.nodes/fn-call
-                 :name     (:samak.nodes/value fn-name)
+                 :fn       fn-expression
                  :argument expression})
 
 (defparser p-def [expression-name p-symbol
@@ -59,6 +63,15 @@
   #:samak.nodes {:type :samak.nodes/def
                  :name (:samak.nodes/value expression-name)
                  :rhs  rhs})
+
+#_(defparser p-chan-def [channel-ref p-chan-ref
+                         op (with-ws (p/<|> (p/token* "<-")
+                                            (p/token* "->")))
+                         pipe-call p-fn-call]
+    #:samak.nodes {:type :samak.nodes/chan-def
+                   :name (:samak.nodes/value channel-ref)
+                   :op   op
+                   :pipe pipe-call})
 
 (def p-toplevel (p/<|> (p/<:> p-def) p-pipe))
 

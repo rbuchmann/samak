@@ -11,6 +11,15 @@
     (fn [y]
       (f x y))))
 
+(defn arity2 [f]
+  (fn [x]
+    (if (= x '_)
+      (fn [y]
+        (fn [x2]
+          (f x2 y)))
+      (fn [y]
+        (f x y)))))
+
 (defn arity3 [f]
   (fn [x]
     (fn [y]

@@ -14,7 +14,7 @@
 (defn from-seq [col]
   (std/source (a/to-chan col)))
 
-(defn log []
+(defn log [args]
   (let [log-chan (chan)]
     (go-loop []
       (when-let [x (<! log-chan)]
@@ -37,5 +37,5 @@
   (go (let [req (http/get (:url request))]
         (a/pipeline 1 res (map :body) req))))
 
-(defn http []
+(defn http [args]
   (std/async-pipe http-call))
