@@ -55,8 +55,8 @@
    'map (arity2 map)
    'or or*
    'and and*
-   'if if*})
-
+   'if if*
+   '! '!})
 
 (defn map* [f]
   (std/transduction-pipe (map f)))

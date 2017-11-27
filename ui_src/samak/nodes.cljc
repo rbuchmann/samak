@@ -35,8 +35,6 @@
 
 (def eval-vals (partial map (fn [[k v]] [(::value k) (eval-node v)])))
 
-;; (map (fzip [:-value eval-node]))
-
 (defn to-map-fn [m]
   (fn [x]
     (->> m
@@ -48,12 +46,14 @@
 
 (def ^:dynamic *symbol-map* {})
 
-;; TODO: Make fn literals first class?
+(defn resolve-symbol [s]
+  (or (*symbol-map* s)
+      (throw (Exception. (str "Unknown variable: " s)))))
 
 (defnode map [::value]
-  :eval-fn (comp to-map-fn eval-vals ::value))
+  :eval-fn (comp to-map-fn eval-vals ::kv-pairs))
 
-(defnode vector [::children]
+(defnode vector [::value]
   :eval-fn (comp to-vector-fn eval-reordered ::children))
 
 (defnode integer [::value]
@@ -69,11 +69,13 @@
   :eval-fn (comp constantly ::value))
 
 (defnode symbol [::value]
-  :eval-fn (comp *symbol-map* ::value))
+  :eval-fn (comp resolve-symbol ::value))
 
 (defnode accessor [::value]
   :eval-fn ::value)
 
 (defnode def [::name ::rhs])
 
-(defnode p-fn-call [::name ::argument])
+(defnode fn-call [::name ::argument]
+  :eval-fn (fn [{:keys [::fn ::argument]}]
+             ((eval-node fn) (eval-node argument))))

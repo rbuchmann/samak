@@ -17,7 +17,7 @@
   (let [defined-symbols (eval-toplevel-defs ast)]
     (binding [n/*symbol-map* (merge core/samak-symbols defined-symbols)]
       (->> ast
-           (remove #(::n/type %) ::n/def)
+           (remove #(= (::n/type %) ::n/def))
            eval-pipes))))
 
 (defn catch-errors [ast]

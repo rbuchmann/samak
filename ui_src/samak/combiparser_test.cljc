@@ -23,16 +23,24 @@
   (is (= (p/value cp/p-symbol "foo")
          #:samak.nodes{:type  :samak.nodes/symbol
                        :value 'foo}))
+  (is (= (p/value cp/p-symbol "!")
+         #:samak.nodes{:type  :samak.nodes/symbol
+                       :value '!}))
+  (is (= (p/value cp/p-identifier "foo-bar")
+         "foo-bar"))
+  (is (= (p/value cp/p-symbol "foo.bar/baz-baf")
+         #:samak.nodes{:type  :samak.nodes/symbol
+                       :value 'foo.bar/baz-baf}))
   (is (= (p/value cp/p-map "{:foo 1}")
          #:samak.nodes{:type :samak.nodes/map
-                       :value
-                       {#:samak.nodes {:value :foo
-                                       :type  :samak.nodes/keyword}
-                        #:samak.nodes {:value 1
-                                       :type  :samak.nodes/integer}}}))
+                       :kv-pairs
+                       [[#:samak.nodes {:value :foo
+                                        :type  :samak.nodes/keyword}
+                         #:samak.nodes {:value 1
+                                        :type  :samak.nodes/integer}]]}))
   (is (= (p/value cp/p-vector "[1 2 foo :bar]")
          #:samak.nodes{:type :samak.nodes/vector
-                       :value
+                       :children
                        [{:samak.nodes/value 1
                          :samak.nodes/type  :samak.nodes/integer
                          :order             0}
@@ -71,16 +79,17 @@
 (deftest program-test
   (is (= (p/value cp/p-fn-call "f {:a 1}")
          #:samak.nodes{:type         :samak.nodes/fn-call
-                       :name         'f
+                       :fn           #:samak.nodes {:value 'f
+                                                    :type :samak.nodes/symbol}
                        :argument
                        #:samak.nodes {:type :samak.nodes/map
-                                      :value
-                                      {#:samak.nodes {:value :a
-                                                      :type
-                                                      :samak.nodes/keyword}
-                                       #:samak.nodes {:value 1
-                                                      :type
-                                                      :samak.nodes/integer}}}}))
+                                      :kv-pairs
+                                      [[#:samak.nodes {:value :a
+                                                       :type
+                                                       :samak.nodes/keyword}
+                                        #:samak.nodes {:value 1
+                                                       :type
+                                                       :samak.nodes/integer}]]}}))
   (is (= (p/value cp/p-def "foo = 1")
          #:samak.nodes{:type         :samak.nodes/def
                        :name         'foo
@@ -90,13 +99,15 @@
 
   (is (= (p/value cp/p-fn-call "foo 5")
          #:samak.nodes{:type         :samak.nodes/fn-call
-                       :name         'foo
+                       :fn
+                       #:samak.nodes{:value 'foo, :type :samak.nodes/symbol}
                        :argument
                        #:samak.nodes {:value 5 :type :samak.nodes/integer}}))
 
   (is (= (p/value cp/p-grouped "(bar 5)")
          #:samak.nodes{:type         :samak.nodes/fn-call
-                       :name         'bar
+                       :fn
+                       #:samak.nodes{:value 'bar, :type :samak.nodes/symbol}
                        :argument
                        #:samak.nodes {:value 5 :type :samak.nodes/integer}}))
 
@@ -115,16 +126,4 @@
                            :order             0}
                           {:samak.nodes/value 'baz
                            :samak.nodes/type  :samak.nodes/symbol
-                           :order             1}]}]}))
-  (is (= (p/value cp/p-toplevel "!foo <- bar {}")
-         #:samak.nodes{:type :samak.nodes/chan-def,
-                       :name
-                       #:samak.nodes{:value :foo,
-                                     :type :samak.nodes/chan-ref},
-                       :op "<-",
-                       :pipe
-                       #:samak.nodes{:type :samak.nodes/fn-call,
-                                     :name 'bar,
-                                     :argument
-                                     #:samak.nodes{:type :samak.nodes/map,
-                                                   :value {}}}})))
+                           :order             1}]}]})))

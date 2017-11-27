@@ -3,22 +3,27 @@
             [samak.tools       :as tools])
   #?(:cljs (:require-macros [samak.parse-tools :refer [defparser defliteral defbinop]])))
 
+(defn with-ws [p]
+  (p/between (p/many p/white-space) p))
+
 #?(:clj
    (defmacro defparser [name bindings body]
      `(def ~name (p/bind ~bindings
                          (p/return ~body)))))
+
+#?(:clj
+   (defmacro defparser* [name bindings body]
+     `(def ~name (with-ws (p/bind ~bindings
+                                 (p/return ~body))))))
 
 (defn parser-name [s]
   (symbol (str "p-" s)))
 
 #?(:clj
    (defmacro defliteral [literal-name bindings body]
-     `(defparser ~(parser-name literal-name) ~bindings
+     `(defparser* ~(parser-name literal-name) ~bindings
         #:samak.nodes{:type  ~(tools/qualify-kw "samak.nodes" literal-name)
                       :value ~body})))
-
-(defn with-ws [p]
-  (p/between (p/many p/white-space) p))
 
 #?(:clj
    (defmacro defbinop [op-name op-sym p-operands]

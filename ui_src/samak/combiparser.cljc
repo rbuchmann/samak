@@ -8,14 +8,22 @@
 
 ;; literals
 
+(def p-identifier (p/<+> (p/many1 (p/<|> p/alpha-num (p/one-of* "-!?")) )))
+
+(def p-ns-identifier (p/<+> p/letter (p/many (p/<|> (p/sym* \.) p-identifier))))
+
+(defparser p-qualified-identifier [ns (p/optional (p/<:> (p/<+> p-ns-identifier (p/skip (p/sym* \/)))))
+                                   v p-identifier]
+  (symbol ns v))
+
+(defliteral symbol [s p-qualified-identifier]
+  s)
+
 (defliteral accessor [_ (p/<:> (p/<*> (p/sym* \:) (p/sym* \-)))
-                      v hs/identifier] (keyword v))
+                      v p-qualified-identifier] (keyword v))
 
 (defliteral keyword [_ (p/<?> (p/sym* \:) "keyword literal")
-                     v hs/identifier] (keyword v))
-
-(defliteral chan-ref [_ (p/<?> (p/sym* \!) "channel reference starting with !")
-                      v hs/identifier] (keyword v))
+                     v p-qualified-identifier] (keyword v))
 
 (defliteral integer [v hs/dec-lit] v)
 
@@ -23,19 +31,16 @@
 
 (defliteral string [v hs/string-lit] v)
 
-(defliteral symbol [ns (p/optional (p/<:> (p/<*> hs/identifier )))
-                    v hs/identifier] (symbol v))
-
 (def p-map (hs/braces (p/bind [kvs (p/many (p/<*> p-keyword (p/fwd p-simple-expression)))]
                               (p/return
                                #:samak.nodes {:type :samak.nodes/map
-                                              :value (into {} kvs)}))))
+                                              :kv-pairs (vec kvs)}))))
 
 (def p-vector (hs/brackets (p/bind [items (p/many (p/fwd p-simple-expression))]
-                                   (p/return #:samak.nodes {:type :samak.nodes/vector
-                                                            :value (tools/ordered items)}))))
+                                   (p/return #:samak.nodes {:type     :samak.nodes/vector
+                                                            :children (tools/ordered items)}))))
 
-(def p-literal (p/<|> p-accessor p-keyword p-integer p-float p-string p-symbol p-vector p-map))
+(def p-literal (p/<|> p-integer p-float p-accessor p-keyword p-string p-symbol p-vector p-map))
 
 ;; operators
 
