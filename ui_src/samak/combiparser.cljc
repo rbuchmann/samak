@@ -69,15 +69,6 @@
                  :name (:samak.nodes/value expression-name)
                  :rhs  rhs})
 
-#_(defparser p-chan-def [channel-ref p-chan-ref
-                         op (with-ws (p/<|> (p/token* "<-")
-                                            (p/token* "->")))
-                         pipe-call p-fn-call]
-    #:samak.nodes {:type :samak.nodes/chan-def
-                   :name (:samak.nodes/value channel-ref)
-                   :op   op
-                   :pipe pipe-call})
-
 (def p-toplevel (p/<|> (p/<:> p-def) p-pipe))
 
 (defn parse [s]
