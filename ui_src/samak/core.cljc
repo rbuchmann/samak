@@ -1,6 +1,7 @@
 (ns samak.core
-  (:require [samak.stdlib      :as std]
-            [net.cgrand.xforms :as x]))
+  (:require [samak.stdlib             :as std]
+            [samak.transduction-tools :as tt]
+            [net.cgrand.xforms        :as x]))
 
 (defn arity1 [f]
   (fn [x]
@@ -40,14 +41,19 @@
   (fn [x]
     (and (a x) (b x))))
 
+(defn filter* [pred]
+  (if* pred identity tt/ignore))
+
 (def transducer-symbols
-  {'map        (arity1 map)
-   'mapcat     (arity1 mapcat)
-   'filter     (arity1 filter)
-   'remove     (arity1 remove)
-   'reductions (arity2 x/reductions)
-   'take       (arity1 take)
-   'drop       (arity1 drop)})
+  {'mapcat     (fn [f]
+                 (fn [x]
+                   (tt/many (f x))))
+   'filter     filter*
+   'remove     (comp filter* complement)
+   ;; 'reductions (arity2 x/reductions) TBD: Stateful helper in tt ns
+   ;; 'take       (arity1 take)
+   ;; 'drop       (arity1 drop)
+   })
 
 
 (def samak-symbols
@@ -57,12 +63,3 @@
    'and and*
    'if if*
    '! '!})
-
-(defn map* [f]
-  (std/transduction-pipe (map f)))
-
-(defn filter* [f]
-  (std/transduction-pipe (filter f)))
-
-(defn reductions* [f init]
-  (std/transduction-pipe (x/reductions f init)))

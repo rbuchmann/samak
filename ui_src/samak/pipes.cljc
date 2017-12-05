@@ -1,41 +1,84 @@
 (ns samak.pipes
-  #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
-  (:require #?(:cljs
-               [cljs.core.async        :as a :refer [put! chan <! >! timeout close!]]
-               :clj
-               [clojure.core.async     :as a :refer [put! chan <! >! timeout close!
-                                                     go go-loop]])
-            [samak.stdlib              :as std]
-            [samak.tools               :as tools]
-            #?(:cljs [cljs-http.client :as http]
-               :clj  [clj-http.client  :as http])
-            [reagent.core              :as r]))
+  #?@(:clj
+      [(:require [clojure.core.async :as a :refer [<! chan go put!]]
+                 [samak.tools        :refer [log]])]
+      :cljs
+      [(:require [cljs.core.async :as a :refer [<! chan put!]])
+       (:require-macros
+        [cljs.core.async.macros :refer [go]]
+        [samak.tools :refer [log]])]))
 
-(defn from-seq [col]
-  (std/source (a/to-chan col)))
+;; Pipes and flow control
 
-(defn log [args]
-  (let [log-chan (chan)]
-    (go-loop []
-      (when-let [x (<! log-chan)]
-        (tools/log x)
-        (recur)))
-    (std/sink log-chan)))
+(def start-chan (a/promise-chan))
 
+(defprotocol Pipe
+  (in-port [this])
+  (out-port [this]))
 
-#?(:cljs (defn ui []
-           (let [ui-chan (chan)]
-             (go-loop []
-               (when-some [x (<! ui-chan)]
-                 (when-let [node (js/document.getElementById "generated-app")]
-                   (r/render x node))
-                 (recur)))
-             (std/sink ui-chan))))
+(def pipe? (partial satisfies? Pipe))
 
+(defprotocol Disconnectable
+  (disconnect [this]))
 
-(defn http-call [request res]
-  (go (let [req (http/get (:url request))]
-        (a/pipeline 1 res (map :body) req))))
+(defrecord Sink [ch]
+  Pipe
+  (in-port [_] ch)
+  (out-port [_] nil))
 
-(defn http [args]
-  (std/async-pipe http-call))
+(defn sink [ch]
+  (Sink. ch))
+
+(defrecord Source [ch]
+  Pipe
+  (in-port [_] nil)
+  (out-port [_] ch))
+
+(defn source [ch]
+  (Source. (a/mult ch)))
+
+(defrecord Pipethrough [in out]
+  Pipe
+  (in-port [_] in)
+  (out-port [_] out))
+
+(defn pipe [ch]
+  (Pipethrough. ch (a/mult ch)))
+
+(defn transduction-pipe [xf]
+  (pipe (chan 1 xf)))
+
+(defn async-pipe [xf]
+  (let [in-chan (chan)
+        out-chan (chan)]
+    (a/pipeline-async 1 out-chan xf in-chan)
+    (Pipethrough. in-chan (a/mult out-chan))))
+
+(def ports (juxt in-port out-port))
+
+(defn fire! [pipe event]
+  (log (str "Fired event: " event))
+  (let [intake (in-port pipe)]
+    (put! intake event)))
+
+(defrecord CompositePipe [a b]
+  Pipe
+  (in-port [_] (in-port a))
+  (out-port [_] (out-port b))
+  Disconnectable
+  (disconnect [_] (a/untap (out-port a) (in-port b))))
+
+(defn composite-pipe [a b]
+  (CompositePipe. a b))
+
+(defn link [from to]
+  (let [source (out-port from)
+        sink (in-port to)]
+    (a/tap source sink)
+    (composite-pipe from to)))
+
+(defn instrument [f]
+  (transduction-pipe (map f)))
+
+(defn start []
+  (put! start-chan :go))
