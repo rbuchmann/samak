@@ -1,12 +1,12 @@
 (ns samak.pipes
-  #?@(:clj
-      [(:require [clojure.core.async :as a :refer [<! chan go put!]]
-                 [samak.tools        :refer [log]])]
-      :cljs
-      [(:require [cljs.core.async :as a :refer [<! chan put!]])
-       (:require-macros
-        [cljs.core.async.macros :refer [go]]
-        [samak.tools :refer [log]])]))
+  #?@
+   (:clj
+    [(:require
+      [clojure.core.async :as a :refer [chan put!]]
+      [samak.tools :refer [log]])]
+    :cljs
+    [(:require [cljs.core.async :as a :refer [chan put!]])
+     (:require-macros [samak.tools :refer [log]])]))
 
 ;; Pipes and flow control
 

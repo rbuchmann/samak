@@ -30,6 +30,8 @@
             [lein-cooper "1.2.2"]
             [lein-garden "0.3.0"]]
 
+  :main samak.main
+
   :clean-targets ^{:protect false} ["resources/main.js"
                                     "resources/public/js/ui-core.js"
                                     "resources/public/js/ui-core.js.map"
