@@ -1,7 +1,10 @@
 (ns samak.nodes
-  (:require #?(:clj  [clojure.spec.alpha :as s]
-               :cljs [cljs.spec.alpha    :as s])
-            [samak.core                  :as core]))
+  #?@
+   (:clj
+    [(:require [clojure.spec.alpha :as s])]
+    :cljs
+    [(:require [cljs.spec.alpha :as s])
+     (:require-macros [samak.nodes :refer [defnode]])]))
 
 (defn symbol->ns-keyword [sym]
   (->> sym
@@ -18,15 +21,23 @@
 
 (s/def ::value (complement nil?))
 
-(defmacro defnode [name fields & {:keys [references components eval-fn] :as args}]
-  (let [kw (symbol->ns-keyword name)]
-    `(let [spec# (s/merge ::node (s/keys :req ~fields))]
-       (do
-         (s/def ~kw spec#)
-         (defmethod describe-node ~kw [_#] {:references ~references
-                                            :spec       spec#})
-         ~(when eval-fn
-            `(defmethod eval-node ~kw [node#] (~eval-fn node#)))))))
+(def s-merge #?(:clj  'clojure.spec.alpha/merge
+                :cljs 'cljs.spec.alpha/merge))
+(def s-keys #?(:clj  'clojure.spec.alpha/keys
+               :cljs 'cljs.spec.alpha/keys))
+(def s-def #?(:clj  'clojure.spec.alpha/def
+              :cljs 'cljs.spec.alpha/def))
+
+#?(:clj
+   (defmacro defnode [name fields & {:keys [references components eval-fn] :as args}]
+     (let [kw (symbol->ns-keyword name)]
+       `(let [spec# (~samak.nodes/s-merge ::node (~samak.nodes/s-keys :req ~fields))]
+          (do
+            (~samak.nodes/s-def ~kw spec#)
+            (defmethod describe-node ~kw [_#] {:references ~references
+                                               :spec       spec#})
+            ~(when eval-fn
+               `(defmethod eval-node ~kw [node#] (~eval-fn node#))))))))
 
 (defn eval-reordered [nodes]
   (->> nodes
@@ -48,7 +59,9 @@
 
 (defn resolve-symbol [s]
   (or (*symbol-map* s)
-      (throw (Exception. (str "Unknown variable: " s)))))
+      (let [msg (str "Unknown variable: " s)]
+        #?(:clj  (throw (Exception. msg))
+           :cljs (throw (js/Error.  msg)) ))))
 
 (defnode map [::value]
   :eval-fn (comp to-map-fn eval-vals ::kv-pairs))

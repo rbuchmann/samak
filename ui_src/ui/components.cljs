@@ -80,8 +80,8 @@
   [:form
    (into [form-group] args)])
 
-(defn form-input [id placeholder]
-  (let [val (r/atom "")]
+(defn form-input [id placeholder & [state]]
+  (let [val (or state (r/atom ""))]
     (fn []
       [form-control {:key (str "form-input-" id)
                      :type :text

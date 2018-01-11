@@ -5,8 +5,8 @@
       [clojure.core.async :as a :refer [chan put!]]
       [samak.tools :refer [log]])]
     :cljs
-    [(:require [cljs.core.async :as a :refer [chan put!]])
-     (:require-macros [samak.tools :refer [log]])]))
+    [(:require [cljs.core.async :as a :refer [chan put!]]
+               [samak.tools     :refer [log]])]))
 
 ;; Pipes and flow control
 
@@ -16,7 +16,8 @@
   (in-port [this])
   (out-port [this]))
 
-(def pipe? (partial satisfies? Pipe))
+(defn pipe? [p]
+  (satisfies? Pipe p))
 
 (defprotocol Disconnectable
   (disconnect [this]))

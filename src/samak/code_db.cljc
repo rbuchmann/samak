@@ -1,6 +1,9 @@
 (ns samak.code-db
-  (:require [datascript.core       :as d]
-            #?(:cljs [reagent.core :as r])))
+  #?@
+   (:clj
+    [(:require [datascript.core :as d])]
+    :cljs
+    [(:require [datascript.core :as d] [reagent.core :as r])]))
 
 (def schema #:samak.nodes {:argument   {:db/isComponent true
                                         :db/valueType   :db.type/ref}

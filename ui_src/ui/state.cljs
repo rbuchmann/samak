@@ -1,7 +1,7 @@
 (ns ui.state
   (:require [reagent.core   :as r]
             [keybind.core   :as k]
-            [ui.code-db     :as db]
+            [samak.code-db  :as db]
             [ui.modes       :as modes]
             [ui.transitions :as transitions]))
 

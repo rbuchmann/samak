@@ -76,3 +76,5 @@
     (if (:ok result)
       (select-keys result [:value])
       {:error (with-out-str (p/print-error result))})))
+
+(def failure? :error)
