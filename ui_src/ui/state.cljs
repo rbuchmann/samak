@@ -6,8 +6,9 @@
             [ui.transitions :as transitions]))
 
 (defn make-initial-state []
-  {:mode modes/starting-mode
-   :path []})
+  {:mode       modes/starting-mode
+   :path       []
+   :repl-lines []})
 
 (defonce app-state (r/atom (make-initial-state)))
 (defonce db (db/create-ratom-db db/schema))

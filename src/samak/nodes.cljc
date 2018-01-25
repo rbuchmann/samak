@@ -1,9 +1,9 @@
 (ns samak.nodes
   #?@
    (:clj
-    [(:require [clojure.spec.alpha :as s])]
+    []
     :cljs
-    [(:require [cljs.spec.alpha :as s])
+    [
      (:require-macros [samak.nodes :refer [defnode]])]))
 
 (defn symbol->ns-keyword [sym]
@@ -15,29 +15,13 @@
 
 (defmulti describe-node ::type)
 
-(s/def ::type keyword?)
-
-(s/def ::node (s/keys :req [::type]))
-
-(s/def ::value (complement nil?))
-
-(def s-merge #?(:clj  'clojure.spec.alpha/merge
-                :cljs 'cljs.spec.alpha/merge))
-(def s-keys #?(:clj  'clojure.spec.alpha/keys
-               :cljs 'cljs.spec.alpha/keys))
-(def s-def #?(:clj  'clojure.spec.alpha/def
-              :cljs 'cljs.spec.alpha/def))
-
 #?(:clj
    (defmacro defnode [name fields & {:keys [references components eval-fn] :as args}]
      (let [kw (symbol->ns-keyword name)]
-       `(let [spec# (~samak.nodes/s-merge ::node (~samak.nodes/s-keys :req ~fields))]
-          (do
-            (~samak.nodes/s-def ~kw spec#)
-            (defmethod describe-node ~kw [_#] {:references ~references
-                                               :spec       spec#})
-            ~(when eval-fn
-               `(defmethod eval-node ~kw [node#] (~eval-fn node#))))))))
+       `(do
+          (defmethod describe-node ~kw [_#] {:references ~references})
+          ~(when eval-fn
+             `(defmethod eval-node ~kw [node#] (~eval-fn node#)))))))
 
 (defn eval-reordered [nodes]
   (->> nodes

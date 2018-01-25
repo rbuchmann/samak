@@ -74,7 +74,9 @@
   [codemirror-base {:value @state
                     :options {:mode "clojure"
                               :lineNumbers true
-                              :readOnly "nocursor"}}])
+                              :readOnly "nocursor"
+                              ; :autoScroll true
+                              :autoCursor false}}])
 
 (defn form [id & args]
   [:form
@@ -89,6 +91,27 @@
                      :value @val
                      :placeholder placeholder
                      :on-change #(reset! val (-> % .-target .-value))}])))
+
+
+
+(defn submitting-input [id placeholder handler]
+  (let [val (r/atom "")]
+    (fn [id placeholder handler]
+      [form-control {:key (str "form-input-" id)
+               :type :text
+               :id id
+               :value @val
+               :placeholder placeholder
+               :on-change #(reset! val (-> % .-target .-value))
+               :on-key-press #(try
+                                (when (= (.-key %) "Enter")
+                                  (.preventDefault %)
+                                  (.stopPropagation %)
+                                  (handler @val)
+                                  (reset! val ""))
+
+                                (catch js/Error e
+                                  (println e)))}])))
 
 (defn unordered-list [children]
   [:ul (map-indexed
