@@ -44,6 +44,8 @@
 (defn resolve-symbol [s]
   (or (*symbol-map* s)
       (let [msg (str "Unknown variable: " s)]
+        (println "symbols" *symbol-map*)
+        (println "Variable: " (pr-str s))
         #?(:clj  (throw (Exception. msg))
            :cljs (throw (js/Error.  msg)) ))))
 

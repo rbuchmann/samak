@@ -3,28 +3,30 @@
             [samak.nodes       :as n]
             [samak.pipes       :as pipes]
             [samak.core        :as core]
+            [samak.stdlib      :as std]
             [clojure.string    :as str])
   #?(:clj (:gen-class)))
 
-(defn eval-toplevel-defs [ast]
-  (->> ast
-       (filter #(= (::n/type %) ::n/def))
-       (map (fn [{:keys [::n/name ::n/rhs]}]
-              [name (n/eval-node rhs)]))
-       (into {})))
+(defn eval-toplevel-defs [defined-symbols ast]
+  (binding [n/*symbol-map* defined-symbols]
+    (->> ast
+         (filter #(= (::n/type %) ::n/def))
+         (map (fn [{:keys [::n/name ::n/rhs]}]
+                [name (n/eval-node rhs)]))
+         (into {}))))
 
 (defn maybe-wrap-instrumentation [evaluated]
   (if (pipes/pipe? evaluated)
     evaluated
     (pipes/instrument evaluated)))
 
-(defn eval-pipe-op [{:keys [arguments]}]
+(defn eval-pipe-op [{:keys [samak.nodes/arguments]}]
   (->> (n/eval-reordered arguments)
        (map maybe-wrap-instrumentation)
        (partition 2 1)))
 
-(defn eval-pipes [ast defined-symbols]
-  (binding [n/*symbol-map* (merge core/samak-symbols defined-symbols)]
+(defn eval-pipes [defined-symbols ast]
+  (binding [n/*symbol-map* defined-symbols]
     (->> ast
          (filter #(and (= (::n/type %) ::n/binop)
                        (= (::n/op   %) ::n/pipe)))
@@ -39,25 +41,70 @@
     (:value ast)))
 
 (defn parse-samak-string [s]
-  (some->> s
-           p/parse
-           catch-errors))
+  (some-> s
+          p/parse
+          catch-errors))
+
+(def repl-prefixes
+  {\e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))
+   \s (fn [_ _] (pipes/start))})
+
+(defn run-repl-cmd [s defined-symbols]
+  (let [[_ dispatch & rst] s]
+    (when-let [repl-cmd (repl-prefixes dispatch)]
+      (repl-cmd (->> rst (apply str) str/trim) defined-symbols))))
+
+(defn eval-line
+  "Evals some input line in the context of the defined symbols,
+  and returns a new map of symbols"
+  [defined-symbols input]
+  (if (str/starts-with? input "!")
+    (do
+      (run-repl-cmd input defined-symbols)
+      defined-symbols)
+    (let [parsed (parse-samak-string input)
+          new-symbols (some->> parsed
+                               (eval-toplevel-defs defined-symbols)
+                               (merge defined-symbols))
+          pipe-pairs (eval-pipes new-symbols parsed)]
+      #_(print pipe-pairs)
+      (link-all! pipe-pairs)
+      (if new-symbols
+        new-symbols
+        defined-symbols))))
+
+(defn eval-lines [lines]
+  (reduce eval-line (merge core/samak-symbols std/pipe-symbols) lines))
+
+(def tp
+  (str/split-lines
+"in = (pipes/from-seq ([1 2 3] !))
+out = (pipes/log !)
+in | out
+!s"))
+
+(def tp2
+  (str/split-lines
+   " x = inc
+y = (x (1 !))
+!e"))
+
+(def tp3
+  "x = (pipes/from-seq ([1 2 3] !))")
 
 #?(:clj
    (do
      (defn prompt []
        (print "> ")
-       (flush))
+       (flush)
+       (read-line))
 
-     (defn -main [& args]
-       (loop [defined-symbols {}]
-         (prompt)
-         (let [input (read-line)]
-           (when (not= (str/trim input) ":quit")
-             (let [parsed (parse-samak-string input)
-                   new-symbols (some->> parsed
-                                        eval-toplevel-defs
-                                        (merge defined-symbols))
-                   pipe-pairs (eval-pipes parsed new-symbols)]
-               (link-all! pipe-pairs)
-               (recur new-symbols))))))))
+     (defn input-lines []
+       (->> (lazy-seq (cons (prompt) (input-lines)))
+            (take-while (fn [line] (not= "!q" (str/trim line))))))
+
+     (defn -main [filename & args]
+       (-> filename
+           slurp
+           str/split-lines
+           eval-lines))))

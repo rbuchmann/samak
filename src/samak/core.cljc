@@ -59,6 +59,7 @@
 (def samak-symbols
   {'id identity
    'map (arity2 map)
+   'inc inc
    'or or*
    'and and*
    'if if*

@@ -41,3 +41,7 @@
 
 (defn http [args]
   (pipes/async-pipe http-call))
+
+(def pipe-symbols
+  {'pipes/from-seq from-seq
+   'pipes/log      log})
