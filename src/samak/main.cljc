@@ -1,11 +1,11 @@
 (ns samak.main
-  (:require [samak.combiparser :as p]
+  (:gen-class)
+  (:require [clojure.string    :as str]
+            [samak.combiparser :as p]
+            [samak.core        :as core]
             [samak.nodes       :as n]
             [samak.pipes       :as pipes]
-            [samak.core        :as core]
-            [samak.stdlib      :as std]
-            [clojure.string    :as str])
-  #?(:clj (:gen-class)))
+            [samak.stdlib      :as std]))
 
 (defn eval-toplevel-defs [defined-symbols ast]
   (binding [n/*symbol-map* defined-symbols]
@@ -32,9 +32,6 @@
                        (= (::n/op   %) ::n/pipe)))
          (mapcat eval-pipe-op))))
 
-(defn link-all! [pipe-pairs]
-  (map (partial apply pipes/link) pipe-pairs))
-
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
     (println "There was a parse error: " error)
@@ -46,8 +43,7 @@
           catch-errors))
 
 (def repl-prefixes
-  {\e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))
-   \s (fn [_ _] (pipes/start))})
+  {\e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))})
 
 (defn run-repl-cmd [s defined-symbols]
   (let [[_ dispatch & rst] s]
@@ -67,25 +63,22 @@
                                (eval-toplevel-defs defined-symbols)
                                (merge defined-symbols))
           pipe-pairs (eval-pipes new-symbols parsed)]
-      #_(print pipe-pairs)
-      (link-all! pipe-pairs)
-      (if new-symbols
-        new-symbols
-        defined-symbols))))
+      (pipes/link-all! pipe-pairs)
+      (or new-symbols defined-symbols))))
 
 (defn eval-lines [lines]
   (reduce eval-line (merge core/samak-symbols std/pipe-symbols) lines))
 
 (def tp
   (str/split-lines
-"in = (pipes/from-seq ([1 2 3] !))
+"in = (pipes/debug {})
 out = (pipes/log !)
 in | out
-!s"))
+!e"))
 
 (def tp2
   (str/split-lines
-   " x = inc
+"x = inc
 y = (x (1 !))
 !e"))
 

@@ -3,14 +3,15 @@
    (:clj
     [(:require
       [clojure.core.async :as a :refer [chan put!]]
+      [com.stuartsierra.dependency :as dep]
       [samak.tools :refer [log]])]
     :cljs
-    [(:require [cljs.core.async :as a :refer [chan put!]]
-               [samak.tools     :refer [log]])]))
+    [(:require
+      [cljs.core.async :as a :refer [chan put!]]
+      [com.stuartsierra.dependency :as dep]
+      [samak.tools :refer [log]])]))
 
 ;; Pipes and flow control
-
-(def start-chan (a/promise-chan))
 
 (defprotocol Pipe
   (in-port [this])
@@ -50,7 +51,7 @@
   (pipe (chan 1 xf)))
 
 (defn async-pipe [xf]
-  (let [in-chan (chan)
+  (let [in-chan  (chan)
         out-chan (chan)]
     (a/pipeline-async 1 out-chan xf in-chan)
     (Pipethrough. in-chan (a/mult out-chan))))
@@ -72,14 +73,25 @@
 (defn composite-pipe [a b]
   (CompositePipe. a b))
 
-(defn link [from to]
+(defn link! [from to]
   (let [source (out-port from)
-        sink (in-port to)]
+        sink   (in-port to)]
     (a/tap source sink)
     (composite-pipe from to)))
 
 (defn instrument [f]
   (transduction-pipe (map f)))
 
-(defn start []
-  (put! start-chan :go))
+(defn to-depgraph [edges]
+  ; If there is an edge from a->b, then b depends on a
+  (reduce (fn [graph [a b]] (dep/depend graph b a)) (dep/graph) edges))
+
+(defn order-links [pipe-pairs]
+  (let [g (to-depgraph pipe-pairs)]
+    (for [node       (-> g dep/topo-sort reverse)
+          dependency (dep/immediate-dependencies g node)]
+      [dependency node])))
+
+(defn link-all! [pipe-pairs]
+  (doseq [[a b] (order-links pipe-pairs)]
+    (link! a b)))

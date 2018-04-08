@@ -15,8 +15,8 @@
       [samak.tools :as tools])
      (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
-(defn from-seq [col]
-  (pipes/source (a/to-chan col)))
+(defn debug [_]
+  (pipes/pipe (chan)))
 
 (defn log [args]
   (let [log-chan (chan)]
@@ -43,5 +43,8 @@
   (pipes/async-pipe http-call))
 
 (def pipe-symbols
-  {'pipes/from-seq from-seq
-   'pipes/log      log})
+  (merge
+   {'pipes/log   log
+    'pipes/debug debug}
+   #?(:cljs
+      {'pipes/ui ui})))
