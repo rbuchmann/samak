@@ -43,7 +43,12 @@
           catch-errors))
 
 (def repl-prefixes
-  {\e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))})
+  {\f (fn [in symbols] (let [[pipe-name event] (str/split in #" ")
+                             _ (println (str "putting " event " into " pipe-name))
+                             pipe (get symbols (symbol pipe-name))]
+                         (when (pipes/pipe? pipe)
+                           (pipes/fire! pipe event))))
+   \e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))})
 
 (defn run-repl-cmd [s defined-symbols]
   (let [[_ dispatch & rst] s]
