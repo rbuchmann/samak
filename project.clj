@@ -5,7 +5,7 @@
   :description "A hello world application for electron"
   :dependencies [[org.clojure/clojure "1.9.0-beta2"]
                  [org.clojure/clojurescript "1.9.946"]
-                 [figwheel "0.5.10"]
+                 [figwheel "0.5.15"]
                  [reagent "0.6.1" :exclusions [cljsjs/react
                                                cljsjs/react-dom
                                                cljsjs/react-dom-server]]
@@ -26,7 +26,7 @@
                  [org.clojure/test.check "0.9.0"]
                  [ru.prepor/kern "1.2.0-SNAPSHOT"]]
   :plugins [[lein-cljsbuild "1.1.5"]
-            [lein-figwheel "0.5.10"]
+            [lein-figwheel "0.5.15"]
             [lein-cooper "1.2.2"]
             [lein-garden "0.3.0"]]
 
