@@ -23,23 +23,25 @@ In case you don't have electron installed globally, run =npm run start=.
 
 * Todos, roughly sorted by ascending awesomeness*difficulty
 
-- Better state cleanup for reloading
-- Less awful layout
+- Better state cleanup for reloading ✔
+- Actually store state in db
+- Persistence (Should be very easy with datascript)
+- Less awful layout ( Tiny progress )
 - Get rid of multiple react versions -.- ✔
 - Pipe instrumentation, debugging
 - Program structure graph (Pipe layout with e.g. klayjs). Could show
   latest channel state with comment boxes.
-- Allow sending of messages to channels for testing/debugging
+- Allow sending of messages to channels for testing/debugging ✔
 - Pipe configs instead of parameters, to allow different settings for testing etc.
 - Improved single arg function support, e.g. #{:foo id} -> (fn [x] {:foo x}) ✔
-- async requests, easy to model with core.async's "pipeline-async"
-- Type checker (Either piggybacking on core.typed or hand-rolled with
-  core.logic, haven't decided)
+- async requests, easy to model with core.async's "pipeline-async" ✔
+- Type checker (Either piggybacking on +core.typed+ or hand-rolled +with+
+  +core.logic+, haven't decided) -> It's actually either spectrum or hand-rolled now.
 - Typed pipes (related)
 - Code in datascript db: Already works, needs sexpress like editing
   though, not very useful when everything gets parsed from scratch
   every time
-- More backends, python, maybe Go, everything that's easy to generate and has channels
+- More backends, python, maybe Go, everything that's easy to generate and has channels (-> Rust experiment underway)
 - Auto conversion between languages, e.g. input pipe from python,
   output to browser, should be easy to automatically link
 - Disallow lambda, only backus style function composition: Probably
