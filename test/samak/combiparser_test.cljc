@@ -54,6 +54,19 @@
                          :samak.nodes/type  :samak.nodes/keyword
                          :order             3}]})))
 
+(deftest should-parse-multiple-pipes
+  (is (= {:value
+          [#:samak.nodes{:op :samak.nodes/pipe,
+                         :type :samak.nodes/binop,
+                         :arguments
+                         [{:samak.nodes/value (symbol "bar"),
+                           :samak.nodes/type :samak.nodes/symbol,
+                           :order 0}
+                          {:samak.nodes/value (symbol "baz"),
+                           :samak.nodes/type :samak.nodes/symbol,
+                           :order 1}]}]}
+         (cp/parse "bar | baz | quux"))))
+
 (deftest operator-test
   (is (= (p/value cp/p-compose "a . b")
          #:samak.nodes{:op   :samak.nodes/compose
