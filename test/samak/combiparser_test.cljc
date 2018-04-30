@@ -105,7 +105,7 @@
                                                        :samak.nodes/integer}]]}}))
   (is (= (p/value cp/p-def "foo = 1")
          #:samak.nodes{:type         :samak.nodes/def
-                       :name         'foo
+                       :name         {:samak.nodes/value #:samak.nodes{:value 'foo :type :samak.nodes/symbol}}
                        :rhs
                        #:samak.nodes {:value 1
                                       :type  :samak.nodes/integer}}))
@@ -127,7 +127,7 @@
   (is (= (cp/parse "foo = 1 \n bar | baz")
          {:value
           [#:samak.nodes{:type         :samak.nodes/def
-                         :name         'foo
+                         :name         {:samak.nodes/value #:samak.nodes{:value 'foo :type :samak.nodes/symbol}}
                          :rhs
                          #:samak.nodes {:value 1
                                         :type  :samak.nodes/integer}}
