@@ -3,9 +3,8 @@
   (:clj
    [(:require [samak.api :as api])]
    :cljs
-   [
-    (:require-macros [samak.nodes :refer [defnode]]
-                     [samak.api :as api])]))
+   [(:require [samak.api :as api])
+    (:require-macros [samak.nodes :refer [defnode]])]))
 
 (defn symbol->ns-keyword [sym]
   (->> sym

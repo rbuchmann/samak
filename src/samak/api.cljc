@@ -62,5 +62,5 @@
 (defn defexp
   [expression-name rhs]
   #:samak.nodes{:type :samak.nodes/def
-                :name {:samak.nodes/value expression-name}
+                :name expression-name
                 :rhs  rhs})
