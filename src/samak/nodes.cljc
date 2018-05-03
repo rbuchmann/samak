@@ -30,14 +30,20 @@
 
 (def eval-vals (partial map (fn [[k v]] [(::value k) (eval-node v)])))
 
+(declare eval-as-fn)
+
+(defn map-vals [f m]
+  (into {} (for [[k v] m] [k (f v)])))
+
 (defn to-map-fn [m]
-  (fn [x]
-    (->> m
-         (map (fn [[k f]] [k (f x)]))
-         (into {}))))
+  (let [fn-m (map-vals eval-as-fn m)]
+    (fn [x]
+      (->> fn-m
+           (map (fn [[k f]] [k (f x)]))
+           (into {})))))
 
 (defn to-vector-fn [v]
-  (apply juxt v))
+  (apply juxt (map eval-as-fn v)))
 
 (def ^:dynamic *symbol-map* {})
 
@@ -48,34 +54,48 @@
         (println "symbols" *symbol-map*)
         (println "Variable: " (pr-str s))
         #?(:clj  (throw (Exception. msg))
-           :cljs (throw (js/Error.  msg)) ))))
+           :cljs (throw (js/Error.  msg))))))
+
+(defprotocol SamakCallable
+  (to-samak-fn [this]))
+
+(extend-protocol SamakCallable
+  #?(:clj  clojure.lang.PersistentArrayMap
+     :cljs cljs.core/PersistentArrayMap)
+  (to-samak-fn [this] (to-map-fn this))
+  #?(:clj  clojure.lang.PersistentVector
+     :cljs cljs.core/PersistentVector)
+  (to-samak-fn [this] (to-vector-fn this)))
+
+(defn eval-as-fn [f]
+  (cond
+    (satisfies? SamakCallable f) (to-samak-fn f)
+    (ifn? f) f
+    :default (constantly f)))
 
 (defnode map [::value]
-  :eval-fn (comp to-map-fn eval-vals ::kv-pairs))
+  :eval-fn (comp #(into {} %) eval-vals ::kv-pairs))
 
 (defnode vector [::value]
-  :eval-fn (comp to-vector-fn eval-reordered ::children))
+  :eval-fn (comp vec eval-reordered ::children))
 
 (defnode integer [::value]
-  :eval-fn (comp constantly ::value))
+  :eval-fn ::value)
 
 (defnode keyword [::value]
-  :eval-fn (comp constantly ::value))
+  :eval-fn ::value)
 
 (defnode string [::value]
-  :eval-fn (comp constantly ::value))
+  :eval-fn ::value)
 
 (defnode float [::value]
-  :eval-fn (comp constantly ::value))
+  :eval-fn ::value)
 
 (defnode symbol [::value]
   :eval-fn (comp resolve-symbol ::value))
-
-(defnode accessor [::value]
-  :eval-fn ::value)
 
 (defnode def [::name ::rhs])
 
 (defnode fn-call [::name ::argument]
   :eval-fn (fn [{:keys [::fn ::argument]}]
-             ((eval-node fn) (eval-node argument))))
+             ((eval-as-fn (eval-node fn)) (eval-node argument))))

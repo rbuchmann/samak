@@ -1,10 +1,5 @@
 (ns ui.core
   (:require [reagent.core       :as r]
-            [reagent.ratom      :refer [reaction]]
-            [samak.combiparser  :as parser]
-            [samak.emit         :as emit]
-            [clojure.string     :as string :refer [split-lines]]
-            [ui.components      :as ui]
             [ui.state           :as s]
             [ui.components.repl :as repl]))
 

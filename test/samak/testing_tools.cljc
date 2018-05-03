@@ -1,15 +1,14 @@
 (ns samak.testing-tools
-  (:require [samak.combiparser :as cp]
-            [blancas.kern.core :as p]))
+  (:require [samak.lisparser :as lp]))
 
 
 
 (def example-program
   "
-  foo = inc
-  bar = dec
-  baz = 5
-  input | ((foo . bar) baz)")
+  (def foo inc)
+  (def bar dec)
+  (def baz 5)
+  (| input (|> foo bar) baz)")
 
 (def parsed-example
-  (cp/parse example-program))
+  (lp/parse-all example-program))
