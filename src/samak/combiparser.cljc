@@ -2,7 +2,8 @@
   (:require [blancas.kern.core                :as p]
             [blancas.kern.lexer.haskell-style :as hs]
             [samak.parse-tools                :refer [defbinop defliteral with-ws defparser]]
-            [samak.tools                      :as tools]))
+            [samak.tools                      :as tools]
+            [samak.api :as api]))
 
 (declare p-simple-expression)
 
@@ -32,13 +33,10 @@
 (defliteral string [v hs/string-lit] v)
 
 (def p-map (hs/braces (p/bind [kvs (p/many (p/<*> p-keyword (p/fwd p-simple-expression)))]
-                              (p/return
-                               #:samak.nodes {:type :samak.nodes/map
-                                              :kv-pairs (vec kvs)}))))
+                              (p/return (api/map kvs)))))
 
 (def p-vector (hs/brackets (p/bind [items (p/many (p/fwd p-simple-expression))]
-                                   (p/return #:samak.nodes {:type     :samak.nodes/vector
-                                                            :children (tools/ordered items)}))))
+                                   (p/return (api/vector items)))))
 
 (def p-literal (p/<|> p-integer p-float p-accessor p-keyword p-string p-symbol p-vector p-map))
 
@@ -58,16 +56,12 @@
 (defparser p-fn-call [fn-expression p-simple-expression
                       _ (p/many p/white-space)
                       expression p-simple-expression]
-  #:samak.nodes {:type     :samak.nodes/fn-call
-                 :fn       fn-expression
-                 :argument expression})
+  (api/fn-call fn-expression expression))
 
 (defparser p-def [expression-name p-symbol
                   _ (with-ws (p/sym* \=))
                   rhs p-simple-expression]
-  #:samak.nodes {:type :samak.nodes/def
-                 :name (:samak.nodes/value expression-name)
-                 :rhs  rhs})
+  (api/defexp expression-name rhs))
 
 (def p-toplevel (p/<|> (p/<:> p-def) p-pipe))
 

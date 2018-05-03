@@ -1,10 +1,10 @@
 (ns samak.nodes
   #?@
-   (:clj
-    []
-    :cljs
-    [
-     (:require-macros [samak.nodes :refer [defnode]])]))
+  (:clj
+   [(:require [samak.api :as api])]
+   :cljs
+   [(:require [samak.api :as api])
+    (:require-macros [samak.nodes :refer [defnode]])]))
 
 (defn symbol->ns-keyword [sym]
   (->> sym
@@ -43,6 +43,7 @@
 
 (defn resolve-symbol [s]
   (or (*symbol-map* s)
+      (*symbol-map* (api/symbol s))
       (let [msg (str "Unknown variable: " s)]
         (println "symbols" *symbol-map*)
         (println "Variable: " (pr-str s))

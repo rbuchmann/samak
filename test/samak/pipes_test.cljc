@@ -26,8 +26,8 @@
         p   (sut/transduction-pipe (map inc))
         res (chan)
         snk (sut/sink res)]
-    (sut/link p snk)
-    (sut/link src p)
+    (sut/link! p snk)
+    (sut/link! src p)
     (t/is (= [2 3 4] (timeout-<!! (a/into [] res) 1000)))))
 
 
