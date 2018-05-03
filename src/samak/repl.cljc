@@ -1,13 +1,13 @@
 (ns samak.repl
-  (:require [clojure.string    :as str]
-            #?(:clj [clojure.edn :as edn]
+  (:require [clojure.string       :as str]
+            #?(:clj [clojure.edn  :as edn]
                :cljs [cljs.reader :as edn])
-            [samak.combiparser :as p]
-            [samak.core        :as core]
-            [samak.api         :as api]
-            [samak.nodes       :as n]
-            [samak.pipes       :as pipes]
-            [samak.stdlib      :as std]))
+            [samak.lisparser      :as p]
+            [samak.core           :as core]
+            [samak.api            :as api]
+            [samak.nodes          :as n]
+            [samak.pipes          :as pipes]
+            [samak.stdlib         :as std]))
 
 (defn eval-toplevel-defs [defined-symbols ast]
   (binding [n/*symbol-map* defined-symbols]
@@ -76,10 +76,8 @@
     (do
       (run-repl-cmd input defined-symbols)
       defined-symbols)
-    (let [parsed (parse-samak-string input)
-          _ (println (str "parsed: " parsed))
-          new-symbols (eval-exp defined-symbols parsed)]
-      new-symbols)))
+    (let [parsed (parse-samak-string input)]
+      (eval-exp defined-symbols parsed))))
 
 (defn eval-lines [lines]
   (reduce eval-line (merge core/samak-symbols std/pipe-symbols) lines))

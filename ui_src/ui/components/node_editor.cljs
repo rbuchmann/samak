@@ -1,16 +1,15 @@
 (ns ui.components.node-editor
-  (:require [datascript.core   :as d]
-            [ui.components     :as ui]
-            [reagent.core      :as r]
-            [samak.combiparser :as p]
-            [samak.code-db     :as db]))
+  (:require [datascript.core :as d]
+            [ui.components   :as ui]
+            [reagent.core    :as r]
+            [samak.lisparser :as p]
+            [samak.code-db   :as db]))
 
 (defn node-editor [_ db]
   (let [state (r/atom "")]
     (fn [_ db]
-      (let [parse-result (p/parse @state)
-            error? (p/failure? parse-result)
-            validation-state (when error?
+      (let [parse-result     (p/parse @state)
+            validation-state (when (:error parse-result)
                                "error")]
         [:div
          [ui/col {:md 4}
@@ -26,6 +25,6 @@
             (when validation-state
               [ui/help-block [:pre (with-out-str (cljs.pprint/pprint parse-result))]])
             [ui/button {:value "send"
-                        :type "submit"} "Add node"]]]]
+                        :type  "submit"} "Add node"]]]]
          [ui/col {:md 4}
           [:pre (pr-str @db)]]]))))

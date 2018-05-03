@@ -1,25 +1,25 @@
 (ns samak.repl-test
-  (:require [samak.repl :as sut]
+  (:require [samak.repl   :as sut]
             [clojure.test :as t :refer [deftest is]]
-            [clojure.set :as set]))
+            [clojure.set  :as set]))
 
 (def def-node #:samak.nodes{:type :samak.nodes/def
                             :name {:samak.nodes/value 'quux}
-                            :rhs  #:samak.nodes{:type  :samak.nodes/string
-                                                :value "quux"}})
+                            :rhs  #:samak.nodes {:type  :samak.nodes/string
+                                                 :value "quux"}})
 
 (def pipe-env {'bar (constantly "bar")
                'baz (constantly "baz")})
 
-(def pipe-node #:samak.nodes{:op :samak.nodes/pipe,
+(def pipe-node #:samak.nodes{:op   :samak.nodes/pipe,
                              :type :samak.nodes/binop,
                              :arguments
                              [{:samak.nodes/value 'bar,
-                               :samak.nodes/type :samak.nodes/symbol,
-                               :order 0}
+                               :samak.nodes/type  :samak.nodes/symbol,
+                               :order             0}
                               {:samak.nodes/value 'baz,
-                               :samak.nodes/type :samak.nodes/symbol,
-                               :order 1}]})
+                               :samak.nodes/type  :samak.nodes/symbol,
+                               :order             1}]})
 
 ;; eval-pipe-op
 
@@ -43,8 +43,7 @@
         result (sut/eval-toplevel-defs {} exp)]
     (is (contains? result {:samak.nodes/value 'foo}))
     (let [rhs (get result {:samak.nodes/value 'foo})]
-      (is (ifn? rhs))
-      (is (= "bar" (rhs))))))
+      (is (= "bar" rhs)))))
 
 
 ;; eval-exp
