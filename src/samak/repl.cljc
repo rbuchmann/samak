@@ -46,11 +46,10 @@
 
 (def repl-prefixes
   {\f (fn [in symbols] (let [[pipe-name event] (str/split in #" " 2)
-                             pipe (get symbols (api/symbol pipe-name))]
+                             pipe (get symbols (api/symbol (symbol pipe-name)))]
                          (if (pipes/pipe? pipe)
-                           (do (let [arg (or false ;; (get symbols (symbol event))
+                           (do (let [arg (or (get symbols (api/symbol (symbol event)))
                                              (edn/read-string event))]
-                                 (println (str "putting " arg " (one" (type 1) ") into " pipe-name))
                                  (pipes/fire! pipe arg)))
                            (println (str "could not find pipe " pipe-name)))))
    \e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))})
