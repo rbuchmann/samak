@@ -7,7 +7,10 @@
             [samak.api            :as api]
             [samak.nodes          :as n]
             [samak.pipes          :as pipes]
+            [samak.code-db        :as db]
             [samak.stdlib         :as std]))
+
+(def db (db/create-empty-db))
 
 (defn eval-toplevel-defs [defined-symbols ast]
   (binding [n/*symbol-map* defined-symbols]
@@ -50,14 +53,18 @@
                          (if (pipes/pipe? pipe)
                            (do (let [arg (or (get symbols (api/symbol (symbol event)))
                                              (edn/read-string event))]
-                                 (pipes/fire! pipe arg)))
+                                 (pipes/fire! pipe arg))
+                               {})
                            (println (str "could not find pipe " pipe-name)))))
+   \s (fn [in symbols] (db/parse-tree->db db (parse-samak-string in)) {})
+   \l (fn [in _] (println "from db: " (pr-str (db/load-ast db (symbol in)))) {:a 1})
    \e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))})
 
 (defn run-repl-cmd [s defined-symbols]
   (let [[_ dispatch & rst] s]
     (when-let [repl-cmd (repl-prefixes dispatch)]
-      (repl-cmd (->> rst (apply str) str/trim) defined-symbols))))
+      (let [new-symbols (repl-cmd (->> rst (apply str) str/trim) defined-symbols)]
+        (merge defined-symbols new-symbols)))))
 
 (defn eval-exp
   [defined-symbols expression]
@@ -73,10 +80,8 @@
   and returns a new map of symbols"
   [defined-symbols input]
   (if (str/starts-with? input "!")
-    (do
-      (run-repl-cmd input defined-symbols)
-      defined-symbols)
-    (let [parsed (parse-samak-string input)]
+    (run-repl-cmd input defined-symbols)
+    (let [parsed [(parse-samak-string input)]]
       (eval-exp defined-symbols parsed))))
 
 (defn eval-lines [lines]

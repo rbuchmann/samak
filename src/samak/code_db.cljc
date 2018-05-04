@@ -30,3 +30,11 @@
 (defn parse-tree->db [db tree]
   (doto db
     (d/transact! tree)))
+
+(defn load-ast
+  "loads an ast given by SYMBOL from the database"
+  [db sym]
+  (d/q '[:find ?e
+         :where [?e :samak.nodes/type :samak.nodes/def]
+         [?e :samak.nodes/name sym]]
+       db))
