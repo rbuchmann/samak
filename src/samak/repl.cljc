@@ -47,25 +47,6 @@
           p/parse
           catch-errors))
 
-(def repl-prefixes
-  {\f (fn [in symbols] (let [[pipe-name event] (str/split in #" " 2)
-                             pipe (get symbols (api/symbol (symbol pipe-name)))]
-                         (if (pipes/pipe? pipe)
-                           (do (let [arg (or (get symbols (api/symbol (symbol event)))
-                                             (edn/read-string event))]
-                                 (pipes/fire! pipe arg))
-                               {})
-                           (println (str "could not find pipe " pipe-name)))))
-   \s (fn [in symbols] (db/parse-tree->db db (parse-samak-string in)) {})
-   \l (fn [in _] (println "from db: " (pr-str (db/load-ast db (symbol in)))) {:a 1})
-   \e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))})
-
-(defn run-repl-cmd [s defined-symbols]
-  (let [[_ dispatch & rst] s]
-    (when-let [repl-cmd (repl-prefixes dispatch)]
-      (let [new-symbols (repl-cmd (->> rst (apply str) str/trim) defined-symbols)]
-        (merge defined-symbols new-symbols)))))
-
 (defn eval-exp
   [defined-symbols expression]
   (let [new-symbols (some->> expression
@@ -74,6 +55,45 @@
         pipe-pairs (eval-pipes new-symbols expression)]
     (pipes/link-all! pipe-pairs)
     (or new-symbols defined-symbols)))
+
+(defn fire-event-into-named-pipe
+  [symbols pipe-name event]
+  (let [pipe (get symbols (api/symbol (symbol pipe-name)))]
+    (if (pipes/pipe? pipe)
+      (do (let [arg (or (get symbols (api/symbol (symbol event)))
+                        (edn/read-string event))]
+            (pipes/fire! pipe arg))
+          {})
+      (println (str "could not find pipe " pipe-name)))))
+
+(defn persist-expression
+  [input]
+  (let [exp (parse-samak-string input)]
+    (println (str "persisting expression: " exp))
+    (db/parse-tree->db db [exp])))
+
+(defn load-expression
+  [input symbols]
+  (let [sym (symbol input)
+        _ (println (str "loading " sym))
+        ast (db/load-ast db sym)]
+    (println "from db: " ast)
+    (let [e (eval-exp symbols ast)]
+      (println (str "evaled " e))
+      e)))
+
+(def repl-prefixes
+  {\f (fn [in symbols] (let [[pipe-name event] (str/split in #" " 2)]
+                         (fire-event-into-named-pipe symbols pipe-name event)))
+   \s (fn [in _] (persist-expression in) {})
+   \l (fn [in symbols] (load-expression in symbols))
+   \e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))})
+
+(defn run-repl-cmd [s defined-symbols]
+  (let [[_ dispatch & rst] s]
+    (when-let [repl-cmd (repl-prefixes dispatch)]
+      (let [new-symbols (repl-cmd (->> rst (apply str) str/trim) defined-symbols)]
+        (merge defined-symbols new-symbols)))))
 
 (defn eval-line
   "Evals some input line in the context of the defined symbols,

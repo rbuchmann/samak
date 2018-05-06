@@ -48,3 +48,7 @@
   #:samak.nodes{:type :samak.nodes/def
                 :name expression-name
                 :rhs  rhs})
+
+(defn symbol? [s]
+  (and (= :samak.nodes/symbol (:samak.nodes/type s))
+       (contains? s :samak.nodes/value)))
