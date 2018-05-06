@@ -47,9 +47,19 @@
 
 (def ^:dynamic *symbol-map* {})
 
+(defn matches-symbol
+  [s x]
+  (and (api/symbol? x)
+       (= (str (:samak.nodes/value x)) (str s))))
+
+(defn resolve-binding
+  [s [sym rhs]]
+  (when (matches-symbol s sym)
+    rhs))
+
 (defn resolve-symbol [s]
   (or (*symbol-map* s)
-      (*symbol-map* (api/symbol s))
+      (some #(resolve-binding s %) *symbol-map*)
       (let [msg (str "Unknown variable: " s)]
         (println "symbols" *symbol-map*)
         (println "Variable: " (pr-str s))

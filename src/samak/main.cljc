@@ -1,5 +1,5 @@
 (ns samak.main
-  (:gen-class)
+  #?(:clj (:gen-class))
   (:require [clojure.string :as str]
             [samak.repl :as repl]))
 
