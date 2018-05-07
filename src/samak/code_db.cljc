@@ -19,6 +19,8 @@
                                         :db/isComponent true
                                         :db/valueType   :db.type/ref}
                            :expression {:db/isComponent true
+                                        :db/valueType   :db.type/ref}
+                           :name       {:db/isComponent true
                                         :db/valueType   :db.type/ref}})
 
 #?(:cljs (defn create-ratom-db [schema]
@@ -30,3 +32,17 @@
 (defn parse-tree->db [db tree]
   (doto db
     (d/transact! tree)))
+
+(defn load-ast
+  "loads an ast given by SYMBOL from the database"
+  [db sym]
+  (let [res (d/q '[:find [(pull ?e [*]) ...]
+         :in $ ?sym
+         :where
+         [?e :samak.nodes/type :samak.nodes/def]
+         [?e :samak.nodes/name ?symbol]
+         [?symbol :samak.nodes/type :samak.nodes/symbol]
+         [?symbol :samak.nodes/value ?sym]]
+       @db
+       sym)]
+    res))
