@@ -1,5 +1,5 @@
 (ns samak.api
-  (:refer-clojure :exclude [vector map symbol keyword float])
+  (:refer-clojure :exclude [vector map symbol keyword float symbol?])
   (:require [samak.tools :as tools]))
 
 (defn literal [literal-name body]
