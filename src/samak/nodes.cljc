@@ -21,6 +21,8 @@
         #?(:clj  (throw (Exception. msg))
            :cljs (throw (js/Error.  msg))))))
 
+(defmethod eval-node nil [value] (println (str "eval node broke for " value)))
+
 (defmethod eval-node ::map [{:keys [::kv-pairs]}]
   (->> kv-pairs eval-vals (into {})))
 

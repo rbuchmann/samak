@@ -9,6 +9,7 @@
             [samak.pipes          :as pipes]
             [samak.tools          :as t]
             [samak.code-db        :as db]
+            [samak.oasis          :as oasis]
             [samak.stdlib         :as std]))
 
 (def db (db/create-empty-db))
@@ -60,7 +61,7 @@
   [symbols pipe-name event]
   (let [pipe (get symbols (symbol pipe-name))]
     (if (pipes/pipe? pipe)
-      (do (let [arg (or (get symbols (api/symbol (symbol event)))
+      (do (let [arg (or (get symbols (symbol event))
                         (edn/read-string event))]
             (pipes/fire! pipe arg))
           {})
@@ -103,8 +104,10 @@
   [defined-symbols input]
   (if (str/starts-with? input "!")
     (run-repl-cmd input defined-symbols)
-    (let [parsed [(parse-samak-string input)]]
-      (eval-exp defined-symbols parsed))))
+    (when-let [parsed (parse-samak-string input)]
+      (println parsed)
+      (std/notify-source parsed)
+      (eval-exp defined-symbols [parsed]))))
 
 (defn eval-lines [lines]
   (reduce eval-line (merge core/samak-symbols std/pipe-symbols) lines))

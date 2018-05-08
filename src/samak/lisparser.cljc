@@ -27,7 +27,8 @@
     float?   (api/float s)
     vector?  (api/vector (map form->ast s))
     map?     (api/map (map #(mapv form->ast %) s))
-    list?    (list->ast s)))
+    list?    (list->ast s)
+    (throw (str "unexpected form: " s))))
 
 
 (defn parse [s]
@@ -35,7 +36,8 @@
     (let [sexp (edn/read-string s)]
       {:value (form->ast sexp)})
     #?(:cljs (catch js/Error e
-               {:error (.-message e)})
+               (do (console/error "error" e)
+                   {:error e}))
        :clj  (catch Exception e
                {:error (.getMessage e)}))))
 

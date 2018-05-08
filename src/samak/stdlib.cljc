@@ -5,6 +5,7 @@
      [clj-http.client :as http]
      [clojure.core.async :as a :refer [<! put! chan go go-loop]]
      [samak.pipes :as pipes]
+     [samak.code-db :as db]
      [samak.tools :as tools]
      [clojure.string :as str])]
    :cljs
@@ -14,6 +15,7 @@
      [clojure.string :as str]
      [reagent.core :as r]
      [samak.pipes :as pipes]
+     [samak.code-db :as db]
      [samak.tools :as tools])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
@@ -34,11 +36,24 @@
       [tag options? children]
       [tag nil (cons options? children)])))
 
+;; #?(:cljs [(defn conv [a] (do (println "a" (js->clj a)) (js->clj a)))]
+;;    :clj [(defn conv [_])])
+
+#?(:clj (defn to-clj [i] i)
+   :cljs
+   (defn to-clj
+     [x]
+     (into {} (for [k (.keys js/Object x)] [(keyword k) (aget x k)]))))
+
+(defmulti convert-event :type)
+(defmethod convert-event "change" [ev] {:target {:value (.-value (:target ev))}})
+(defmethod convert-event nil [ev] ev)
+
 (defn to-handler [v ch]
   (fn
     ([]    (put! ch {:data  v}))
-    #_([evt] (put! ch {:data  v
-                     :event evt}))))
+    ([evt] (put! ch {:data  v
+                     :event (convert-event (to-clj evt))}))))
 
 (defn transform-element [x ch]
   (if (vector? x)
@@ -62,16 +77,49 @@
            (recur)))
        (pipes/pipe ui-in ui-out))))
 
+#?(:clj (defn ui []))
+
 (defn http-call [request res]
-  (go (let [req (http/get (:url request))]
-        (a/pipeline 1 res (map :body) req))))
+  (go
+    (let [req (http/get (:url request))]
+      (a/pipeline 1 res (map :body) req))))
 
 (defn http []
   (pipes/async-pipe http-call))
 
+(defn db-init [args]
+  (db/create-empty-db))
+
+(defn query-call
+  [db query]
+  (fn [input out]
+    (let [ast (or (db/load-ast db input) :not-found)]
+      (put! out ast))))
+
+(defn db-persist [args]
+  )
+
+(defn db-query [db query]
+  (pipes/async-pipe (query-call db query)))
+
+(def notify-chan (chan 1))
+
+(defn notify-source
+  [ast]
+  (put! notify-chan ast))
+
+(defn eval-notify
+  ""
+  []
+  (let [source (chan 1)]
+    (a/pipeline 1 source (map (fn [x] (println "ast in: " x) x)) notify-chan)
+    (pipes/source source)))
+
+
 (def pipe-symbols
   (merge
-   {'pipes/log   log
-    'pipes/debug debug}
+   {'pipes/log         log
+    'pipes/debug       debug
+    'pipes/eval-notify eval-notify}
    #?(:cljs
       {'pipes/ui ui})))
