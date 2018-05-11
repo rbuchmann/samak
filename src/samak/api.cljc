@@ -39,10 +39,10 @@
   #:samak.nodes {:type     :samak.nodes/vector
                  :children (tools/ordered items)})
 
-(defn fn-call [fn-expression expression]
-  #:samak.nodes {:type     :samak.nodes/fn-call
-                 :fn       fn-expression
-                 :argument expression})
+(defn fn-call [fn-expression args]
+  #:samak.nodes {:type      :samak.nodes/fn-call
+                 :fn        fn-expression
+                 :arguments (tools/ordered args)})
 
 (defn defexp [expression-name rhs]
   #:samak.nodes{:type :samak.nodes/def

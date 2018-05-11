@@ -106,6 +106,6 @@
 
 (defnode def [::name ::rhs])
 
-(defnode fn-call [::name ::argument]
-  :eval-fn (fn [{:keys [::fn ::argument]}]
-             ((eval-as-fn (eval-node fn)) (eval-node argument))))
+(defnode fn-call [::name ::arguments]
+  :eval-fn (fn [{:keys [::fn ::arguments]}]
+             (apply (eval-as-fn (eval-node fn)) (eval-reordered arguments))))

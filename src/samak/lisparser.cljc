@@ -6,14 +6,12 @@
 (declare form->ast)
 
 (defn list->ast [l]
-  (if-let [[f & args] (not-empty l)]
+  (when-let [[f & args] (not-empty l)]
     (case f
       def (apply api/defexp (map form->ast args))
       |>  (api/compose (map form->ast args))
       |   (api/pipe (map form->ast args))
-      ;; TODO: Make this accept multiple args again
-      (api/fn-call (form->ast f) (form->ast (first args))))
-    nil))
+      (api/fn-call (form->ast f) (map form->ast args)))))
 
 (defn form->ast [s]
   (condp (fn [pred item] (pred item)) s
@@ -25,6 +23,7 @@
     vector?  (api/vector (map form->ast s))
     map?     (api/map (map #(mapv form->ast %) s))
     list?    (list->ast s)))
+
 
 (defn parse [s]
   (try
