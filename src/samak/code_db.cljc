@@ -5,9 +5,7 @@
     :cljs
     [(:require [datascript.core :as d] [reagent.core :as r])]))
 
-(def schema #:samak.nodes {:argument   {:db/isComponent true
-                                        :db/valueType   :db.type/ref}
-                           :arguments  {:db/isComponent true
+(def schema #:samak.nodes {:arguments  {:db/isComponent true
                                         :db/valueType   :db.type/ref
                                         :db/cardinality :db.cardinality/many}
                            :rhs        {:db/isComponent true
