@@ -36,3 +36,6 @@
          (fn [i item]
            (assoc item :order i))
          items)))
+
+(defn map-vals [f m]
+  (into {} (for [[k v] m] [k (f v)])))
