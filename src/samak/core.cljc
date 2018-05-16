@@ -3,30 +3,6 @@
             [samak.transduction-tools :as tt]
             [net.cgrand.xforms        :as x]))
 
-(defn arity1 [f]
-  (fn [x]
-    (f x)))
-
-(defn arity2 [f]
-  (fn [x]
-    (fn [y]
-      (f x y))))
-
-(defn arity2 [f]
-  (fn [x]
-    (if (= x '_)
-      (fn [y]
-        (fn [x2]
-          (f x2 y)))
-      (fn [y]
-        (f x y)))))
-
-(defn arity3 [f]
-  (fn [x]
-    (fn [y]
-      (fn [z]
-        (f x y z)))))
-
 (defn if* [pred then else]
   (fn [x]
     (if (pred x)
@@ -40,6 +16,10 @@
 (defn and* [a b]
   (fn [x]
     (and (a x) (b x))))
+
+(defn curry1 [f]
+  (fn [x]
+    (partial f x)))
 
 (defn filter* [pred]
   (if* pred identity tt/ignore))
@@ -58,7 +38,7 @@
 
 (def samak-symbols
   {'id identity
-   'map (arity2 map)
+   'map (curry1 map)
    'inc inc
    'or or*
    'and and*
