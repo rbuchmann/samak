@@ -1,6 +1,7 @@
 (ns samak.core
   (:require [samak.stdlib             :as std]
             [samak.transduction-tools :as tt]
+            [samak.protocols          :as p]
             [net.cgrand.xforms        :as x]))
 
 (defn if* [pred then else]
@@ -9,38 +10,37 @@
       (then x)
       (else x))))
 
-(defn or* [a b]
+(defn or* [& args]
   (fn [x]
-    (or (a x) (b x))))
+    (some #(% x) (map p/eval-as-fn args))))
 
-(defn and* [a b]
+(defn and* [& args]
   (fn [x]
-    (and (a x) (b x))))
+    (every? #(% x) (map p/eval-as-fn args))))
+
+(defn chain [& args]
+  (->> args reverse (map p/eval-as-fn) (apply comp)))
 
 (defn curry1 [f]
   (fn [x]
     (partial f x)))
 
-(defn filter* [pred]
-  (if* pred identity tt/ignore))
-
-(def transducer-symbols
-  {'mapcat     (fn [f]
-                 (fn [x]
-                   (tt/many (f x))))
-   'filter     filter*
-   'remove     (comp filter* complement)
-   ;; 'reductions (arity2 x/reductions) TBD: Stateful helper in tt ns
-   ;; 'take       (arity1 take)
-   ;; 'drop       (arity1 drop)
-   })
-
+(defn curry2 [f]
+  (fn [x y]
+    (partial f x y)))
 
 (def samak-symbols
-  {'id identity
-   'map (curry1 map)
-   'inc inc
-   'or or*
-   'and and*
-   'if if*
-   '! '!})
+  {'|>     chain
+   'id     identity
+   'map    (curry1 map)
+   'filter (curry1 filter)
+   'remove (curry1 remove)
+   'take   (curry1 take)
+   'drop   (curry1 drop)
+   'many   tt/many
+   'ignore tt/ignore
+   'inc    inc
+   'or     or*
+   'and    and*
+   'if     if*
+   '!      '!})

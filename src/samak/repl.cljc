@@ -33,8 +33,7 @@
 (defn eval-pipes [defined-symbols ast]
   (binding [n/*symbol-map* defined-symbols]
     (->> ast
-         (filter #(and (= (::n/type %) ::n/binop)
-                       (= (::n/op   %) ::n/pipe)))
+         (filter #(= (::n/type %) ::n/pipe))
          (mapcat eval-pipe-op))))
 
 (defn catch-errors [ast]

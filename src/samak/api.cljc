@@ -21,16 +21,9 @@
 (defn string [identifier]
   (literal 'string identifier))
 
-(defn binop [op-name args]
-  #:samak.nodes {:type      :samak.nodes/binop
-                 :op        (tools/qualify-kw "samak.nodes" op-name)
-                 :arguments (tools/ordered args)})
-
 (defn pipe [args]
-  (binop 'pipe args))
-
-(defn compose [args]
-  (binop 'compose args)) ;; here be dragons?!?
+  #:samak.nodes {:type      :samak.nodes/pipe
+                 :arguments (tools/ordered args)})
 
 (defn map [kvs]
   #:samak.nodes {:type     :samak.nodes/map

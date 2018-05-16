@@ -9,7 +9,6 @@
   (when-let [[f & args] (not-empty l)]
     (case f
       def (apply api/defexp (map form->ast args))
-      |>  (api/compose (map form->ast args))
       |   (api/pipe (map form->ast args))
       (api/fn-call (form->ast f) (map form->ast args)))))
 
