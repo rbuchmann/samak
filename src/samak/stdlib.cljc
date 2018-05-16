@@ -15,7 +15,7 @@
       [samak.tools :as tools])
      (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
-(defn debug [_]
+(defn debug []
   (pipes/pipe (chan)))
 
 (defn log [args]
