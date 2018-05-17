@@ -86,7 +86,8 @@
                          (fire-event-into-named-pipe symbols pipe-name event)))
    \s (fn [in _] (persist-expression in) {})
    \l (fn [in symbols] (load-expression in symbols))
-   \e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))})
+   \e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))
+   \p (fn [in _] (println (parse-samak-string in)))})
 
 (defn run-repl-cmd [s defined-symbols]
   (let [[_ dispatch & rst] s]
