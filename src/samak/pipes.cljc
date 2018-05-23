@@ -84,7 +84,7 @@
     (composite-pipe from to)))
 
 (defn instrument [f]
-  (-> f p/to-samak-fn map tt/instrumentation-xf transduction-pipe))
+  (-> f p/eval-as-fn map tt/instrumentation-xf transduction-pipe))
 
 (defn to-depgraph [edges]
   ; If there is an edge from a->b, then b depends on a
