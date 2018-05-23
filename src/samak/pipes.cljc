@@ -5,12 +5,15 @@
      [clojure.core.async :as a :refer [chan put!]]
      [com.stuartsierra.dependency :as dep]
      [samak.tools :refer [log]]
+     [samak.protocols :as p]
      [samak.transduction-tools :as tt])]
    :cljs
    [(:require
      [cljs.core.async :as a :refer [chan put!]]
      [com.stuartsierra.dependency :as dep]
-     [samak.tools :refer [log]])]))
+     [samak.protocols :as p]
+     [samak.tools :refer [log]]
+     [samak.transduction-tools :as tt])]))
 
 ;; Pipes and flow control
 
@@ -81,7 +84,7 @@
     (composite-pipe from to)))
 
 (defn instrument [f]
-  (-> f map tt/instrumentation-xf transduction-pipe))
+  (-> f p/to-samak-fn map tt/instrumentation-xf transduction-pipe))
 
 (defn to-depgraph [edges]
   ; If there is an edge from a->b, then b depends on a

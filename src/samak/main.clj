@@ -1,7 +1,7 @@
 (ns samak.main
-  #?(:clj (:gen-class))
+  (:gen-class)
   (:require [clojure.string :as str]
-            [samak.repl :as repl]))
+            [samak.repl     :as repl]))
 
 (def tp
   (str/split-lines

@@ -7,6 +7,7 @@
             [samak.api            :as api]
             [samak.nodes          :as n]
             [samak.pipes          :as pipes]
+            [samak.tools          :as t]
             [samak.code-db        :as db]
             [samak.stdlib         :as std]))
 
@@ -57,7 +58,7 @@
 
 (defn fire-event-into-named-pipe
   [symbols pipe-name event]
-  (let [pipe (get symbols (api/symbol (symbol pipe-name)))]
+  (let [pipe (get symbols (symbol pipe-name))]
     (if (pipes/pipe? pipe)
       (do (let [arg (or (get symbols (api/symbol (symbol event)))
                         (edn/read-string event))]
@@ -86,7 +87,7 @@
                          (fire-event-into-named-pipe symbols pipe-name event)))
    \s (fn [in _] (persist-expression in) {})
    \l (fn [in symbols] (load-expression in symbols))
-   \e (fn [_ symbols] (println "Defined symbols: " (pr-str symbols)))
+   \e (fn [_ symbols] (println "Defined symbols:\n" (t/pretty symbols)))
    \p (fn [in _] (println (parse-samak-string in)))})
 
 (defn run-repl-cmd [s defined-symbols]
@@ -106,3 +107,10 @@
 
 (defn eval-lines [lines]
   (reduce eval-line (merge core/samak-symbols std/pipe-symbols) lines))
+
+
+(def tl
+  (str/split-lines
+   "(def in (pipes/debug))
+  (| in (|> inc inc) (pipes/log))
+  !f in 5"))

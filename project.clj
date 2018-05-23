@@ -4,8 +4,8 @@
   :source-paths ["src" "ui_src"]
   :description "A hello world application for electron"
   :dependencies [[org.clojure/clojure "1.9.0-beta2"]
-                 [org.clojure/clojurescript "1.9.946"]
-                 [figwheel "0.5.15"]
+                 [org.clojure/clojurescript "1.10.238"]
+                 [figwheel "0.5.16"]
                  [reagent "0.6.1" :exclusions [cljsjs/react
                                                cljsjs/react-dom
                                                cljsjs/react-dom-server]]
@@ -23,8 +23,8 @@
                  [camel-snake-kebab "0.4.0"]
                  [keybind "2.1.0"]
                  [org.clojure/test.check "0.9.0"]]
-  :plugins [[lein-cljsbuild "1.1.5"]
-            [lein-figwheel "0.5.15"]
+  :plugins [[lein-cljsbuild "1.1.7"]
+            [lein-figwheel "0.5.16"]
             [lein-cooper "1.2.2"]
             [lein-garden "0.3.0"]]
 
@@ -47,7 +47,7 @@
                     :optimizations  :simple
                     :pretty-print   true
                     :cache-analysis true}}
-    {:source-paths ["ui_src" "dev_src"]
+    {:source-paths ["src" "ui_src" "dev_src"]
      :id           "frontend-dev"
      :compiler     {:output-to      "resources/public/js/ui-core.js"
                     :output-dir     "resources/public/js/ui-out"

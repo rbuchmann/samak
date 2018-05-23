@@ -9,6 +9,11 @@
     #?(:cljs (.log js/console msg)
        :clj (println msg))))
 
+(defn pretty [x]
+  (with-out-str
+    #?(:cljs (cljs.pprint/pprint    x)
+       :clj  (clojure.pprint/pprint x))))
+
 (defn xform-spec [spec f]
   (s/conformer
    (fn [val]

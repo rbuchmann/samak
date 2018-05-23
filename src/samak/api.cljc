@@ -28,6 +28,7 @@
 (defn map [kvs]
   #:samak.nodes {:type     :samak.nodes/map
                  :kv-pairs (vec kvs)})
+
 (defn vector [items]
   #:samak.nodes {:type     :samak.nodes/vector
                  :children (tools/ordered items)})
@@ -39,9 +40,9 @@
 
 (defn defexp [expression-name rhs]
   #:samak.nodes{:type :samak.nodes/def
-                :name expression-name
+                :name (:samak.nodes/value expression-name)
                 :rhs  rhs})
 
-(defn symbol? [s]
+(defn symbol-node? [s]
   (and (= :samak.nodes/symbol (:samak.nodes/type s))
        (contains? s :samak.nodes/value)))
