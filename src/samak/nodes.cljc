@@ -1,12 +1,6 @@
 (ns samak.nodes
-  #?@
-   (:clj
-    [(:require [samak.api :as api]
-               [samak.protocols :as p])]
-    :cljs
-    [(:require [samak.api :as api]
-               [samak.protocols :as p])
-     (:require-macros [samak.nodes :refer [defnode]])]))
+  (:require [samak.api       :as api]
+            [samak.protocols :as p]))
 
 (def ^:dynamic *symbol-map* {})
 

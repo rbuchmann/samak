@@ -18,7 +18,7 @@
 (defn debug []
   (pipes/pipe (chan)))
 
-(defn log [args]
+(defn log []
   (let [log-chan (chan)]
     (go-loop []
       (when-let [x (<! log-chan)]
@@ -39,7 +39,7 @@
   (go (let [req (http/get (:url request))]
         (a/pipeline 1 res (map :body) req))))
 
-(defn http [args]
+(defn http []
   (pipes/async-pipe http-call))
 
 (def pipe-symbols

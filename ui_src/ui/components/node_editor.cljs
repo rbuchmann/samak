@@ -9,20 +9,20 @@
   (let [state (r/atom "")]
     (fn [_ db]
       (let [parse-result     (p/parse @state)
-            validation-state (when (:error parse-result)
+            error-state (when (:error parse-result)
                                "error")]
         [:div
          [ui/col {:md 4}
           [:h1 "Node editor!"]
           [:form {:on-submit #(do
                                 (.preventDefault %)
-                                (when-not error?
+                                (when-not error-state
                                   (println "Submitted: " @state "!")
                                   (println "parsed: " parse-result)
                                   (db/parse-tree->db db (:value parse-result))))}
-           [ui/form-group {:validation-state validation-state}
-            [ui/autofocused-input state validation-state]
-            (when validation-state
+           [ui/form-group {:validation-state error-state}
+            [ui/autofocused-input state error-state]
+            (when error-state
               [ui/help-block [:pre (with-out-str (cljs.pprint/pprint parse-result))]])
             [ui/button {:value "send"
                         :type  "submit"} "Add node"]]]]
