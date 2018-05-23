@@ -111,6 +111,7 @@
 
 (def tl
   (str/split-lines
-   "(def in (pipes/debug))
-  (| in (|> inc inc) (pipes/log))
-  !f in 5"))
+"(def in (pipes/debug))
+(def out (pipes/log))
+(| in (|> inc inc) out)
+!f in 5"))
