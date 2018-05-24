@@ -48,8 +48,11 @@
   (in-port [_] in)
   (out-port [_] out))
 
-(defn pipe [ch]
-  (Pipethrough. ch (a/mult ch)))
+(defn pipe
+  ([ch]
+   (Pipethrough. ch (a/mult ch)))
+  ([in out]
+   (Pipethrough. in (a/mult out))))
 
 (defn transduction-pipe [xf]
   (pipe (chan 1 xf)))
