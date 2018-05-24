@@ -87,7 +87,8 @@
                          (fire-event-into-named-pipe symbols pipe-name event)))
    \s (fn [in _] (persist-expression in) {})
    \l (fn [in symbols] (load-expression in symbols))
-   \e (fn [_ symbols] (println "Defined symbols:\n" (t/pretty symbols)))
+   \o (fn [_ symbols] (reduce (fn [a e] (merge a (eval-exp a [e]))) symbols (oasis/start)))
+   \e (fn [_ symbols] (println "Defined symbols:\n" (t/pretty (sort-by first symbols))))
    \p (fn [in _] (println (parse-samak-string in)))})
 
 (defn run-repl-cmd [s defined-symbols]
