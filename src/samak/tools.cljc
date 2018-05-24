@@ -1,8 +1,10 @@
 (ns samak.tools
   #?@(:clj
-       [(:require [clojure.spec.alpha :as s])]
-       :cljs
-       [(:require [cljs.spec.alpha :as s])]))
+      [(:require [clojure.spec.alpha :as s]
+                 [clojure.pprint     :refer [pprint]])]
+      :cljs
+      [(:require [cljs.spec.alpha :as s]
+                 [cljs.pprint :refer [pprint]])]))
 
 (defn log [& args]
   (let [msg (apply str args)]
@@ -11,8 +13,7 @@
 
 (defn pretty [x]
   (with-out-str
-    #?(:cljs (cljs.pprint/pprint    x)
-       :clj  (clojure.pprint/pprint x))))
+    (pprint x)))
 
 (defn xform-spec [spec f]
   (s/conformer

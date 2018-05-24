@@ -1,7 +1,8 @@
 (ns samak.lisparser
   (:require #?(:clj [clojure.edn  :as edn]
                :cljs [cljs.reader :as edn])
-            [samak.api            :as api]))
+            [samak.api            :as api]
+            [clojure.string       :as str]))
 
 (declare form->ast)
 
@@ -12,9 +13,14 @@
       |   (api/pipe (map form->ast args))
       (api/fn-call (form->ast f) (map form->ast args)))))
 
+(defn key-fn-or-keyword [k]
+  (if (str/starts-with? (name k) "-")
+    (api/key-fn (-> k name (.substring 1) keyword))
+    (api/keyword k)))
+
 (defn form->ast [s]
   (condp (fn [pred item] (pred item)) s
-    keyword? (api/keyword s)
+    keyword? (key-fn-or-keyword s)
     string?  (api/string s)
     symbol?  (api/symbol s)
     integer? (api/integer s)

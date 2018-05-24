@@ -115,3 +115,11 @@
 (def out (pipes/log))
 (| in (|> inc inc) out)
 !f in 5"))
+
+
+(def tl2
+  (str/split-lines
+"(def in (pipes/debug))
+(def out (pipes/log))
+(| in [:div id] out)
+!f in 42"))

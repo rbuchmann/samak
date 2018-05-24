@@ -29,6 +29,7 @@
 
 (defmethod eval-node ::integer [{:keys [::value]}] value)
 (defmethod eval-node ::keyword [{:keys [::value]}] value)
+(defmethod eval-node ::key-fn  [{:keys [::value]}] (fn [x] (value x)))
 (defmethod eval-node ::string  [{:keys [::value]}] value)
 (defmethod eval-node ::float   [{:keys [::value]}] value)
 (defmethod eval-node ::symbol  [{:keys [::value]}] (resolve-symbol value))

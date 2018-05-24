@@ -12,6 +12,9 @@
 (defn keyword [identifier]
   (literal 'keyword identifier))
 
+(defn key-fn [identifier]
+  (literal 'key-fn identifier))
+
 (defn integer [identifier]
   (literal 'integer identifier))
 

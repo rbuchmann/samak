@@ -26,4 +26,7 @@
   (to-samak-fn [this] (to-map-fn this))
   #?(:clj  clojure.lang.PersistentVector
      :cljs cljs.core/PersistentVector)
-  (to-samak-fn [this] (to-vector-fn this)))
+  (to-samak-fn [this] (to-vector-fn this))
+  #?(:clj  clojure.lang.Keyword
+     :cljs cljs.core/Keyword)
+  (to-samak-fn [this] (constantly this)))

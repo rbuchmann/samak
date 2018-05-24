@@ -1,5 +1,5 @@
 (ns samak.nodes-test
-  (:require [samak.nodes :as n]
+  (:require [samak.nodes     :as n]
             [clojure.test    :refer [deftest is]]
             [samak.lisparser :as lp]
             [samak.core      :as core]
@@ -23,9 +23,9 @@
 (deftest eval-program-structures
   (binding [n/*symbol-map* core/samak-symbols]
     (is (= 1 (eval-string "(1 :bar)")))
-    (let [m (eval-string "(:foo ({:foo 1} !))")]
+    (let [m (eval-string "(:-foo ({:foo 1} !))")]
       (is (= m 1)))
-    (is (= [1 :bar] (eval-string "([1 :foo] {:foo :bar})")))))
+    (is (= [1 :foo :bar] (eval-string "([1 :foo :-foo] {:foo :bar})")))))
 
 (deftest should-resolve-plain-symbol
   (binding [n/*symbol-map* core/samak-symbols]
