@@ -39,7 +39,7 @@
 (defn fn-call [fn-expression args]
   #:samak.nodes {:type      :samak.nodes/fn-call
                  :fn        fn-expression
-                 :arguments (tools/ordered args)})
+                 :arguments (if args (tools/ordered args) [])})
 
 (defn defexp [expression-name rhs]
   #:samak.nodes{:type :samak.nodes/def
