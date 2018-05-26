@@ -43,5 +43,5 @@
    'or     or*
    'and    and*
    'if     if*
-   'const 'constantly
+   'const  constantly
    '!      '!})
