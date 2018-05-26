@@ -7,8 +7,8 @@
 (defn if* [pred then else]
   (fn [x]
     (if (pred x)
-      (then x)
-      (else x))))
+      ((p/eval-as-fn then) x)
+      ((p/eval-as-fn else) x))))
 
 (defn or* [& args]
   (fn [x]
@@ -37,6 +37,7 @@
    'remove (curry1 remove)
    'take   (curry1 take)
    'drop   (curry1 drop)
+   '=      (curry1 =)
    'many   tt/many
    'ignore tt/ignore
    'inc    inc
