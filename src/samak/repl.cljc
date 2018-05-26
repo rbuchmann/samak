@@ -80,7 +80,7 @@
 
 (defn start-oasis
   [symbols]
-  (let [code (reduce (fn [a e] (merge a (eval-exp a [e]))) symbols (oasis/start))]
+  (let [code (reduce (fn [a e] (merge a (eval-exp a e))) symbols (oasis/start))]
     (fire-event-into-named-pipe code "oasis" "1")
     code))
 

@@ -47,10 +47,38 @@
 
 (def sum (partial apply +))
 
+(defn filter* [pred]
+  (let [pred* (p/eval-as-fn pred)]
+    (fn [x]
+      (if (pred* x)
+        x
+        (tt/ignore x)))))
+
+(def sum (partial apply +))
+
+(defn red [f init]
+  (let [col (atom (vector))]
+    (fn [x]
+      (swap! col conj x)
+      (reduce f init @col))))
+
+(defn vals*
+  ([]
+   (vals* '[]))
+  ([init]
+   (fn [x]
+     (into init (vals x)))))
+
+(defn concat*
+  [init]
+  (fn [x]
+    (into init x)))
+
+
 (def samak-symbols
   {'|>     chain
    'id     identity
-   'map    (curry1fn map)
+   'map    (curry1fn mapv)
    'filter (curry1fn filter)
    'only   #(if* % identity tt/ignore)
    'remove (curry1fn filter)
@@ -61,6 +89,12 @@
    '=      (curry1 =)
    'many   tt/many
    'ignore tt/ignore
+   'merge  merge
+   'red    red
+   'vals   vals*
+   'sort-by (curry1 sort-by)
+   'first  first
+   'concat concat*
    'inc    inc
    'odd?   odd?
    'even?  even?
@@ -70,4 +104,6 @@
    'if     if*
    'const  constantly
    'when   when*
+   '+      +
+   '-      -
    '!      '!})
