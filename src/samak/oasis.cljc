@@ -3,30 +3,69 @@
             [samak.core   :as core]
             [samak.stdlib :as pipes]))
 
+(defn defncall
+  ([sym fn-name]
+   (api/defexp (api/symbol sym) (api/fn-call (api/symbol fn-name) nil)))
+  ([sym fn-name & args]
+   (api/defexp (api/symbol sym) (api/fn-call (api/symbol fn-name) args))))
+
+(defn pipe
+  ""
+  [& args]
+  (api/pipe (map api/symbol args)))
+
+
 (defn start
   []
   (let [oasis [;; (api/defexp (api/symbol 'div) (api/fn-call (api/symbol 'pipes/ui) [(api/keyword :div)]))
-               (api/defexp (api/symbol 'ui) (api/fn-call (api/symbol 'pipes/ui) nil))
-               (api/defexp (api/symbol 'd) (api/fn-call (api/symbol 'pipes/debug) nil))
-               (api/defexp (api/symbol 'log) (api/fn-call (api/symbol 'pipes/log) nil))
-               (api/defexp (api/symbol 'n) (api/fn-call (api/symbol 'pipes/eval-notify) nil))
+               (defncall 'ui 'pipes/ui)
+               (defncall 'd 'pipes/debug)
+               (defncall 'log 'pipes/log)
+               (defncall 'n 'pipes/eval-notify)
 
-               ;; (api/defexp (api/symbol 'm)
-               ;;   (api/fn-call  (api/symbol 'foo) (api/symbol 'foo)))
-               (api/defexp (api/symbol 'graph) (api/vector [(api/keyword :div) (api/string "eval") (api/symbol 'id)]))
-               (api/pipe [(api/symbol 'n) (api/symbol 'graph) (api/symbol 'ui)])
+               (api/defexp (api/symbol 'graph)
+                 (api/vector [(api/keyword :div)
+                              (api/string "eval ")
+                              (api/symbol 'id)]))
+               (pipe 'n 'graph 'ui)
 
-               (api/pipe [(api/symbol 'n) (api/symbol 'log)])
-               (api/pipe [(api/symbol 'd) (api/key-fn :map) (api/symbol 'log)])
-               (api/pipe [(api/symbol 'ui) (api/symbol 'log)])
+               (pipe 'n 'log)
+               (pipe 'd 'log)
+               (pipe 'ui 'log)
 
-               ;; (api/defexp (api/symbol 'input) (api/key-fn :bar))
-               ;; (api/pipe [()])
+               (defncall 'get-event-val '|>
+                 (api/key-fn :event)
+                 (api/key-fn :target)
+                 (api/key-fn :value))
 
-               (api/defexp (api/symbol 'oasis) (api/fn-call (api/symbol 'pipes/debug) nil))
-               (api/defexp (api/symbol 'repl) (api/vector [(api/keyword :input) (api/map {(api/keyword :on-change) (api/keyword :change)})]))
-               (api/pipe [(api/symbol 'oasis) (api/symbol 'repl) (api/symbol 'ui)])
-               (api/pipe [(api/symbol 'oasis) (api/symbol 'repl) (api/symbol 'log)])
+               (api/defexp (api/symbol 'handle-input)
+                 (api/vector [(api/keyword :div)
+                              (api/symbol 'get-event-val)]))
+               (pipe 'ui 'handle-input 'log)
+
+               (api/defexp (api/symbol 'handle-submit)
+                 (api/vector [(api/keyword :div)
+                              (api/string "submit")]))
+
+               (defncall 'is-change '=
+                 (api/keyword :change))
+
+               (defncall 'is-input '|>
+                 (api/key-fn :data)
+                 (api/symbol 'is-change))
+
+               (defncall 'handle-event '|>
+                 (api/fn-call (api/symbol 'if) [(api/symbol 'is-input)
+                                                (api/symbol 'handle-input)
+                                                (api/symbol 'handle-submit)]))
+
+               (pipe 'ui 'handle-event 'log)
+
+               (defncall 'oasis 'pipes/debug)
+               (api/defexp (api/symbol 'repl)
+                 (api/vector [(api/keyword :form) (api/map {(api/keyword :on-submit) (api/keyword :submit)})
+                              (api/vector [(api/keyword :input) (api/map {(api/keyword :on-change) (api/keyword :change)})])]))
+               (pipe 'oasis 'repl 'ui)
+               (pipe 'oasis 'repl 'log)
                ]]
-    (println "oasis" oasis)
     oasis))
