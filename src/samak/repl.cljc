@@ -83,12 +83,19 @@
       (println (str "evaled " e))
       e)))
 
+(defn start-oasis
+  [symbols]
+  (let [code (reduce (fn [a e] (merge a (eval-exp a [e]))) symbols (oasis/start))]
+    (fire-event-into-named-pipe code "oasis" "1")
+    code))
+
+
 (def repl-prefixes
   {\f (fn [in symbols] (let [[pipe-name event] (str/split in #" " 2)]
                          (fire-event-into-named-pipe symbols pipe-name event)))
    \s (fn [in _] (persist-expression in) {})
    \l (fn [in symbols] (load-expression in symbols))
-   \o (fn [_ symbols] (reduce (fn [a e] (merge a (eval-exp a [e]))) symbols (oasis/start)))
+   \o (fn [_ symbols] (start-oasis symbols))
    \e (fn [_ symbols] (println "Defined symbols:\n" (t/pretty (sort-by first symbols))))
    \p (fn [in _] (println (parse-samak-string in)))})
 

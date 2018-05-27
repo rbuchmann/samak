@@ -45,15 +45,17 @@
      [x]
      (into {} (for [k (.keys js/Object x)] [(keyword k) (aget x k)]))))
 
-(defmulti convert-event :type)
-(defmethod convert-event "change" [ev] {:target {:value (.-value (:target ev))}})
-(defmethod convert-event nil [ev] ev)
+(defmulti convert-event #(:type (to-clj %)))
+(defmethod convert-event "change" [ev] {:target {:value (.-value (:target (to-clj ev)))}})
+(defmethod convert-event "submit" [ev] (do (.preventDefault ev) (to-clj ev)))
+(defmethod convert-event nil [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
+(defmethod convert-event :default [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 
 (defn to-handler [v ch]
   (fn
     ([]    (put! ch {:data  v}))
     ([evt] (put! ch {:data  v
-                     :event (convert-event (to-clj evt))}))))
+                     :event (convert-event evt)}))))
 
 (defn transform-element [x ch]
   (if (vector? x)
