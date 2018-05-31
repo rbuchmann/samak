@@ -30,11 +30,12 @@
     list?    (list->ast s)
     (throw (str "unexpected form: " s))))
 
+(defn parse-form [form]
+  {:value (form->ast form)})
 
 (defn parse [s]
   (try
-    (let [sexp (edn/read-string s)]
-      {:value (form->ast sexp)})
+    (-> s edn/read-string parse-form)
     #?(:cljs (catch js/Error e
                (do (console/error "error" e)
                    {:error e}))

@@ -134,3 +134,21 @@
 (def out (pipes/log))
 (| in [:div id] out)
 !f in 42"))
+
+(def tl3
+  (str/split-lines
+"(def in (pipes/debug))
+(def out (pipes/log))
+(| in (filter even?) out)
+!f in 5
+!f in 6"))
+
+;;
+
+(def tl4
+  (str/split-lines
+   "(def in (pipes/debug))
+(def out (pipes/log))
+(| in (pipes/reductions (|> [:-next :-state] sum) 0) out)
+!f in 5
+!f in 6"))

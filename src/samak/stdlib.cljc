@@ -7,7 +7,9 @@
      [samak.pipes :as pipes]
      [samak.code-db :as db]
      [samak.tools :as tools]
-     [clojure.string :as str])]
+     [clojure.string :as str]
+     [net.cgrand.xforms :as x]
+     [samak.protocols :as p])]
    :cljs
    [(:require
      [cljs-http.client :as http]
@@ -16,7 +18,9 @@
      [reagent.core :as r]
      [samak.pipes :as pipes]
      [samak.code-db :as db]
-     [samak.tools :as tools])
+     [samak.tools :as tools]
+     [samak.protocols :as p]
+     [net.cgrand.xforms :as x])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 (defn debug []
@@ -117,11 +121,21 @@
     (a/pipeline 1 source (map (fn [x] (println "ast in: " x) x)) notify-chan)
     (pipes/source source)))
 
+(defn wrap-samak-reducer [f]
+  (fn [state nxt]
+    (f {:next  nxt
+        :state state})))
+
+(defn reductions* [f init]
+  (pipes/transduction-pipe (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
+                                         init)))
+
 
 (def pipe-symbols
   (merge
    {'pipes/log         log
     'pipes/debug       debug
-    'pipes/eval-notify eval-notify}
+    'pipes/eval-notify eval-notify
+    'pipes/reductions reductions*}
    #?(:cljs
       {'pipes/ui ui})))

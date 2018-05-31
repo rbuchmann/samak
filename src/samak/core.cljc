@@ -29,11 +29,21 @@
   (fn [x y]
     (partial f x y)))
 
+(defn filter* [pred]
+  (let [pred* (p/eval-as-fn pred)]
+    (fn [x]
+      (if (pred* x)
+        x
+        (tt/ignore x)))))
+
+(def sum (partial apply +))
+
+
 (def samak-symbols
   {'|>     chain
    'id     identity
    'map    (curry1 map)
-   'filter (curry1 filter)
+   'filter filter*
    'remove (curry1 remove)
    'take   (curry1 take)
    'drop   (curry1 drop)
@@ -41,6 +51,9 @@
    'many   tt/many
    'ignore tt/ignore
    'inc    inc
+   'odd?   odd?
+   'even?  even?
+   'sum    sum
    'or     or*
    'and    and*
    'if     if*
