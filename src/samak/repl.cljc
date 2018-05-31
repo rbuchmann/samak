@@ -14,29 +14,25 @@
 
 (def db (db/create-empty-db))
 
-(defn eval-toplevel-defs [defined-symbols ast]
-  (binding [n/*symbol-map* defined-symbols]
-    (let [defs (filter (fn [t] (= (::n/type t) ::n/def)) ast)
-          evaled (map (fn [{:keys [::n/name ::n/rhs]}]
-                        [name (n/eval-node rhs)])
-                      defs)]
-      (into {} evaled))))
-
 (defn maybe-wrap-instrumentation [evaluated]
   (if (pipes/pipe? evaluated)
     evaluated
     (pipes/instrument evaluated)))
 
-(defn eval-pipe-op [{:keys [samak.nodes/arguments]}]
-  (->> (n/eval-reordered arguments)
-       (map maybe-wrap-instrumentation)
-       (partition 2 1)))
-
-(defn eval-pipes [defined-symbols ast]
+(defn eval-toplevel-ast [defined-symbols ast]
   (binding [n/*symbol-map* defined-symbols]
-    (->> ast
-         (filter #(= (::n/type %) ::n/pipe))
-         (mapcat eval-pipe-op))))
+    (condp (fn [k form] (= (::n/type form) k)) ast
+      ::n/def (let [{:keys [::n/name ::n/rhs]} ast
+                    node (n/eval-node rhs)
+                    new-symbols (assoc defined-symbols name node)]
+                [node new-symbols])
+      ::n/pipe (let [{:keys [samak.nodes/arguments]} ast
+                     pipe-pairs (->> (n/eval-reordered arguments)
+                                 (map maybe-wrap-instrumentation)
+                                 (partition 2 1))]
+                 (pipes/link-all! pipe-pairs)
+                 [pipe-pairs defined-symbols])
+      [(n/eval-node ast) defined-symbols])))
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -50,11 +46,8 @@
 
 (defn eval-exp
   [defined-symbols expression]
-  (let [new-symbols (some->> expression
-                               (eval-toplevel-defs defined-symbols)
-                               (merge defined-symbols))
-        pipe-pairs (eval-pipes new-symbols expression)]
-    (pipes/link-all! pipe-pairs)
+  (let [[result new-symbols] (eval-toplevel-ast defined-symbols expression)]
+    (print result)
     (or new-symbols defined-symbols)))
 
 (defn fire-event-into-named-pipe
@@ -114,7 +107,7 @@
     (when-let [parsed (parse-samak-string input)]
       (println parsed)
       (std/notify-source parsed)
-      (eval-exp defined-symbols [parsed]))))
+      (eval-exp defined-symbols parsed))))
 
 (defn eval-lines [lines]
   (reduce eval-line (merge core/samak-symbols std/pipe-symbols) lines))
@@ -142,8 +135,6 @@
 (| in (filter even?) out)
 !f in 5
 !f in 6"))
-
-;;
 
 (def tl4
   (str/split-lines
