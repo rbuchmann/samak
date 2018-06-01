@@ -47,21 +47,6 @@
 
 (def sum (partial apply +))
 
-(defn filter* [pred]
-  (let [pred* (p/eval-as-fn pred)]
-    (fn [x]
-      (if (pred* x)
-        x
-        (tt/ignore x)))))
-
-(def sum (partial apply +))
-
-(defn red [f init]
-  (let [col (atom (vector))]
-    (fn [x]
-      (swap! col conj x)
-      (reduce f init @col))))
-
 (defn vals*
   ([]
    (vals* '[]))
@@ -73,6 +58,11 @@
   [init]
   (fn [x]
     (into init x)))
+
+(defn flattenv
+  ""
+  [x]
+  (into [] (flatten x)))
 
 
 (def samak-symbols
@@ -89,11 +79,9 @@
    '=      (curry1 =)
    'many   tt/many
    'ignore tt/ignore
-   'merge  merge
-   'red    red
+   'flatten flattenv
    'vals   vals*
    'sort-by (curry1 sort-by)
-   'first  first
    'concat concat*
    'inc    inc
    'odd?   odd?
@@ -104,6 +92,4 @@
    'if     if*
    'const  constantly
    'when   when*
-   '+      +
-   '-      -
    '!      '!})
