@@ -28,19 +28,14 @@
     (is (every? samak.pipes/pipe? (first (sut/eval-pipe-op pipe-node))))))
 
 
-;; eval-pipes
+;; eval-toplevel-ast
 
-(deftest should-resolve-pipes-from-ast
-  (is (every? samak.pipes/pipe? (first (sut/eval-pipes pipe-env [pipe-node])))))
-
-;; eval-toplevel-defs
-
-(deftest should-evaluate-defs
-  (let [exp [#:samak.nodes{:type :samak.nodes/def
-                           :name {:samak.nodes/value 'foo}
-                           :rhs  #:samak.nodes{:type  :samak.nodes/string
-                                               :value "bar"}}]
-        result (sut/eval-toplevel-defs {} exp)]
+(deftest should-evaluate-ast
+  (let [exp #:samak.nodes{:type :samak.nodes/def
+                          :name {:samak.nodes/value 'foo}
+                          :rhs  #:samak.nodes{:type  :samak.nodes/string
+                                              :value "bar"}}
+        [evald result] (sut/eval-toplevel-ast {} exp)]
     (is (contains? result {:samak.nodes/value 'foo}))
     (let [rhs (get result {:samak.nodes/value 'foo})]
       (is (= "bar" rhs)))))
@@ -49,28 +44,28 @@
 ;; eval-exp
 
 (deftest should-evaluate-expression
-  (let [exp [#:samak.nodes{:type :samak.nodes/def
-                           :name {:samak.nodes/value 'foo}
-                           :rhs  #:samak.nodes{:type  :samak.nodes/string
-                                               :value "bar"}}]]
+  (let [exp #:samak.nodes{:type :samak.nodes/def
+                          :name {:samak.nodes/value 'foo}
+                          :rhs  #:samak.nodes{:type  :samak.nodes/string
+                                              :value "bar"}}]
     (let [result (sut/eval-exp {} exp)]
       (is (contains? result {:samak.nodes/value 'foo})))))
 
 (deftest should-keep-existing-symbols
-  (let [exp [#:samak.nodes{:type :samak.nodes/def
-                           :name {:samak.nodes/value 'foo}
-                           :rhs  #:samak.nodes{:type  :samak.nodes/string
-                                               :value "bar"}}]
+  (let [exp #:samak.nodes{:type :samak.nodes/def
+                          :name {:samak.nodes/value 'foo}
+                          :rhs  #:samak.nodes{:type  :samak.nodes/string
+                                              :value "bar"}}
         symbols {{:samak.nodes/value 'quux} (constantly "quux")}]
   (let [result (sut/eval-exp symbols exp)]
     (is (contains? result {:samak.nodes/value 'foo}))
     (is (contains? result {:samak.nodes/value 'quux})))))
 
 (deftest should-refer-to-env
-  (let [exp [#:samak.nodes{:type :samak.nodes/def
-                           :name {:samak.nodes/value 'foo}
-                           :rhs  #:samak.nodes{:type  :samak.nodes/symbol
-                                               :value {:samak.nodes/value 'bar}}}]
+  (let [exp #:samak.nodes{:type :samak.nodes/def
+                          :name {:samak.nodes/value 'foo}
+                          :rhs  #:samak.nodes{:type  :samak.nodes/symbol
+                                              :value {:samak.nodes/value 'bar}}}
         symbols {{:samak.nodes/value 'bar} (constantly "bar")}
         result (sut/eval-exp symbols exp)]
     (is (contains? result {:samak.nodes/value 'foo}))

@@ -19,6 +19,11 @@
     evaluated
     (pipes/instrument evaluated)))
 
+(defn eval-pipe-op [{:keys [samak.nodes/arguments]}]
+  (->> (n/eval-reordered arguments)
+       (map maybe-wrap-instrumentation)
+       (partition 2 1)))
+
 (defn eval-toplevel-ast [defined-symbols ast]
   (binding [n/*symbol-map* defined-symbols]
     (condp (fn [k form] (= (::n/type form) k)) ast
@@ -26,10 +31,7 @@
                     node (n/eval-node rhs)
                     new-symbols (assoc defined-symbols name node)]
                 [node new-symbols])
-      ::n/pipe (let [{:keys [samak.nodes/arguments]} ast
-                     pipe-pairs (->> (n/eval-reordered arguments)
-                                 (map maybe-wrap-instrumentation)
-                                 (partition 2 1))]
+      ::n/pipe (let [pipe-pairs (eval-pipe-op ast)]
                  (pipes/link-all! pipe-pairs)
                  [pipe-pairs defined-symbols])
       [(n/eval-node ast) defined-symbols])))
@@ -87,8 +89,8 @@
   {\f (fn [in symbols] (let [[pipe-name event] (str/split in #" " 2)]
                          (fire-event-into-named-pipe symbols pipe-name event)))
    \s (fn [in _] (persist-expression in) {})
-   \l (fn [in symbols] (load-expression in symbols))
    \o (fn [_ symbols] (start-oasis symbols))
+   \l (fn [in symbols] (load-expression in symbols))
    \e (fn [_ symbols] (println "Defined symbols:\n" (t/pretty (sort-by first symbols))))
    \p (fn [in _] (println (parse-samak-string in)))})
 
