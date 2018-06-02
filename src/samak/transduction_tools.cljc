@@ -11,13 +11,11 @@
   (reify Streamable
     (get-items [_] [])))
 
-(defn instrumentation-xf [xf]
-  (fn
-    ([] (xf))
-    ([a] (xf a))
-    ([acc nxt]
-     (if (satisfies? Streamable nxt)
-       (reduce xf acc (get-items nxt))
-       (xf acc nxt)))))
+(defn wrap-streamable [xf]
+  (completing (fn [acc nxt]
+                (if (satisfies? Streamable nxt)
+                  (reduce xf acc (get-items nxt))
+                  (xf acc nxt)))))
 
-;; filter p = p ? id : ignore
+(defn instrumentation-xf [xf]
+  (comp xf wrap-streamable))

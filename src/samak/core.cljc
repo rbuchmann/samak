@@ -36,15 +36,20 @@
         x
         (tt/ignore x)))))
 
-(def sum (partial apply +))
+(defn mapcat* [f]
+  (let [f* (p/eval-as-fn f)]
+    (comp tt/many f*)))
 
+(def sum (partial apply +))
 
 (def samak-symbols
   {'|>     chain
    'id     identity
    'map    (curry1 map)
    'filter filter*
+   'mapcat mapcat*
    'remove (curry1 remove)
+   'repeat (curry1 repeat)
    'take   (curry1 take)
    'drop   (curry1 drop)
    '=      (curry1 =)
