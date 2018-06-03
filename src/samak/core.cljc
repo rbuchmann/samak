@@ -21,13 +21,16 @@
 (defn chain [& args]
   (->> args reverse (map p/eval-as-fn) (apply comp)))
 
+(defn curry1fn [f]
+  (fn [x]
+    (let [x* (p/eval-as-fn x)]
+      (fn [y]
+        (f x* y)))))
+
 (defn curry1 [f]
   (fn [x]
-    (partial f x)))
-
-(defn curry2 [f]
-  (fn [x y]
-    (partial f x y)))
+    (fn [y]
+      (f x y))))
 
 (defn filter* [pred]
   (let [pred* (p/eval-as-fn pred)]
@@ -45,10 +48,10 @@
 (def samak-symbols
   {'|>     chain
    'id     identity
-   'map    (curry1 map)
+   'map    (curry1fn map)
    'filter filter*
    'mapcat mapcat*
-   'remove (curry1 remove)
+   'remove (comp filter* not)
    'repeat (curry1 repeat)
    'take   (curry1 take)
    'drop   (curry1 drop)
