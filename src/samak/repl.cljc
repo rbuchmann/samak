@@ -107,7 +107,6 @@
   (if (str/starts-with? input "!")
     (run-repl-cmd input defined-symbols)
     (when-let [parsed (parse-samak-string input)]
-      (println parsed)
       (std/notify-source parsed)
       (eval-exp defined-symbols parsed))))
 
@@ -134,7 +133,15 @@
   (str/split-lines
 "(def in (pipes/debug))
 (def out (pipes/log))
-(| in (filter even?) out)
+(| in (if even? id ignore) out)
+!f in 5
+!f in 6"))
+
+(def tl3b
+  (str/split-lines
+   "(def in (pipes/debug))
+(def out (pipes/log))
+(| in (only even?) out)
 !f in 5
 !f in 6"))
 
@@ -151,5 +158,4 @@
    "(def in (pipes/debug))
 (def out (pipes/log))
 (| in (mapcat (repeat 3)) out)
-!f in 5
-!f in 6"))
+!f in [5 6]"))

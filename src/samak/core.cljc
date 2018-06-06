@@ -5,10 +5,13 @@
             [net.cgrand.xforms        :as x]))
 
 (defn if* [pred then else]
-  (fn [x]
-    (if (pred x)
-      ((p/eval-as-fn then) x)
-      ((p/eval-as-fn else) x))))
+  (let [pred* (p/eval-as-fn pred)
+        then* (p/eval-as-fn then)
+        else* (p/eval-as-fn else)]
+    (fn [x]
+      (if (pred* x)
+        (then* x)
+        (else* x)))))
 
 (defn or* [& args]
   (fn [x]
@@ -17,6 +20,12 @@
 (defn and* [& args]
   (fn [x]
     (every? #(% x) (map p/eval-as-fn args))))
+
+(defn when* [pred]
+  (let [pred* (p/eval-as-fn pred)]
+    (fn [x]
+      (when (pred* x)
+        x))))
 
 (defn chain [& args]
   (->> args reverse (map p/eval-as-fn) (apply comp)))
@@ -32,16 +41,9 @@
     (fn [y]
       (f x y))))
 
-(defn filter* [pred]
-  (let [pred* (p/eval-as-fn pred)]
-    (fn [x]
-      (if (pred* x)
-        x
-        (tt/ignore x)))))
-
-(defn mapcat* [f]
-  (let [f* (p/eval-as-fn f)]
-    (comp tt/many f*)))
+(defn mapcatv [f]
+  (fn [x]
+    (vec (mapcat f x))))
 
 (def sum (partial apply +))
 
@@ -49,9 +51,10 @@
   {'|>     chain
    'id     identity
    'map    (curry1fn map)
-   'filter filter*
-   'mapcat mapcat*
-   'remove (comp filter* not)
+   'filter (curry1fn filter)
+   'only   #(if* % identity tt/ignore)
+   'remove (curry1fn filter)
+   'mapcat mapcatv
    'repeat (curry1 repeat)
    'take   (curry1 take)
    'drop   (curry1 drop)
@@ -66,4 +69,5 @@
    'and    and*
    'if     if*
    'const  constantly
+   'when   when*
    '!      '!})
