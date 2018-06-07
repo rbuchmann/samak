@@ -49,7 +49,7 @@
 (defn eval-exp
   [defined-symbols expression]
   (let [[result new-symbols] (eval-toplevel-ast defined-symbols expression)]
-    (print result)
+    (print "EVALED:" result)
     (or new-symbols defined-symbols)))
 
 (defn fire-event-into-named-pipe

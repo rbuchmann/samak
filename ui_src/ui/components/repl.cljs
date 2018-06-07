@@ -14,7 +14,6 @@
 (defn make [state db]
   (let [lines (reaction (str/join "\n" (:repl-lines @state)))]
     (fn [state db]
-      (println "WAT" lines)
       [ui/grid {:fluid true}
        [ui/row
         [ui/col {:md 4}

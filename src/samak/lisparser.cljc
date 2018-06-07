@@ -37,7 +37,7 @@
   (try
     (-> s edn/read-string parse-form)
     #?(:cljs (catch js/Error e
-               (do (console/error "error" e)
+               (do (js/console.error "error" e)
                    {:error e}))
        :clj  (catch Exception e
                {:error (.getMessage e)}))))
