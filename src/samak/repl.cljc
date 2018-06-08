@@ -46,7 +46,7 @@
 
 (defn parse-samak-string [s]
   (some-> s
-          p/parse
+          p/parse-all
           catch-errors))
 
 (defn eval-exp
@@ -67,9 +67,9 @@
 
 (defn persist-expression
   [input]
-  (let [exp (parse-samak-string input)]
-    (println (str "persisting expression: " exp))
-    (db/parse-tree->db db [exp])))
+  (let [exps (parse-samak-string input)]
+    (println (str "persisting expression: " exps))
+    (db/parse-tree->db db exps)))
 
 (defn load-expression
   [input symbols]
@@ -115,12 +115,20 @@
   (if (str/starts-with? input "!")
     (run-repl-cmd input defined-symbols)
     (when-let [parsed (parse-samak-string input)]
-      (std/notify-source parsed)
-      (eval-exp defined-symbols parsed))))
+      (println parsed)
+      (doseq [expression parsed]
+        (std/notify-source expression))
+      (reduce eval-exp defined-symbols parsed))))
+
+(defn group-repl-cmds [lines]
+  (->> lines
+       (partition-by #(str/starts-with? % "!"))
+       (mapcat (fn [lines] (if (-> lines first (str/starts-with? "!"))
+                            lines
+                            [(str/join " " lines)])))))
 
 (defn eval-lines [lines]
-  (reduce eval-line base-symbols lines))
-
+  (reduce eval-line (merge core/samak-symbols std/pipe-symbols) (group-repl-cmds lines)))
 
 (def tl
   (str/split-lines
