@@ -20,6 +20,8 @@
                  [clj-http "3.7.0"]
                  [automat "0.2.2"]
                  [cljsjs/klayjs "0.3.2-0"]
+                 [cljsjs/elkjs "0.3.0-0"]
+                 ;; [org.eclipse.elk/parent "0.3.0" :extension "pom"]
                  [camel-snake-kebab "0.4.0"]
                  [keybind "2.1.0"]
                  [org.clojure/test.check "0.9.0"]]
