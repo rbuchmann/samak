@@ -32,63 +32,48 @@
             :content    (s/* (s/or :terminal string?
                                    :element  ::hiccup))))
 
-(s/def ::ui-element (s/keys :req [:oasis/order :oasis/element]))
+(s/def ::ui-element (s/keys :req [:oasis.gui/order :oasis.gui/element]))
 
-(s/def :oasis/eval-node (s/keys :req [:samak.nodes/type
-                                      :samak.nodes/name]
-                                :opt [:samak.nodes/rhs]))
+(defmulti parse-element :samak.nodes/type)
+(defmethod parse-element :samak.nodes/pipe [_]
+  (s/keys :req [:samak.nodes/type
+                :samak.nodes/name]
+          :opt [:samak.nodes/rhs]))
 
-(s/def :oasis/state (s/coll-of :oasis/eval-node))
-(s/def :oasis/render (s/map-of keyword? ::ui-element))
-(s/def :oasis/gui (s/map-of keyword? ::ui-element))
+(s/def :oasis.spec/eval-node (s/keys :req [:samak.nodes/type
+                                           :samak.nodes/name]
+                                     :opt [:samak.nodes/rhs]))
+
+(s/def :oasis.spec/pipe (s/keys :req [:samak.nodes/type]
+                                :opt [:samak.nodes/arguments]))
+
+(defmethod parse-element :samak.nodes/def [_] :oasis.spec/eval-node)
+(defmethod parse-element :samak.nodes/pipe [_] :oasis.spec/pipe)
+
+
+(s/def :oasis.spec/parse-element (s/multi-spec parse-element :samak.nodes/type))
+
+(s/def :oasis.spec/state (s/coll-of :oasis.spec/parse-element))
+(s/def :oasis.spec/render (s/map-of keyword? ::ui-element))
+(s/def :oasis.spec/gui (s/map-of keyword? ::ui-element))
 
 (defn start
   []
   (let [oasis [(defncall 'ui 'pipes/ui)
                (defncall 'd 'pipes/debug)
                (defncall 'log 'pipes/log)
+               (defncall 'layout 'pipes/layout)
+
                (defncall 'log-state 'pipes/log (api/string "state: "))
+               (defncall 'log-layout 'pipes/log (api/string "layout: "))
                (defncall 'log-render 'pipes/log (api/string "render: "))
                (defncall 'n 'pipes/eval-notify)
 
-               (api/defexp (api/symbol 'graph-node)
-                 (api/vector [(api/keyword :g)
-                              (api/vector [(api/keyword :rect)
-                                           (api/map {(api/keyword :width) (api/integer 60)
-                                                     (api/keyword :height) (api/integer 40)
-                                                     (api/keyword :x) (api/integer 50)
-                                                     (api/keyword :y) (api/integer 20)
-                                                     (api/keyword :style) (api/map {(api/keyword :fill) (api/string "#fff")
-                                                                                    (api/keyword :stroke) (api/string "darkgrey")})})])
-                              (api/vector [(api/keyword :text)
-                                           (api/map {(api/keyword :x) (api/integer 80)
-                                                     (api/keyword :y) (api/integer 40)})
-                                           (api/key-fn :samak.nodes/name)
-                                           (api/symbol 'get-val)])]))
-
-               (defncall 'graph-nodes '|>
-                 (api/fn-call (api/symbol 'map) [(api/symbol 'graph-node)])
-                 (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :g)])]))
-
-
-
-               (api/defexp (api/symbol 'graph)
-                 (api/map {(api/keyword :graph)
-                           (api/map {(api/keyword :oasis/order)
-                                     (api/integer 5)
-                                     (api/keyword :oasis/element)
-                                     (api/vector [(api/keyword :svg)
-                                                  (api/map {(api/keyword :width) (api/integer 600)
-                                                            (api/keyword :height) (api/integer 400)})
-                                                  (api/vector [(api/keyword :rect)
-                                                               (api/map {(api/keyword :width) (api/integer 600)
-                                                                         (api/keyword :height) (api/integer 400)
-                                                                         (api/keyword :fill) (api/string "#eee")})
-                                                               ])
-                                                  (api/symbol 'graph-nodes)])})}))
 
                (pipe 'd 'log)
                (pipe 'ui 'log)
+
+               get-val
 
                (defncall 'get-event-val '|>
                  (api/key-fn :event)
@@ -121,21 +106,21 @@
                (defncall 'oasis 'pipes/debug)
                (api/defexp (api/symbol 'repl)
                  (api/map {(api/keyword :repl)
-                           (api/map {(api/keyword :oasis/order)
+                           (api/map {(api/keyword :oasis.gui/order)
                                      (api/integer 10)
-                                     (api/keyword :oasis/element)
+                                     (api/keyword :oasis.gui/element)
                                      (api/vector [(api/keyword :form) (api/map {(api/keyword :on-submit) (api/keyword :submit)})
                                                   (api/vector [(api/keyword :input) (api/map {(api/keyword :on-change) (api/keyword :change)})])])})}))
 
                (api/defexp (api/symbol 'header)
                  (api/map {(api/keyword :header)
-                           (api/map {(api/keyword :oasis/order)
+                           (api/map {(api/keyword :oasis.gui/order)
                                      (api/integer 1)
-                                     (api/keyword :oasis/element)
+                                     (api/keyword :oasis.gui/element)
                                      (api/vector [(api/keyword :div)
                                                   (api/string "Oasis")])})}))
 
-               (defncall 'render 'pipes/debug (api/keyword :oasis/render))
+               (defncall 'render 'pipes/debug (api/keyword :oasis.spec/render))
                (pipe 'oasis 'header 'render)
                (pipe 'oasis 'repl 'render)
 
@@ -147,11 +132,152 @@
                                (api/symbol 'flatten)])
                  (api/vector []))
 
-               (defncall 'state 'pipes/debug (api/keyword :oasis/state))
+               (defncall 'state 'pipes/debug (api/keyword :oasis.spec/state))
 
                (pipe 'n 'state-reduce 'state)
                (pipe 'state 'log-state)
-               (pipe 'state 'graph 'render)
+
+
+               ;; convert and layout nodes
+
+               (defncall 'def-name 'str
+                 (api/string "d/")
+                 (api/key-fn :samak.nodes/name))
+
+               (api/defexp (api/symbol 'format-def)
+                 (api/map {(api/keyword :id) (api/symbol 'def-name)
+                           (api/keyword :name) (api/key-fn :samak.nodes/name)
+                           (api/keyword :value) (api/symbol 'get-val)
+                           (api/keyword :width) (api/integer 100)
+                           (api/keyword :height) (api/integer 100)}))
+
+               (defncall 'first-arg-value '|>
+                 (api/key-fn :samak.nodes/arguments)
+                 (api/fn-call (api/symbol 'nth) [(api/integer 0)])
+                 (api/key-fn :samak.nodes/value))
+
+               (defncall 'second-arg-value '|>
+                 (api/key-fn :samak.nodes/arguments)
+                 (api/fn-call (api/symbol 'nth) [(api/integer 1)])
+                 (api/key-fn :samak.nodes/value))
+
+
+               (defncall 'pipe-name 'str
+                 (api/string "p/")
+                 (api/symbol 'first-arg-value)
+                 (api/string "-")
+                 (api/symbol 'second-arg-value))
+
+               (api/defexp (api/symbol 'format-pipe)
+                 (api/map {(api/keyword :id) (api/symbol 'pipe-name)
+                           (api/keyword :source) (api/fn-call (api/symbol 'str)
+                                                              [(api/string "d/")
+                                                               (api/symbol 'first-arg-value)])
+                           (api/keyword :target) (api/fn-call (api/symbol 'str)
+                                                              [(api/string "d/")
+                                                               (api/symbol 'second-arg-value)])}))
+
+
+               (defncall 'is-def '|>
+                 (api/key-fn :samak.nodes/type)
+                 (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/def)]))
+
+               (defncall 'is-pipe '|>
+                 (api/key-fn :samak.nodes/type)
+                 (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/pipe)]))
+
+               (defncall 'filter-nodes 'filter (api/symbol 'is-def))
+               (defncall 'filter-connections 'filter (api/symbol 'is-pipe))
+
+               (defncall 'format-defs '|>
+                 (api/key-fn :defs)
+                 (api/fn-call (api/symbol 'map) [(api/symbol 'format-def)]))
+
+               (defncall 'format-pipes '|>
+                 (api/key-fn :pipes)
+                 (api/fn-call (api/symbol 'map) [(api/symbol 'format-pipe)]))
+
+               (defncall 'format-state '|>
+                 (api/map {(api/keyword :defs) (api/symbol 'filter-nodes)
+                           (api/keyword :pipes) (api/symbol 'filter-connections)})
+                 (api/map {(api/keyword :id) (api/string "root")
+                           (api/keyword :children) (api/symbol 'format-defs)
+                           (api/keyword :edges) (api/symbol 'format-pipes)}))
+
+
+               (defncall 'lay-in 'pipes/debug)
+               (pipe 'state 'format-state 'lay-in)
+
+
+               (pipe 'state 'format-state 'layout)
+
+               (pipe 'layout 'log-layout)
+               (pipe 'lay-in 'log-layout)
+
+
+               (defncall 'translate-str 'str
+                 (api/string "translate(")
+                 (api/key-fn :x)
+                 (api/string ",")
+                 (api/key-fn :y)
+                 (api/string ")"))
+
+               ;; graphing of nodes
+
+               (api/defexp (api/symbol 'graph-node)
+                 (api/vector [(api/keyword :g)
+                              (api/map {(api/keyword :transform)
+                                        (api/symbol 'translate-str) })
+                              (api/vector [(api/keyword :rect)
+                                           (api/map {(api/keyword :width) (api/key-fn :width)
+                                                     (api/keyword :height) (api/key-fn :height)
+                                                     (api/keyword :style) (api/map {(api/keyword :fill) (api/string "#fff")
+                                                                                    (api/keyword :stroke) (api/string "darkgrey")})})])
+                              (api/vector [(api/keyword :text)
+                                           (api/map {(api/keyword :x) (api/integer 0)
+                                                     (api/keyword :y) (api/integer 20)})
+                                           (api/key-fn :name)
+                                           (api/string " - ")
+                                           (api/key-fn :value)])]))
+
+               (defncall 'graph-nodes '|>
+                 (api/key-fn :children)
+                 (api/fn-call (api/symbol 'map) [(api/symbol 'graph-node)])
+                 (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :g)])]))
+
+               (defncall 'graph-connection '|>
+                 (api/key-fn :sections)
+                 (api/fn-call (api/symbol 'nth) [(api/integer 0)])
+                 (api/vector [(api/keyword :g)
+                              (api/vector [(api/keyword :line)
+                                           (api/map {(api/keyword :style) (api/map {(api/keyword :stroke) (api/string "darkgrey")})
+                                                     (api/keyword :x1) (api/fn-call (api/symbol '|>)[(api/key-fn :startPoint) (api/key-fn :x)])
+                                                     (api/keyword :y1) (api/fn-call (api/symbol '|>)[(api/key-fn :startPoint) (api/key-fn :y)])
+                                                     (api/keyword :x2) (api/fn-call (api/symbol '|>)[(api/key-fn :endPoint) (api/key-fn :x)])
+                                                     (api/keyword :y2) (api/fn-call (api/symbol '|>)[(api/key-fn :endPoint) (api/key-fn :y)])})])]))
+
+               (defncall 'graph-connections '|>
+                 (api/key-fn :edges)
+                 (api/fn-call (api/symbol 'map) [(api/symbol 'graph-connection)])
+                 (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :g)])]))
+
+               (api/defexp (api/symbol 'graph)
+                 (api/map {(api/keyword :graph)
+                           (api/map {(api/keyword :oasis.gui/order)
+                                     (api/integer 5)
+                                     (api/keyword :oasis.gui/element)
+                                     (api/vector [(api/keyword :svg)
+                                                  (api/map {(api/keyword :width) (api/integer 600)
+                                                            (api/keyword :height) (api/integer 400)})
+                                                  (api/vector [(api/keyword :rect)
+                                                               (api/map {(api/keyword :width) (api/integer 600)
+                                                                         (api/keyword :height) (api/integer 400)
+                                                                         (api/keyword :fill) (api/string "#eee")})
+                                                               ])
+                                                  (api/symbol 'graph-nodes)
+                                                  (api/symbol 'graph-connections)])})}))
+
+               (pipe 'layout 'graph 'render)
 
                ;; reduce elements to latest version of GUI element
 
@@ -162,7 +288,7 @@
                  (api/map {}))
 
 
-               (defncall 'reducer 'pipes/debug (api/keyword :oasis/gui))
+               (defncall 'reducer 'pipes/debug (api/keyword :oasis.spec/gui))
                (pipe 'render 'elements-reduce 'reducer)
                (pipe 'render 'elements-reduce 'log-render)
 
@@ -171,7 +297,7 @@
                (defncall 'render-elements '|>
                  (api/fn-call (api/symbol 'vals) nil)
                  ;; (api/fn-call (api/symbol 'sort-by [(api/symbol 'id)]))
-                 (api/fn-call (api/symbol 'map) [(api/key-fn :oasis/element)])
+                 (api/fn-call (api/symbol 'map) [(api/key-fn :oasis.gui/element)])
                  (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :div)])]))
 
                (pipe 'reducer 'render-elements 'log)

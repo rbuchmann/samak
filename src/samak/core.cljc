@@ -64,19 +64,30 @@
   [x]
   (into [] (flatten x)))
 
+(defn str* [& args]
+  (let [args* (map p/eval-as-fn args)]
+    (fn [x] (apply str (map #(% x) args*)))))
+
+(defn nth*
+  ""
+  [i]
+  (fn [col]
+    (nth col i)))
+
 
 (def samak-symbols
   {'|>     chain
    'id     identity
    'map    (curry1fn mapv)
-   'filter (curry1fn filter)
+   'filter (curry1fn filterv)
    'only   #(if* % identity tt/ignore)
-   'remove (curry1fn filter)
+   'remove (curry1fn filterv)
    'mapcat mapcatv
    'repeat (curry1 repeat)
    'take   (curry1 take)
    'drop   (curry1 drop)
    '=      (curry1 =)
+   'nth    nth*
    'many   tt/many
    'ignore tt/ignore
    'flatten flattenv
@@ -87,6 +98,7 @@
    'odd?   odd?
    'even?  even?
    'sum    sum
+   'str    str*
    'or     or*
    'and    and*
    'if     if*

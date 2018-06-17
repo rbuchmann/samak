@@ -3,9 +3,10 @@
   (:clj
    [(:require
      [clj-http.client :as http]
-     [clojure.core.async :as a :refer [<! put! chan go go-loop]]
+     [clojure.core.async :as a :refer [<! put! chan go go-loop close!]]
      [samak.pipes :as pipes]
      [samak.code-db :as db]
+     [samak.layout :as layout]
      [samak.tools :as tools]
      [clojure.string :as str]
      [net.cgrand.xforms :as x]
@@ -13,17 +14,18 @@
    :cljs
    [(:require
      [cljs-http.client :as http]
-     [cljs.core.async :as a :refer [<! put! chan]]
+     [cljs.core.async :as a :refer [<! put! chan close!]]
      [clojure.string :as str]
      [reagent.core :as r]
      [samak.pipes :as pipes]
      [samak.code-db :as db]
+     [samak.layout :as layout]
      [samak.tools :as tools]
      [samak.protocols :as p]
      [net.cgrand.xforms :as x])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
-
+;; Utility helper
 
 (defn debug
   ([] (pipes/pipe (chan)))
@@ -40,6 +42,9 @@
            (tools/log x))
          (recur)))
      (pipes/sink log-chan))))
+
+
+;; GUI & Event handling
 
 (defn destructure-element [x]
   (let [[tag options? & children] x]
@@ -92,6 +97,9 @@
 
 #?(:clj (defn ui []))
 
+
+;; Networking
+
 (defn http-call [request res]
   (go
     (let [req (http/get (:url request))]
@@ -99,6 +107,9 @@
 
 (defn http []
   (pipes/async-pipe http-call nil nil))
+
+
+;; DB
 
 (defn db-init [args]
   (db/create-empty-db))
@@ -115,6 +126,9 @@
 (defn db-query [db query]
   (pipes/async-pipe (query-call db query) nil nil))
 
+
+;; Runtime
+
 (def notify-chan (chan 1))
 
 (defn notify-source
@@ -127,6 +141,18 @@
   (let [source (chan 1)]
     (a/pipeline 1 source (map (fn [x] (println "ast in: " x) x)) notify-chan)
     (pipes/source source)))
+
+;; Graph Layouting
+
+ (defn layout-call [request res]
+   (let [handler (fn [result] (put! res result) (close! res))]
+     (layout/compute-layout request [] handler handler)))
+
+(defn layout []
+  (pipes/async-pipe layout-call nil nil))
+
+
+;; General purpose
 
 (defn wrap-samak-reducer [f]
   (fn [state nxt]
@@ -145,4 +171,5 @@
     'pipes/eval-notify eval-notify
     'pipes/reductions reductions*}
    #?(:cljs
-      {'pipes/ui ui})))
+      {'pipes/ui ui
+       'pipes/layout layout})))
