@@ -14,6 +14,9 @@
 
 (def db (db/create-empty-db))
 
+(def base-symbols (merge core/samak-symbols std/pipe-symbols))
+
+
 (defn maybe-wrap-instrumentation [evaluated]
   (if (pipes/pipe? evaluated)
     evaluated
@@ -78,9 +81,14 @@
       (println (str "evaled " e))
       e)))
 
+(defn eval-multi-exp
+  "evaluate a sequence of expressions"
+  [symbols exps]
+  (reduce (fn [a e] (merge a (eval-exp a e))) symbols exps))
+
 (defn start-oasis
   [symbols]
-  (let [code (reduce (fn [a e] (merge a (eval-exp a [e]))) symbols (oasis/start))]
+  (let [code (eval-multi-exp symbols (oasis/start))]
     (fire-event-into-named-pipe code "oasis" "1")
     code))
 
@@ -111,7 +119,7 @@
       (eval-exp defined-symbols parsed))))
 
 (defn eval-lines [lines]
-  (reduce eval-line (merge core/samak-symbols std/pipe-symbols) lines))
+  (reduce eval-line base-symbols lines))
 
 
 (def tl

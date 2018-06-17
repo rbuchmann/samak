@@ -23,16 +23,23 @@
      [net.cgrand.xforms :as x])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
-(defn debug []
-  (pipes/pipe (chan)))
 
-(defn log []
-  (let [log-chan (chan)]
-    (go-loop []
-      (when-let [x (<! log-chan)]
-        (tools/log x)
-        (recur)))
-    (pipes/sink log-chan)))
+
+(defn debug
+  ([] (pipes/pipe (chan)))
+  ([spec] (pipes/checked-pipe (debug) spec spec)))
+
+(defn log
+  ([] (log nil))
+  ([prefix]
+   (let [log-chan (chan)]
+     (go-loop []
+       (when-let [x (<! log-chan)]
+         (if prefix
+           (tools/log prefix x)
+           (tools/log x))
+         (recur)))
+     (pipes/sink log-chan))))
 
 (defn destructure-element [x]
   (let [[tag options? & children] x]
@@ -91,7 +98,7 @@
       (a/pipeline 1 res (map :body) req))))
 
 (defn http []
-  (pipes/async-pipe http-call))
+  (pipes/async-pipe http-call nil nil))
 
 (defn db-init [args]
   (db/create-empty-db))
@@ -106,7 +113,7 @@
   )
 
 (defn db-query [db query]
-  (pipes/async-pipe (query-call db query)))
+  (pipes/async-pipe (query-call db query) nil nil))
 
 (def notify-chan (chan 1))
 

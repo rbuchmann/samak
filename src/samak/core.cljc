@@ -47,10 +47,28 @@
 
 (def sum (partial apply +))
 
+(defn vals*
+  ([]
+   (vals* '[]))
+  ([init]
+   (fn [x]
+     (into init (vals x)))))
+
+(defn concat*
+  [init]
+  (fn [x]
+    (into init x)))
+
+(defn flattenv
+  ""
+  [x]
+  (into [] (flatten x)))
+
+
 (def samak-symbols
   {'|>     chain
    'id     identity
-   'map    (curry1fn map)
+   'map    (curry1fn mapv)
    'filter (curry1fn filter)
    'only   #(if* % identity tt/ignore)
    'remove (curry1fn filter)
@@ -61,6 +79,10 @@
    '=      (curry1 =)
    'many   tt/many
    'ignore tt/ignore
+   'flatten flattenv
+   'vals   vals*
+   'sort-by (curry1 sort-by)
+   'concat concat*
    'inc    inc
    'odd?   odd?
    'even?  even?
