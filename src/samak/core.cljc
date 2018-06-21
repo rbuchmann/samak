@@ -2,6 +2,8 @@
   (:require [samak.stdlib             :as std]
             [samak.transduction-tools :as tt]
             [samak.protocols          :as p]
+            [samak.nodes :as n]
+            [samak.pipes              :as pipes]
             [net.cgrand.xforms        :as x]))
 
 (defn if* [pred then else]
@@ -74,6 +76,27 @@
   (fn [col]
     (nth col i)))
 
+(defn maybe-wrap-instrumentation [evaluated]
+  (if (pipes/pipe? evaluated)
+    evaluated
+    (pipes/instrument evaluated)))
+
+(defn eval-pipe-op [{:keys [samak.nodes/arguments]}]
+  (->> (n/eval-reordered arguments)
+       (map maybe-wrap-instrumentation)
+       (partition 2 1)))
+
+(defn net
+  ""
+  [pipes]
+  (println "net")
+  (println pipes)
+  (let [pipe-pairs (eval-pipe-op pipes)]
+    (println "pipes")
+    (println pipe-pairs)
+    (pipes/link-all! pipe-pairs)))
+
+
 
 (def samak-symbols
   {'|>     chain
@@ -104,4 +127,5 @@
    'if     if*
    'const  constantly
    'when   when*
+   'net    net
    '!      '!})

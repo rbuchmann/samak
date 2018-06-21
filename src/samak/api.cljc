@@ -30,7 +30,9 @@
 
 (defn map [kvs]
   #:samak.nodes {:type     :samak.nodes/map
-                 :kv-pairs (vec kvs)})
+                 :mapkv-pairs (vec (clojure.core/map (fn [[k v]] {:samak.nodes/mapkey k
+                                                                  :samak.nodes/mapvalue v})
+                                                     kvs))})
 
 (defn vector [items]
   #:samak.nodes {:type     :samak.nodes/vector

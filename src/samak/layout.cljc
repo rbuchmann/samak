@@ -12,3 +12,5 @@
      (->  (.layout (js/ELK.) (clj->js graph) (clj->js (or options {})))
           (.then #(success (js->clj % :keywordize-keys true)))
           (.catch #(error (js->clj % :keywordize-keys true))))))
+
+#?(:clj (defn compute-layout [graph options success error]))
