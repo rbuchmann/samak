@@ -28,7 +28,8 @@
        (partition 2 1)))
 
 (defn eval-toplevel-ast [defined-symbols ast]
-  (binding [n/*symbol-map* defined-symbols]
+  (binding [n/*symbol-map* defined-symbols
+            n/*db* db]
     (condp (fn [k form] (= (::n/type form) k)) ast
       ::n/def (let [{:keys [::n/name ::n/rhs]} ast
                     node (n/eval-node rhs)
@@ -66,10 +67,14 @@
       (println (str "could not find pipe " pipe-name)))))
 
 (defn persist-expression
+  [exps]
+  (println (str "persisting expression: " exps))
+  (db/parse-tree->db db exps))
+
+(defn persist-string
   [input]
   (let [exps (parse-samak-string input)]
-    (println (str "persisting expression: " exps))
-    (db/parse-tree->db db exps)))
+    (persist-expression exps)))
 
 (defn load-expression
   [input symbols]
@@ -86,17 +91,23 @@
   [symbols exps]
   (reduce (fn [a e] (merge a (eval-exp a e))) symbols exps))
 
+
+
 (defn start-oasis
   [symbols]
   (let [code (eval-multi-exp symbols (oasis/start))]
     (fire-event-into-named-pipe code "oasis" "1")
     code))
 
+(defn persist-oasis
+  []
+  (oasis/persist db))
 
 (def repl-prefixes
   {\f (fn [in symbols] (let [[pipe-name event] (str/split in #" " 2)]
                          (fire-event-into-named-pipe symbols pipe-name event)))
    \s (fn [in _] (persist-expression in) {})
+   \q (fn [_ symbols] (persist-oasis) symbols )
    \o (fn [_ symbols] (start-oasis symbols))
    \l (fn [in symbols] (load-expression in symbols))
    \e (fn [_ symbols] (println "Defined symbols:\n" (t/pretty (sort-by first symbols))))

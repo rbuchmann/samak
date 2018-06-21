@@ -2,8 +2,10 @@
   (:require [samak.api    :as api]
             [samak.core   :as core]
             [samak.stdlib :as pipes]
+            [samak.spec] ;;include specs as side effect
             #?(:clj  [clojure.spec.alpha :as s]
-               :cljs [cljs.spec.alpha :as s])))
+               :cljs [cljs.spec.alpha :as s])
+            [samak.code-db :as db]))
 
 (defn defncall
   ([sym fn-name]
@@ -34,26 +36,7 @@
 
 (s/def ::ui-element (s/keys :req [:oasis.gui/order :oasis.gui/element]))
 
-(defmulti parse-element :samak.nodes/type)
-(defmethod parse-element :samak.nodes/pipe [_]
-  (s/keys :req [:samak.nodes/type
-                :samak.nodes/name]
-          :opt [:samak.nodes/rhs]))
-
-(s/def :oasis.spec/eval-node (s/keys :req [:samak.nodes/type
-                                           :samak.nodes/name]
-                                     :opt [:samak.nodes/rhs]))
-
-(s/def :oasis.spec/pipe (s/keys :req [:samak.nodes/type]
-                                :opt [:samak.nodes/arguments]))
-
-(defmethod parse-element :samak.nodes/def [_] :oasis.spec/eval-node)
-(defmethod parse-element :samak.nodes/pipe [_] :oasis.spec/pipe)
-
-
-(s/def :oasis.spec/parse-element (s/multi-spec parse-element :samak.nodes/type))
-
-(s/def :oasis.spec/state (s/coll-of :oasis.spec/parse-element))
+(s/def :oasis.spec/state (s/coll-of :samak.spec/toplevel-exp))
 (s/def :oasis.spec/render (s/map-of keyword? ::ui-element))
 (s/def :oasis.spec/gui (s/map-of keyword? ::ui-element))
 
@@ -69,10 +52,6 @@
                (defncall 'log-render 'pipes/log (api/string "render: "))
                (defncall 'n 'pipes/eval-notify)
 
-
-               (pipe 'd 'log)
-               (pipe 'ui 'log)
-
                get-val
 
                (defncall 'get-event-val '|>
@@ -83,7 +62,6 @@
                (api/defexp (api/symbol 'handle-input)
                  (api/vector [(api/keyword :div)
                               (api/symbol 'get-event-val)]))
-               (pipe 'ui 'handle-input 'log)
 
                (api/defexp (api/symbol 'handle-submit)
                  (api/vector [(api/keyword :div)
@@ -101,9 +79,10 @@
                                                 (api/symbol 'handle-input)
                                                 (api/symbol 'handle-submit)]))
 
-               (pipe 'ui 'handle-event 'log)
 
-               (defncall 'oasis 'pipes/debug)
+               (api/defexp (api/symbol 'test) (api/map {(api/keyword :test) (api/keyword :foo)}))
+
+               (defncall 'start 'pipes/debug)
                (api/defexp (api/symbol 'repl)
                  (api/map {(api/keyword :repl)
                            (api/map {(api/keyword :oasis.gui/order)
@@ -121,8 +100,6 @@
                                                   (api/string "Oasis")])})}))
 
                (defncall 'render 'pipes/debug (api/keyword :oasis.spec/render))
-               (pipe 'oasis 'header 'render)
-               (pipe 'oasis 'repl 'render)
 
                ;; keep evaluations in state reduction
 
@@ -134,8 +111,6 @@
 
                (defncall 'state 'pipes/debug (api/keyword :oasis.spec/state))
 
-               (pipe 'n 'state-reduce 'state)
-               (pipe 'state 'log-state)
 
 
                ;; convert and layout nodes
@@ -206,13 +181,6 @@
 
 
                (defncall 'lay-in 'pipes/debug)
-               (pipe 'state 'format-state 'lay-in)
-
-
-               (pipe 'state 'format-state 'layout)
-
-               (pipe 'layout 'log-layout)
-               (pipe 'lay-in 'log-layout)
 
 
                (defncall 'translate-str 'str
@@ -277,7 +245,6 @@
                                                   (api/symbol 'graph-nodes)
                                                   (api/symbol 'graph-connections)])})}))
 
-               (pipe 'layout 'graph 'render)
 
                ;; reduce elements to latest version of GUI element
 
@@ -289,18 +256,42 @@
 
 
                (defncall 'reducer 'pipes/debug (api/keyword :oasis.spec/gui))
-               (pipe 'render 'elements-reduce 'reducer)
-               (pipe 'render 'elements-reduce 'log-render)
 
                ;; render elements to hiccup
-
                (defncall 'render-elements '|>
+
                  (api/fn-call (api/symbol 'vals) nil)
                  ;; (api/fn-call (api/symbol 'sort-by [(api/symbol 'id)]))
                  (api/fn-call (api/symbol 'map) [(api/key-fn :oasis.gui/element)])
                  (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :div)])]))
 
-               (pipe 'reducer 'render-elements 'log)
-               (pipe 'reducer 'render-elements 'ui)
+               (defncall 'oasis 'net
+                 (pipe 'd 'log)
+                 (pipe 'ui 'log)
+                 (pipe 'ui 'handle-input 'log)
+                 (pipe 'ui 'handle-event 'log)
+
+                 (pipe 'start 'header 'render)
+                 (pipe 'start 'repl 'render)
+
+                 (pipe 'n 'state-reduce 'state)
+                 (pipe 'state 'log-state)
+
+                 (pipe 'state 'format-state 'lay-in)
+                 (pipe 'state 'format-state 'layout)
+
+                 (pipe 'layout 'log-layout)
+                 (pipe 'lay-in 'log-layout)
+
+                 (pipe 'layout 'graph 'render)
+                 (pipe 'render 'elements-reduce 'reducer)
+                 (pipe 'render 'elements-reduce 'log-render)
+
+                 (pipe 'reducer 'render-elements 'log)
+                 (pipe 'reducer 'render-elements 'ui)
+                 )
                ]]
     oasis))
+
+(defn persist [db]
+  (db/parse-tree->db db (start)))

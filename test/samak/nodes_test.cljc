@@ -3,7 +3,8 @@
             [clojure.test    :refer [deftest is]]
             [samak.lisparser :as lp]
             [samak.core      :as core]
-            [samak.api       :as api]))
+            [samak.api       :as api]
+            [samak.code-db :as db]))
 
 
 (def eval-string (comp n/eval-node :value lp/parse))
@@ -30,3 +31,20 @@
 (deftest should-resolve-plain-symbol
   (binding [n/*symbol-map* core/samak-symbols]
     (is (= inc (n/resolve-symbol 'inc)))))
+
+(deftest should-resolve-from-db
+  (with-redefs-fn {#'db/load-ast (fn [db s] (is (= s 'foo)) (api/keyword :foo))}
+    #(binding [n/*symbol-map* core/samak-symbols]
+       (is (= :foo (n/resolve-symbol 'foo))))))
+
+(deftest should-resolve-multi-exp
+  (with-redefs-fn {#'db/load-ast (fn [db s] (is (= s 'foo)) (api/integer 1))}
+    #(binding [n/*symbol-map* core/samak-symbols]
+       (is (= 2 (n/eval-node (api/fn-call (api/symbol 'sum)
+                                             [(api/vector [(api/integer 1)
+                                                           (api/symbol 'foo)])])))))))
+
+
+
+(deftest should-evaluate-map
+  (is (= {:test 1} (n/eval-node (api/map {(api/keyword :test) (api/integer 1)})))))

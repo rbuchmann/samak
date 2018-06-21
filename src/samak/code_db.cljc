@@ -18,8 +18,9 @@
                                         :db/valueType   :db.type/ref}
                            :expression {:db/isComponent true
                                         :db/valueType   :db.type/ref}
-                           :name       {:db/isComponent true
-                                        :db/valueType   :db.type/ref}})
+                           ;; :name       {:db/unique      :db.unique/value
+                           ;;              :db/valueType   :db.type/string}
+                           })
 
 #?(:cljs (defn create-ratom-db [schema]
            (r/atom (d/empty-db schema) :meta {:listeners (atom {}) })))
@@ -38,9 +39,7 @@
          :in $ ?sym
          :where
          [?e :samak.nodes/type :samak.nodes/def]
-         [?e :samak.nodes/name ?symbol]
-         [?symbol :samak.nodes/type :samak.nodes/symbol]
-         [?symbol :samak.nodes/value ?sym]]
+         [?e :samak.nodes/name ?sym]]
        @db
        sym)]
-    res))
+    (first res)))

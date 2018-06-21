@@ -1,8 +1,10 @@
 (ns samak.nodes
   (:require [samak.api       :as api]
+            [samak.code-db   :as db]
             [samak.protocols :as p]))
 
 (def ^:dynamic *symbol-map* {})
+(def ^:dynamic *db*)
 
 (defmulti eval-node ::type)
 
@@ -13,8 +15,17 @@
 
 (def eval-vals (partial map (fn [[k v]] [(::value k) (eval-node v)])))
 
+(defn resolve-from-db
+  ""
+  [s]
+  (let [node (eval-node (db/load-ast *db* s))]
+    ;; here be stateful dragons
+    node))
+
+
 (defn resolve-symbol [s]
   (or (*symbol-map* s)
+      (resolve-from-db s)
       (let [msg (str "Unknown variable: " s)]
         (println "symbols" *symbol-map*)
         (println "Variable: " (pr-str s))
@@ -23,8 +34,11 @@
 
 (defmethod eval-node nil [value] (println (str "eval node broke for " value)))
 
-(defmethod eval-node ::map [{:keys [::kv-pairs]}]
-  (->> kv-pairs eval-vals (into {})))
+(defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
+  (reduce (fn [a {:keys [::mapkey ::mapvalue]}]
+            (assoc a (::value mapkey) (eval-node mapvalue)))
+          {}
+          mapkv-pairs))
 
 (defmethod eval-node ::vector [{:keys [::children]}]
   (-> children eval-reordered vec))
@@ -37,6 +51,8 @@
 (defmethod eval-node ::symbol  [{:keys [::value]}] (resolve-symbol value))
 
 (defmethod eval-node ::def [{:keys [::name ::rhs]}])
+
+(defmethod eval-node ::pipe [ast] ast)
 
 (defmethod eval-node ::fn-call [{:keys [::fn ::arguments]}]
   (apply (p/eval-as-fn (eval-node fn)) (eval-reordered arguments)))
