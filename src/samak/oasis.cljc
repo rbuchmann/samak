@@ -50,6 +50,7 @@
                (defncall 'log-state 'pipes/log (api/string "state: "))
                (defncall 'log-layout 'pipes/log (api/string "layout: "))
                (defncall 'log-render 'pipes/log (api/string "render: "))
+               (defncall 'log-events 'pipes/log (api/string "events: "))
                (defncall 'n 'pipes/eval-notify)
 
                get-val
@@ -60,24 +61,77 @@
                  (api/key-fn :value))
 
                (api/defexp (api/symbol 'handle-input)
-                 (api/vector [(api/keyword :div)
-                              (api/symbol 'get-event-val)]))
+                 (api/map {(api/keyword :input)
+                           (api/symbol 'get-event-val)}))
 
                (api/defexp (api/symbol 'handle-submit)
-                 (api/vector [(api/keyword :div)
-                              (api/string "submit")]))
+                 (api/map {(api/keyword :submit)
+                           (api/string "submit")}))
 
                (defncall 'is-change '=
                  (api/keyword :change))
+
+               (defncall 'is-submit '=
+                 (api/keyword :submit))
 
                (defncall 'is-input '|>
                  (api/key-fn :data)
                  (api/symbol 'is-change))
 
-               (defncall 'handle-event '|>
-                 (api/fn-call (api/symbol 'if) [(api/symbol 'is-input)
-                                                (api/symbol 'handle-input)
-                                                (api/symbol 'handle-submit)]))
+               (defncall 'is-submit-data '|>
+                 (api/key-fn :data)
+                 (api/symbol 'is-submit))
+
+               (defncall 'filter-input 'if
+                 (api/symbol 'is-input)
+                 (api/symbol 'handle-input)
+                 (api/symbol 'ignore))
+
+               (defncall 'filter-submit 'if
+                 (api/symbol 'is-submit-data)
+                 (api/symbol 'handle-submit)
+                 (api/symbol 'ignore))
+
+               (defncall 'raw-events 'pipes/debug)
+               (defncall 'reduced-events 'pipes/debug)
+               (defncall 'events 'pipes/debug)
+
+               (defncall 'merge-state '|>
+                 (api/vector [(api/key-fn :state) (api/key-fn :next)])
+                 (api/fn-call (api/symbol 'concat) [(api/map {})]))
+
+               (defncall 'has-submit '|>
+                 (api/key-fn :state)
+                 (api/key-fn :submit))
+
+               (defncall 'select-input '|>
+                 (api/key-fn :state)
+                 (api/key-fn :input))
+
+               (defncall 'merge-without-submit '|>
+                 (api/vector [(api/map {(api/keyword :input) (api/symbol 'select-input)})
+                              (api/key-fn :next)])
+                 (api/fn-call (api/symbol 'concat) [(api/map {})]))
+
+               (defncall 'input-reduce 'pipes/reductions
+                 (api/fn-call (api/symbol 'if) [(api/symbol 'has-submit)
+                                                (api/symbol 'merge-without-submit)
+                                                (api/symbol 'merge-state)])
+                 (api/map {}))
+
+
+               (defncall 'is-complete 'and
+                 (api/key-fn :input)
+                 (api/key-fn :submit))
+
+               (defncall 'only-complete 'only (api/symbol 'is-complete))
+
+
+               (defncall 'ev 'pipes/eval-line)
+
+               (api/defexp (api/symbol 'make-eval)
+                 (api/key-fn :input))
+
 
 
                (api/defexp (api/symbol 'test) (api/map {(api/keyword :test) (api/keyword :foo)}))
@@ -110,7 +164,6 @@
                  (api/vector []))
 
                (defncall 'state 'pipes/debug (api/keyword :oasis.spec/state))
-
 
 
                ;; convert and layout nodes
@@ -266,29 +319,38 @@
                  (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :div)])]))
 
                (defncall 'oasis 'net
-                 (pipe 'd 'log)
-                 (pipe 'ui 'log)
-                 (pipe 'ui 'handle-input 'log)
-                 (pipe 'ui 'handle-event 'log)
+                 (api/vector [(pipe 'd 'log)
+                              (pipe 'ui 'log)
 
-                 (pipe 'start 'header 'render)
-                 (pipe 'start 'repl 'render)
+                              (pipe 'reduced-events 'only-complete 'events)
+                              (pipe 'raw-events 'input-reduce 'reduced-events)
 
-                 (pipe 'n 'state-reduce 'state)
-                 (pipe 'state 'log-state)
+                              (pipe 'events 'log-events)
+                              (pipe 'events 'make-eval 'ev)
+                              (pipe 'events 'make-eval 'log)
 
-                 (pipe 'state 'format-state 'lay-in)
-                 (pipe 'state 'format-state 'layout)
+                              (pipe 'ui 'filter-input 'raw-events)
+                              (pipe 'ui 'filter-submit 'raw-events)
 
-                 (pipe 'layout 'log-layout)
-                 (pipe 'lay-in 'log-layout)
 
-                 (pipe 'layout 'graph 'render)
-                 (pipe 'render 'elements-reduce 'reducer)
-                 (pipe 'render 'elements-reduce 'log-render)
+                              (pipe 'start 'header 'render)
+                              (pipe 'start 'repl 'render)
 
-                 (pipe 'reducer 'render-elements 'log)
-                 (pipe 'reducer 'render-elements 'ui)
+                              (pipe 'n 'state-reduce 'state)
+                              (pipe 'state 'log-state)
+
+                              (pipe 'state 'format-state 'lay-in)
+                              (pipe 'state 'format-state 'layout)
+
+                              (pipe 'layout 'log-layout)
+                              (pipe 'lay-in 'log-layout)
+
+                              (pipe 'layout 'graph 'render)
+                              (pipe 'render 'elements-reduce 'reducer)
+                              (pipe 'render 'elements-reduce 'log-render)
+
+                              (pipe 'reducer 'render-elements 'log)
+                              (pipe 'reducer 'render-elements 'ui)])
                  )
                ]]
     oasis))

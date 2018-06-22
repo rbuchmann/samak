@@ -10,7 +10,8 @@
      [samak.tools :as tools]
      [clojure.string :as str]
      [net.cgrand.xforms :as x]
-     [samak.protocols :as p])]
+     [samak.protocols :as p]
+     [samak.lisparser :as lp])]
    :cljs
    [(:require
      [cljs-http.client :as http]
@@ -22,6 +23,7 @@
      [samak.layout :as layout]
      [samak.tools :as tools]
      [samak.protocols :as p]
+     [samak.lisparser :as lp]
      [net.cgrand.xforms :as x])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
@@ -142,6 +144,23 @@
     (a/pipeline 1 source (map (fn [x] (println "ast in: " x) x)) notify-chan)
     (pipes/source source)))
 
+(defn eval-line-call
+  ""
+  [input]
+  (doseq [expression (lp/parse input)]
+    (notify-source expression)))
+
+(defn eval-line
+  ""
+  []
+  (let [log-chan (chan)]
+    (go-loop []
+      (when-let [x (<! log-chan)]
+        (eval-line-call x)
+        (recur)))
+    (pipes/sink log-chan)))
+
+
 ;; Graph Layouting
 
  (defn layout-call [request res]
@@ -169,7 +188,8 @@
    {'pipes/log         log
     'pipes/debug       debug
     'pipes/eval-notify eval-notify
-    'pipes/reductions reductions*}
+    'pipes/eval-line   eval-line
+    'pipes/reductions  reductions*}
    #?(:cljs
       {'pipes/ui ui
        'pipes/layout layout})))

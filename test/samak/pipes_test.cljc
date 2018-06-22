@@ -10,11 +10,11 @@
     [(:require
       [cljs.test :as t :include-macros true]
       [cljs.spec.alpha :as s]
-      [clojure.core.async :as a :refer [<!! chan to-chan]]
+      [clojure.core.async :as a :refer [chan to-chan]]
       [samak.pipes :as sut])]))
 
-(defn timeout-<!! [c t]
-  (first (a/alts!! [c (a/timeout t)] :priority true)))
+#?(:clj (defn timeout-<!! [c t]
+          (first (a/alts!! [c (a/timeout t)] :priority true))))
 
 ;;TODO: Both flaky, not sure how to best fix this
 #_(t/deftest basic-linkage
@@ -53,23 +53,23 @@
     (t/is (= [:e :f] (first res)))
     (t/is (= [:a :b] (last res)))))
 
-(t/deftest dag-test
-  (let [inp (chan)
-        a (sut/source inp)
-        b (sut/transduction-pipe (map #(str "a" %)))
-        c (sut/transduction-pipe (map str))
-        d (sut/transduction-pipe (map keyword))
-        e (sut/transduction-pipe (map identity))
-        res (chan)
-        f (sut/sink res)]
-    (sut/link-all! [[a b]
-                    [b c]
-                    [b d]
-                    [c e]
-                    [d e]
-                    [e f]])
-    (a/onto-chan inp [1])
-    (t/is (= #{:a1 "a1"} (set (timeout-<!! (a/into [] res) 5000))))))
+#?(:clj (t/deftest dag-test
+          (let [inp (chan)
+                a (sut/source inp)
+                b (sut/transduction-pipe (map #(str "a" %)))
+                c (sut/transduction-pipe (map str))
+                d (sut/transduction-pipe (map keyword))
+                e (sut/transduction-pipe (map identity))
+                res (chan)
+                f (sut/sink res)]
+            (sut/link-all! [[a b]
+                            [b c]
+                            [b d]
+                            [c e]
+                            [d e]
+                            [e f]])
+            (a/onto-chan inp [1])
+            (t/is (= #{:a1 "a1"} (set (timeout-<!! (a/into [] res) 5000)))))))
 
 (s/def ::in-spec string?)
 (s/def ::out-spec (s/coll-of string?))

@@ -89,12 +89,10 @@
 (defn net
   ""
   [pipes]
-  (println "net")
-  (println pipes)
-  (let [pipe-pairs (eval-pipe-op pipes)]
-    (println "pipes")
-    (println pipe-pairs)
-    (pipes/link-all! pipe-pairs)))
+  (doseq [pipe-def pipes]
+    (let [pipe-pairs (eval-pipe-op pipe-def)]
+      (println (str "pipes: " pipe-pairs))
+      (pipes/link-all! pipe-pairs))))
 
 
 
