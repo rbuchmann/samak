@@ -1,5 +1,5 @@
 (ns samak.lisparser
-  (:require #?(:clj [clojure.edn  :as edn]
+  (:require #?(:clj  [clojure.edn :as edn]
                :cljs [cljs.reader :as edn])
             [samak.api            :as api]
             [clojure.string       :as str]))
@@ -9,7 +9,7 @@
 (defn list->ast [l]
   (when-let [[f & args] (not-empty l)]
     (case f
-      def (apply api/defexp (map form->ast args))
+      def (let [[name-sym rhs] args] (api/defexp name-sym (form->ast rhs)))
       |   (api/pipe (map form->ast args))
       (api/fn-call (form->ast f) (map form->ast args)))))
 
@@ -32,15 +32,6 @@
 
 (defn parse-form [form]
   {:value (form->ast form)})
-
-(defn parse [s]
-  (try
-    (-> s edn/read-string parse-form)
-    #?(:cljs (catch js/Error e
-               (do (js/console.error "error" e)
-                   {:error e}))
-       :clj  (catch Exception e
-               {:error (.getMessage e)}))))
 
 (defn parse-all [s]
   (try

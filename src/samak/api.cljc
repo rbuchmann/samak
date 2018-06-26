@@ -1,13 +1,16 @@
 (ns samak.api
   (:refer-clojure :exclude [vector map symbol keyword float])
-  (:require [samak.tools :as tools]))
+  (:require [samak.tools :as tools]
+            [samak.core  :as core]))
 
 (defn literal [literal-name body]
   #:samak.nodes{:type  (tools/qualify-kw "samak.nodes" literal-name)
                 :value body})
 
 (defn symbol [identifier]
-  (literal 'symbol identifier))
+  (if (contains? core/samak-symbols identifier)
+    (literal 'builtin identifier)
+    [:samak.nodes/name identifier]))
 
 (defn keyword [identifier]
   (literal 'keyword identifier))
@@ -45,7 +48,7 @@
 
 (defn defexp [expression-name rhs]
   #:samak.nodes{:type :samak.nodes/def
-                :name (:samak.nodes/value expression-name)
+                :name expression-name
                 :rhs  rhs})
 
 (defn symbol-node? [s]

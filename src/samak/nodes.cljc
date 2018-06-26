@@ -1,17 +1,13 @@
 (ns samak.nodes
-  (:require [samak.api       :as api]
-            [samak.code-db   :as db]
+  (:require [samak.core      :as core]
             [samak.protocols :as p]))
-
-(def ^:dynamic *symbol-map* {})
-(def ^:dynamic *db*)
 
 (defmulti eval-node ::type)
 
 (defn eval-reordered [nodes]
   (->> nodes
        (sort-by :order)
-       (mapv eval-node)))
+       (mapv (comp eval-node ::node))))
 
 (def eval-vals (partial map (fn [[k v]] [(::value k) (eval-node v)])))
 
@@ -47,7 +43,7 @@
 (defmethod eval-node ::key-fn  [{:keys [::value]}] (fn [x] (value x)))
 (defmethod eval-node ::string  [{:keys [::value]}] value)
 (defmethod eval-node ::float   [{:keys [::value]}] value)
-(defmethod eval-node ::symbol  [{:keys [::value]}] (resolve-symbol value))
+(defmethod eval-node ::builtin [{:keys [::value]}] (core/samak-symbols value))
 
 (defmethod eval-node ::def [{:keys [::name ::rhs]}])
 

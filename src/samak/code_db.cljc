@@ -18,8 +18,13 @@
                                         :db/valueType   :db.type/ref}
                            :expression {:db/isComponent true
                                         :db/valueType   :db.type/ref}
-                           ;; :name       {:db/unique      :db.unique/value
-                           ;;              :db/valueType   :db.type/string}
+                           :from       {:db/isComponent false
+                                        :db/valueType   :db.type/ref}
+                           :to         {:db/isComponent false
+                                        :db/valueType   :db.type/ref}
+                           :name       {:db/unique :db.unique/value}
+                           :node       {:db/isComponent true
+                                        :db/valueType   :db.type/ref}
                            })
 
 #?(:cljs (defn create-ratom-db [schema]
@@ -28,19 +33,46 @@
 (defn create-empty-db []
   (d/create-conn schema))
 
-(defn parse-tree->db [db tree]
-  (doto db
-    (d/transact! tree)))
+(defn parse-tree->db! [db tree]
+  (d/transact! db tree))
 
 
 (defn load-ast
   "loads an ast given by SYMBOL from the database"
   [db sym]
   (let [res (d/q '[:find [(pull ?e [*]) ...]
-         :in $ ?sym
-         :where
-         [?e :samak.nodes/type :samak.nodes/def]
-         [?e :samak.nodes/name ?sym]]
-       @db
-       sym)]
+                   :in $ ?sym
+                   :where
+                   [?e :samak.nodes/type :samak.nodes/def]
+                   [?e :samak.nodes/name ?sym]]
+                 @db
+                 sym)]
     (first res)))
+
+(defn load-by-id
+  "loads an ast given by its entity id from the database"
+  [db id]
+  (let [res (d/q '[:find [(pull ?id [*]) ...]
+                   :in $ ?id]
+                 @db
+                 id)]
+    (first res)))
+
+(defn retrieve-links [db]
+  (d/q '[:find [(pull ?id [*]) ...]
+         :in $
+         :where
+         [?id :samak.nodes/type :samak.nodes/link]]
+       @db))
+
+(defn write-to-disk [db filename]
+  (->> db d/db pr-str (spit filename)))
+
+(def read-db #?(:clj  (partial clojure.edn/read-string {:readers d/data-readers})
+                :cljs cljs.reader/read-string))
+
+(defn load-from-disk [filename]
+  (-> filename
+      slurp
+      read-db
+      d/conn-from-db))

@@ -40,7 +40,8 @@
   (into []
         (map-indexed
          (fn [i item]
-           (assoc item :order i))
+           {:order i
+            :samak.nodes/node item})
          items)))
 
 (defn map-vals [f m]

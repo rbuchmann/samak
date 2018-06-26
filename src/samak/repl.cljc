@@ -1,44 +1,29 @@
 (ns samak.repl
-  (:require [clojure.string       :as str]
-            #?(:clj [clojure.edn  :as edn]
-               :cljs [cljs.reader :as edn])
-            [samak.lisparser      :as p]
-            [samak.core           :as core]
-            [samak.api            :as api]
-            [samak.nodes          :as n]
-            [samak.pipes          :as pipes]
-            [samak.tools          :as t]
-            [samak.code-db        :as db]
-            [samak.oasis          :as oasis]
-            [samak.stdlib         :as std]))
+  #?@
+   (:clj
+    [(:require
+      [clojure.edn :as edn]
+      [clojure.string :as str]
+      [samak.code-db :as db]
+      [samak.core :as core]
+      [samak.lisparser :as p]
+      [samak.oasis :as oasis]
+      [samak.pipes :as pipes]
+      [samak.stdlib :as std]
+      [samak.tools :as t])]
+    :cljs
+    [(:require
+      [cljs.reader :as edn]
+      [clojure.string :as str]
+      [samak.code-db :as db]
+      [samak.core :as core]
+      [samak.lisparser :as p]
+      [samak.oasis :as oasis]
+      [samak.pipes :as pipes]
+      [samak.stdlib :as std]
+      [samak.tools :as t])]))
 
 (def db (db/create-empty-db))
-
-(def base-symbols (merge core/samak-symbols std/pipe-symbols))
-
-
-(defn maybe-wrap-instrumentation [evaluated]
-  (if (pipes/pipe? evaluated)
-    evaluated
-    (pipes/instrument evaluated)))
-
-(defn eval-pipe-op [{:keys [samak.nodes/arguments]}]
-  (->> (n/eval-reordered arguments)
-       (map maybe-wrap-instrumentation)
-       (partition 2 1)))
-
-(defn eval-toplevel-ast [defined-symbols ast]
-  (binding [n/*symbol-map* defined-symbols
-            n/*db* db]
-    (condp (fn [k form] (= (::n/type form) k)) ast
-      ::n/def (let [{:keys [::n/name ::n/rhs]} ast
-                    node (n/eval-node rhs)
-                    new-symbols (assoc defined-symbols name node)]
-                [node new-symbols])
-      ::n/pipe (let [pipe-pairs (eval-pipe-op ast)]
-                 (pipes/link-all! pipe-pairs)
-                 [pipe-pairs defined-symbols])
-      [(n/eval-node ast) defined-symbols])))
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -56,6 +41,16 @@
     (print "EVALED:" result)
     (or new-symbols defined-symbols)))
 
+(defn load-expression
+  [db input symbols]
+  (let [sym (symbol input)
+        _ (println (str "loading " sym))
+        ast (db/load-ast db sym)]
+    (println "from db: " ast)
+    (let [e (eval-exp symbols ast)]
+      (println (str "evaled " e))
+      e)))
+
 (defn fire-event-into-named-pipe
   [symbols pipe-name event]
   (let [pipe (get symbols (symbol pipe-name))]
@@ -66,48 +61,19 @@
           {})
       (println (str "could not find pipe " pipe-name)))))
 
-(defn persist-expression
-  [exps]
-  (println (str "persisting expression: " exps))
-  (db/parse-tree->db db exps))
-
-(defn persist-string
-  [input]
-  (let [exps (parse-samak-string input)]
-    (persist-expression exps)))
-
-(defn load-expression
-  [input symbols]
-  (let [sym (symbol input)
-        _ (println (str "loading " sym))
-        ast (db/load-ast db sym)]
-    (println "from db: " ast)
-    (let [e (eval-exp symbols ast)]
-      (println (str "evaled " e))
-      e)))
-
-(defn eval-multi-exp
-  "evaluate a sequence of expressions"
-  [symbols exps]
-  (reduce (fn [a e] (merge a (eval-exp a e))) symbols exps))
-
-
-
 (defn start-oasis
   [symbols]
-  (let [code (eval-multi-exp symbols (oasis/start))]
-    (fire-event-into-named-pipe code "start" "1")
+  (let [code (reduce eval-exp symbols (oasis/start))]
+    (fire-event-into-named-pipe code "oasis" "1")
     code))
 
-(defn persist-oasis
-  []
-  (oasis/persist db))
+
 
 (def repl-prefixes
   {\f (fn [in symbols] (let [[pipe-name event] (str/split in #" " 2)]
                          (fire-event-into-named-pipe symbols pipe-name event)))
-   \s (fn [in _] (persist-expression in) {})
-   \q (fn [_ symbols] (persist-oasis) symbols )
+   \s (fn [in _] (db/parse-tree->db! db in) {})
+   \q (fn [_ symbols] (oasis/store db) symbols)
    \o (fn [_ symbols] (start-oasis symbols))
    \l (fn [in symbols] (load-expression in symbols))
    \e (fn [_ symbols] (println "Defined symbols:\n" (t/pretty (sort-by first symbols))))
