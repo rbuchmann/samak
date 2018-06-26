@@ -2,7 +2,6 @@
   (:require [samak.stdlib             :as std]
             [samak.transduction-tools :as tt]
             [samak.protocols          :as p]
-            [samak.nodes :as n]
             [samak.pipes              :as pipes]
             [net.cgrand.xforms        :as x]))
 
@@ -76,56 +75,36 @@
   (fn [col]
     (nth col i)))
 
-(defn maybe-wrap-instrumentation [evaluated]
-  (if (pipes/pipe? evaluated)
-    evaluated
-    (pipes/instrument evaluated)))
-
-(defn eval-pipe-op [{:keys [samak.nodes/arguments]}]
-  (->> (n/eval-reordered arguments)
-       (map maybe-wrap-instrumentation)
-       (partition 2 1)))
-
-(defn net
-  ""
-  [pipes]
-  (println "net")
-  (println pipes)
-  (let [pipe-pairs (eval-pipe-op pipes)]
-    (println "pipes")
-    (println pipe-pairs)
-    (pipes/link-all! pipe-pairs)))
-
-
-
 (def samak-symbols
-  {'|>     chain
-   'id     identity
-   'map    (curry1fn mapv)
-   'filter (curry1fn filterv)
-   'only   #(if* % identity tt/ignore)
-   'remove (curry1fn filterv)
-   'mapcat mapcatv
-   'repeat (curry1 repeat)
-   'take   (curry1 take)
-   'drop   (curry1 drop)
-   '=      (curry1 =)
-   'nth    nth*
-   'many   tt/many
-   'ignore tt/ignore
-   'flatten flattenv
-   'vals   vals*
-   'sort-by (curry1 sort-by)
-   'concat concat*
-   'inc    inc
-   'odd?   odd?
-   'even?  even?
-   'sum    sum
-   'str    str*
-   'or     or*
-   'and    and*
-   'if     if*
-   'const  constantly
-   'when   when*
-   'net    net
-   '!      '!})
+  (merge
+   {'|>      chain
+    'id      identity
+    'map     (curry1fn mapv)
+    'filter  (curry1fn filterv)
+    'only    #(if* % identity tt/ignore)
+    'remove  (curry1fn filterv)
+    'mapcat  mapcatv
+    'repeat  (curry1 repeat)
+    'take    (curry1 take)
+    'drop    (curry1 drop)
+    '=       (curry1 =)
+    'nth     nth*
+    'many    tt/many
+    'ignore  tt/ignore
+    'flatten flattenv
+    'vals    vals*
+    'sort-by (curry1 sort-by)
+    'concat  concat*
+    'inc     inc
+    'dec     dec
+    'odd?    odd?
+    'even?   even?
+    'sum     sum
+    'str     str*
+    'or      or*
+    'and     and*
+    'if      if*
+    'const   constantly
+    'when    when*
+    '!       '!}
+   std/pipe-symbols))

@@ -8,9 +8,9 @@
 (defn node-editor [_ db]
   (let [state (r/atom "")]
     (fn [_ db]
-      (let [parse-result     (p/parse @state)
-            error-state (when (:error parse-result)
-                               "error")]
+      (let [parse-result (p/parse-all @state)
+            error-state  (when (:error parse-result)
+                           "error")]
         [:div
          [ui/col {:md 4}
           [:h1 "Node editor!"]
@@ -19,7 +19,7 @@
                                 (when-not error-state
                                   (println "Submitted: " @state "!")
                                   (println "parsed: " parse-result)
-                                  (db/parse-tree->db db (:value parse-result))))}
+                                  (db/parse-tree->db! db (:value parse-result))))}
            [ui/form-group {:validation-state error-state}
             [ui/autofocused-input state error-state]
             (when error-state

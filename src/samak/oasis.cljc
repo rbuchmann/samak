@@ -1,11 +1,23 @@
 (ns samak.oasis
-  (:require [samak.api    :as api]
-            [samak.core   :as core]
-            [samak.stdlib :as pipes]
-            [samak.spec] ;;include specs as side effect
-            #?(:clj  [clojure.spec.alpha :as s]
-               :cljs [cljs.spec.alpha :as s])
-            [samak.code-db :as db]))
+  #?@
+   (:clj
+    [(:require
+      [clojure.spec.alpha :as s]
+      [samak.api :as api]
+      [samak.code-db :as db]
+      [samak.nodes :as n]
+      [samak.pipes :as pipes]
+      samak.spec
+      [samak.stdlib :as std])]
+    :cljs
+    [(:require
+      [cljs.spec.alpha :as s]
+      [samak.api :as api]
+      [samak.code-db :as db]
+      [samak.nodes :as n]
+      [samak.pipes :as pipes]
+      samak.spec
+      [samak.stdlib :as std])]))
 
 (defn defncall
   ([sym fn-name]
@@ -293,5 +305,5 @@
                ]]
     oasis))
 
-(defn persist [db]
-  (db/parse-tree->db db (start)))
+(defn store [db]
+  (db/parse-tree->db! db (start)))

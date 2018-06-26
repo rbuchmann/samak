@@ -74,8 +74,6 @@
 (defn transduction-pipe [xf]
   (pipe (chan 1 xf)))
 
-
-
 (defn async-pipe [xf in-spec out-spec]
   (let [in-chan  (chan)
         out-chan (chan)]
