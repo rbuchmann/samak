@@ -187,6 +187,7 @@
   (merge
    {'pipes/log         log
     'pipes/debug       debug
+    'pipes/http        http
     'pipes/eval-notify eval-notify
     'pipes/eval-line   eval-line
     'pipes/reductions  reductions*}

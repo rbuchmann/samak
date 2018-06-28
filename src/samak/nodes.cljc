@@ -25,7 +25,6 @@
 
 (defn resolve-symbol [s]
   (or (*symbol-map* s)
-      (resolve-from-db s)
       (let [msg (str "Unknown variable: " s)]
         (println "symbols" *symbol-map*)
         (println "Variable: " (pr-str s))

@@ -133,8 +133,12 @@
                  (api/key-fn :input))
 
 
-
-               (api/defexp (api/symbol 'test) (api/map {(api/keyword :test) (api/keyword :foo)}))
+               (defncall 'translate-str 'str
+                 (api/string "translate(")
+                 (api/key-fn :x)
+                 (api/string ",")
+                 (api/key-fn :y)
+                 (api/string ")"))
 
                (defncall 'start 'pipes/debug)
                (api/defexp (api/symbol 'repl)
@@ -153,7 +157,73 @@
                                      (api/vector [(api/keyword :div)
                                                   (api/string "Oasis")])})}))
 
-               (defncall 'render 'pipes/debug (api/keyword :oasis.spec/render))
+               (api/defexp (api/symbol 'css-background)
+                 (api/map {(api/keyword :width) (api/string "600px")
+                           (api/keyword :height) (api/string "400px")
+                           (api/keyword :position) (api/string "absolute")
+                           (api/keyword :z-index) (api/integer -100)
+                           (api/keyword :background-color) (api/string "#AABBDD")}))
+
+               (defncall 'calculate-y '|>
+                 (api/vector [(api/integer 30) (api/key-fn :position)])
+                 (api/symbol 'mult)
+                 (api/vector [(api/integer 10) (api/symbol 'id)])
+                 (api/symbol 'sum))
+
+               (defncall 'menu-transform '|>
+                 (api/map {(api/keyword :x) (api/integer 5)
+                           (api/keyword :y) (api/symbol 'calculate-y)})
+                 (api/symbol 'translate-str))
+
+               (api/defexp (api/symbol 'render-menu-entry)
+                 (api/vector [(api/keyword :g)
+                              (api/map {(api/keyword :transform) (api/symbol 'menu-transform)})
+                              (api/vector [(api/keyword :rect)
+                                           (api/map {(api/keyword :height) (api/string "20")
+                                                     (api/keyword :width) (api/string "50")
+                                                     (api/keyword :fill) (api/string "#eee")})])
+                              (api/vector [(api/keyword :text)
+                                           (api/map {(api/keyword :height) (api/string "20")
+                                                     (api/keyword :width) (api/string "100%")
+                                                     (api/keyword :text-anchor) (api/keyword :middle)
+                                                     (api/keyword :x) (api/integer 25)
+                                                     (api/keyword :y) (api/integer 0)
+                                                     (api/keyword :dy) (api/integer 14)})
+                                           (api/key-fn :name)])]))
+
+               (defncall 'render-menu '|>
+                 (api/fn-call (api/symbol 'map) [(api/symbol 'render-menu-entry)])
+                 (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :g)])])
+                 (api/vector [(api/keyword :g)
+                              (api/vector [(api/keyword :rect)
+                                           (api/map {(api/keyword :height) (api/string "400")
+                                                     (api/keyword :width) (api/string "60")
+                                                     (api/keyword :fill) (api/string "#ccc")})])
+                              (api/symbol 'id)])
+                 (api/map {(api/keyword :menu) (api/symbol 'id)}))
+
+               (defncall 'menu 'pipes/debug)
+               (defncall 'menu-items 'pipes/debug)
+
+               (defncall 'menu-const '|>
+                 (api/vector [(api/string "first")
+                              (api/string "second")
+                              (api/string "third")])
+                 (api/symbol 'many))
+
+               (defncall 'map-menu-item '|>
+                 (api/map {(api/keyword :position)
+                           (api/fn-call (api/symbol '|>) [(api/key-fn :state)
+                                                          (api/symbol 'count)])
+                           (api/keyword :name)
+                           (api/key-fn :next)}))
+
+               (defncall 'menu-map 'pipes/reductions
+                 (api/fn-call (api/symbol '|>)
+                              [(api/vector [(api/key-fn :state) (api/symbol 'map-menu-item)])
+                               (api/symbol 'flatten)])
+                 (api/vector []))
+
 
                ;; keep evaluations in state reduction
 
@@ -180,30 +250,33 @@
                            (api/keyword :height) (api/integer 100)}))
 
                (defncall 'first-arg-value '|>
-                 (api/key-fn :samak.nodes/arguments)
                  (api/fn-call (api/symbol 'nth) [(api/integer 0)])
                  (api/key-fn :samak.nodes/value))
 
                (defncall 'second-arg-value '|>
-                 (api/key-fn :samak.nodes/arguments)
                  (api/fn-call (api/symbol 'nth) [(api/integer 1)])
+                 (api/key-fn :samak.nodes/value))
+
+               (defncall 'third-arg-value '|>
+                 (api/fn-call (api/symbol 'nth) [(api/integer 2)])
                  (api/key-fn :samak.nodes/value))
 
 
                (defncall 'pipe-name 'str
                  (api/string "p/")
-                 (api/symbol 'first-arg-value)
+                 (api/symbol :from)
                  (api/string "-")
-                 (api/symbol 'second-arg-value))
+                 (api/symbol :to))
 
-               (api/defexp (api/symbol 'format-pipe)
-                 (api/map {(api/keyword :id) (api/symbol 'pipe-name)
-                           (api/keyword :source) (api/fn-call (api/symbol 'str)
-                                                              [(api/string "d/")
-                                                               (api/symbol 'first-arg-value)])
-                           (api/keyword :target) (api/fn-call (api/symbol 'str)
-                                                              [(api/string "d/")
-                                                               (api/symbol 'second-arg-value)])}))
+
+               (defncall 'format-pipe '|>
+                 (api/vector [(api/map {(api/keyword :id) (api/symbol 'pipe-name)
+                                        (api/keyword :source) (api/fn-call (api/symbol 'str)
+                                                                           [(api/string "d/")
+                                                                            (api/symbol 'first-arg-value)])
+                                        (api/keyword :target) (api/fn-call (api/symbol 'str)
+                                                                           [(api/string "d/")
+                                                                            (api/symbol 'second-arg-value)])})]))
 
 
                (defncall 'is-def '|>
@@ -221,8 +294,22 @@
                  (api/key-fn :defs)
                  (api/fn-call (api/symbol 'map) [(api/symbol 'format-def)]))
 
+               (defncall 'extract-connection '|>
+                 (api/key-fn :samak.nodes/arguments)
+                 (api/fn-call (api/symbol 'map) [(api/symbol 'format-def)])
+                 (api/vector [(api/map {:from (api/fn-call (api/symbol '|> [(api)]))})
+                              (if (api/fn-call (api/symbol '|>)
+                                               [(api/symbol 'count)
+                                                (api/symbol '< [(api/integer 3)])])
+                                (api/vector [])
+                                (api/vector [(api/fn-call (api/symbol '|>)
+                                                          [(api/key-fn :samak.nodes/arguments)
+                                                           (api/symbol 'count)])]))]))
+
+
                (defncall 'format-pipes '|>
                  (api/key-fn :pipes)
+                 (api/fn-call (api/symbol 'mapcat) [(api/symbol 'extract-connection)])
                  (api/fn-call (api/symbol 'map) [(api/symbol 'format-pipe)]))
 
                (defncall 'format-state '|>
@@ -234,14 +321,6 @@
 
 
                (defncall 'lay-in 'pipes/debug)
-
-
-               (defncall 'translate-str 'str
-                 (api/string "translate(")
-                 (api/key-fn :x)
-                 (api/string ",")
-                 (api/key-fn :y)
-                 (api/string ")"))
 
                ;; graphing of nodes
 
@@ -284,19 +363,9 @@
 
                (api/defexp (api/symbol 'graph)
                  (api/map {(api/keyword :graph)
-                           (api/map {(api/keyword :oasis.gui/order)
-                                     (api/integer 5)
-                                     (api/keyword :oasis.gui/element)
-                                     (api/vector [(api/keyword :svg)
-                                                  (api/map {(api/keyword :width) (api/integer 600)
-                                                            (api/keyword :height) (api/integer 400)})
-                                                  (api/vector [(api/keyword :rect)
-                                                               (api/map {(api/keyword :width) (api/integer 600)
-                                                                         (api/keyword :height) (api/integer 400)
-                                                                         (api/keyword :fill) (api/string "#eee")})
-                                                               ])
-                                                  (api/symbol 'graph-nodes)
-                                                  (api/symbol 'graph-connections)])})}))
+                           (api/vector [(api/keyword :g)
+                                        (api/symbol 'graph-nodes)
+                                        (api/symbol 'graph-connections)])}))
 
 
                ;; reduce elements to latest version of GUI element
@@ -307,16 +376,41 @@
                                (api/fn-call (api/symbol 'concat) [(api/map {})]) ])
                  (api/map {}))
 
+               (defncall 'svg-elements-reduce 'pipes/reductions
+                 (api/fn-call (api/symbol '|>)
+                              [(api/vector [(api/key-fn :state) (api/key-fn :next)])
+                               (api/fn-call (api/symbol 'concat) [(api/map {})]) ])
+                 (api/map {}))
 
                (defncall 'reducer 'pipes/debug (api/keyword :oasis.spec/gui))
+               (defncall 'render 'pipes/debug (api/keyword :oasis.spec/render))
 
                ;; render elements to hiccup
                (defncall 'render-elements '|>
-
                  (api/fn-call (api/symbol 'vals) nil)
                  ;; (api/fn-call (api/symbol 'sort-by [(api/symbol 'id)]))
                  (api/fn-call (api/symbol 'map) [(api/key-fn :oasis.gui/element)])
                  (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :div)])]))
+
+               (defncall 'svg-reduced 'pipes/debug (api/keyword :oasis.spec/render))
+
+               ;; render SVG components
+               (defncall 'svg-render 'pipes/debug)
+               (api/defexp (api/symbol 'render-svg)
+                 (api/map {(api/keyword :svg)
+                           (api/map {(api/keyword :oasis.gui/order)
+                                     (api/integer 2)
+                                     (api/keyword :oasis.gui/element)
+                                     (api/vector [(api/keyword :svg)
+                                                  (api/map {(api/keyword :width) (api/integer 600)
+                                                            (api/keyword :height) (api/integer 400)})
+                                                  (api/vector [(api/keyword :rect)
+                                                               (api/map {(api/keyword :width) (api/integer 600)
+                                                                         (api/keyword :height) (api/integer 400)
+                                                                         (api/keyword :fill) (api/string "#eee")})
+                                                               ])
+                                                  (api/key-fn :graph)
+                                                  (api/key-fn :menu)])})}))
 
                (defncall 'oasis 'net
                  (api/vector [(pipe 'd 'log)
@@ -332,10 +426,6 @@
                               (pipe 'ui 'filter-input 'raw-events)
                               (pipe 'ui 'filter-submit 'raw-events)
 
-
-                              (pipe 'start 'header 'render)
-                              (pipe 'start 'repl 'render)
-
                               (pipe 'n 'state-reduce 'state)
                               (pipe 'state 'log-state)
 
@@ -345,14 +435,22 @@
                               (pipe 'layout 'log-layout)
                               (pipe 'lay-in 'log-layout)
 
-                              (pipe 'layout 'graph 'render)
+                              (pipe 'layout 'graph 'svg-render)
                               (pipe 'render 'elements-reduce 'reducer)
                               (pipe 'render 'elements-reduce 'log-render)
 
                               (pipe 'reducer 'render-elements 'log)
-                              (pipe 'reducer 'render-elements 'ui)])
-                 )
-               ]]
+                              (pipe 'reducer 'render-elements 'ui)
+
+                              (pipe 'svg-render 'svg-elements-reduce 'svg-reduced)
+                              (pipe 'svg-reduced 'render-svg 'render)
+
+                              (pipe 'start 'menu-const 'menu-items)
+                              (pipe 'menu-items 'menu-map 'menu)
+                              (pipe 'menu 'render-menu 'svg-render)
+                              (pipe 'start 'header 'render)
+                              (pipe 'start 'repl 'render)])
+                 )]]
     oasis))
 
 (defn persist [db]

@@ -45,9 +45,10 @@
 
 (defn mapcatv [f]
   (fn [x]
-    (vec (mapcat f x))))
+    (vec (mapcat (p/eval-as-fn f) x))))
 
 (def sum (partial apply +))
+(def mult (partial apply *))
 
 (defn vals*
   ([]
@@ -94,6 +95,10 @@
       (println (str "pipes: " pipe-pairs))
       (pipes/link-all! pipe-pairs))))
 
+(defn less
+  ""
+  [c]
+  (fn [x] (< x c)))
 
 
 (def samak-symbols
@@ -108,7 +113,11 @@
    'take   (curry1 take)
    'drop   (curry1 drop)
    '=      (curry1 =)
+   '<      less
+   '+      (curry1 +)
+   '*      (curry1 *)
    'nth    nth*
+   'count  count
    'many   tt/many
    'ignore tt/ignore
    'flatten flattenv
@@ -119,6 +128,7 @@
    'odd?   odd?
    'even?  even?
    'sum    sum
+   'mult   mult
    'str    str*
    'or     or*
    'and    and*

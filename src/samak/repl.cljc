@@ -96,7 +96,7 @@
 (defn start-oasis
   [symbols]
   (let [code (eval-multi-exp symbols (oasis/start))]
-    (fire-event-into-named-pipe code "oasis" "1")
+    (fire-event-into-named-pipe code "start" "1")
     code))
 
 (defn persist-oasis
