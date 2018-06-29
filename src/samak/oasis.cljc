@@ -242,10 +242,23 @@
                  (api/string "d/")
                  (api/key-fn :samak.nodes/name))
 
+               (defncall 'format-ast '|>
+                 (api/key-fn :samak.nodes/rhs)
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '|>)
+                                                                 [(api/key-fn :samak.nodes/type)
+                                                                  (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/string)])])
+                                                    (api/key-fn :samak.nodes/type)])
+                 (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '|>)
+                                                             [(api/key-fn :samak.nodes/type)
+                                                              (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/integer)])])
+                                                (api/key-fn :samak.nodes/value)
+                                                (api/symbol 'id)]))
+
                (api/defexp (api/symbol 'format-def)
                  (api/map {(api/keyword :id) (api/symbol 'def-name)
                            (api/keyword :name) (api/key-fn :samak.nodes/name)
-                           (api/keyword :value) (api/symbol 'get-val)
+                           (api/keyword :value) (api/symbol 'format-ast)
+                           ;; (api/keyword :ast) (api/key-fn :samak.nodes/rhs)
                            (api/keyword :width) (api/integer 100)
                            (api/keyword :height) (api/integer 100)}))
 
@@ -264,19 +277,20 @@
 
                (defncall 'pipe-name 'str
                  (api/string "p/")
-                 (api/symbol :from)
+                 (api/key-fn :from)
                  (api/string "-")
-                 (api/symbol :to))
+                 (api/key-fn :to))
 
 
                (defncall 'format-pipe '|>
-                 (api/vector [(api/map {(api/keyword :id) (api/symbol 'pipe-name)
-                                        (api/keyword :source) (api/fn-call (api/symbol 'str)
-                                                                           [(api/string "d/")
-                                                                            (api/symbol 'first-arg-value)])
-                                        (api/keyword :target) (api/fn-call (api/symbol 'str)
-                                                                           [(api/string "d/")
-                                                                            (api/symbol 'second-arg-value)])})]))
+                 (api/map {(api/keyword :test) (api/symbol 'id)
+                           (api/keyword :id) (api/symbol 'pipe-name)
+                           (api/keyword :source) (api/fn-call (api/symbol 'str)
+                                                              [(api/string "d/")
+                                                               (api/key-fn :from)])
+                           (api/keyword :target) (api/fn-call (api/symbol 'str)
+                                                              [(api/string "d/")
+                                                               (api/key-fn :to)])}))
 
 
                (defncall 'is-def '|>
@@ -296,15 +310,11 @@
 
                (defncall 'extract-connection '|>
                  (api/key-fn :samak.nodes/arguments)
-                 (api/fn-call (api/symbol 'map) [(api/symbol 'format-def)])
-                 (api/vector [(api/map {:from (api/fn-call (api/symbol '|> [(api)]))})
-                              (if (api/fn-call (api/symbol '|>)
-                                               [(api/symbol 'count)
-                                                (api/symbol '< [(api/integer 3)])])
-                                (api/vector [])
-                                (api/vector [(api/fn-call (api/symbol '|>)
-                                                          [(api/key-fn :samak.nodes/arguments)
-                                                           (api/symbol 'count)])]))]))
+                 (api/fn-call (api/symbol 'map) [(api/key-fn :samak.nodes/value)])
+                 (api/vector [(api/map {(api/keyword :from) (api/fn-call (api/symbol 'nth) [(api/integer 0)])
+                                        (api/keyword :to) (api/fn-call (api/symbol 'nth) [(api/integer 1)])})
+                              (api/map {(api/keyword :from) (api/fn-call (api/symbol 'nth) [(api/integer 1)])
+                                        (api/keyword :to) (api/fn-call (api/symbol 'nth) [(api/integer 2)])})]))
 
 
                (defncall 'format-pipes '|>
@@ -336,9 +346,11 @@
                               (api/vector [(api/keyword :text)
                                            (api/map {(api/keyword :x) (api/integer 0)
                                                      (api/keyword :y) (api/integer 20)})
-                                           (api/key-fn :name)
-                                           (api/string " - ")
-                                           (api/key-fn :value)])]))
+                                           (api/key-fn :name)])
+                              (api/vector [(api/keyword :text)
+                                           (api/map {(api/keyword :x) (api/integer 0)
+                                                     (api/keyword :y) (api/integer 30)})
+                                           (api/fn-call (api/symbol 'str) [(api/key-fn :value)])])]))
 
                (defncall 'graph-nodes '|>
                  (api/key-fn :children)
@@ -364,6 +376,7 @@
                (api/defexp (api/symbol 'graph)
                  (api/map {(api/keyword :graph)
                            (api/vector [(api/keyword :g)
+                                        (api/map {(api/keyword :transform) (api/string "translate(70,0)")})
                                         (api/symbol 'graph-nodes)
                                         (api/symbol 'graph-connections)])}))
 
