@@ -10,7 +10,8 @@
       [samak.oasis :as oasis]
       [samak.pipes :as pipes]
       [samak.stdlib :as std]
-      [samak.tools :as t])]
+      [samak.tools :as t]
+      [samak.runtime :as run])]
     :cljs
     [(:require
       [cljs.reader :as edn]
@@ -21,9 +22,12 @@
       [samak.oasis :as oasis]
       [samak.pipes :as pipes]
       [samak.stdlib :as std]
-      [samak.tools :as t])]))
+      [samak.tools :as t]
+      [samak.runtime :as run])]))
 
 (def db (db/create-empty-db))
+
+(def rt (run/make-runtime))
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -36,12 +40,13 @@
           catch-errors))
 
 (defn eval-exp
-  [defined-symbols expression]
-  (let [[result new-symbols] (eval-toplevel-ast defined-symbols expression)]
-    (print "EVALED:" result)
-    (or new-symbols defined-symbols)))
+  [runtime expression]
+  (let [new-symbols (:defined-ids (run/eval-expression! runtime expression))]
+    (when-let [latest (:latest new-symbols)]
+      (print "EVALED:" latest))
+    new-symbols))
 
-(defn load-expression
+#_(defn load-expression
   [db input symbols]
   (let [sym (symbol input)
         _ (println (str "loading " sym))
@@ -51,7 +56,7 @@
       (println (str "evaled " e))
       e)))
 
-(defn fire-event-into-named-pipe
+#_(defn fire-event-into-named-pipe
   [symbols pipe-name event]
   (let [pipe (get symbols (symbol pipe-name))]
     (if (pipes/pipe? pipe)
@@ -61,22 +66,21 @@
           {})
       (println (str "could not find pipe " pipe-name)))))
 
-(defn start-oasis
+#_(defn start-oasis
   [symbols]
   (let [code (reduce eval-exp symbols (oasis/start))]
     (fire-event-into-named-pipe code "oasis" "1")
     code))
 
-
-
 (def repl-prefixes
+
   {\f (fn [in symbols] (let [[pipe-name event] (str/split in #" " 2)]
-                         (fire-event-into-named-pipe symbols pipe-name event)))
+                     #_(fire-event-into-named-pipe symbols pipe-name event)))
    \s (fn [in _] (db/parse-tree->db! db in) {})
-   \q (fn [_ symbols] (oasis/store db) symbols)
-   \o (fn [_ symbols] (start-oasis symbols))
-   \l (fn [in symbols] (load-expression in symbols))
-   \e (fn [_ symbols] (println "Defined symbols:\n" (t/pretty (sort-by first symbols))))
+   ;; \q (fn [_ symbols] (oasis/store db) symbols)
+   ;; \o (fn [_ symbols] (start-oasis symbols))
+   ;; \l (fn [in symbols] (load-expression in symbols))
+   ;; \e (fn [_ symbols] (println "Defined symbols:\n" (t/pretty (sort-by first symbols))))
    \p (fn [in _] (println (parse-samak-string in)))})
 
 (defn run-repl-cmd [s defined-symbols]
@@ -119,14 +123,14 @@
   (str/split-lines
 "(def in (pipes/debug))
 (def out (pipes/log))
-(| in [:div id] out)
+(| in (> [:div id]) out)
 !f in 42"))
 
 (def tl3
   (str/split-lines
 "(def in (pipes/debug))
 (def out (pipes/log))
-(| in (if even? id ignore) out)
+(| in (|> (if even? id ignore)) out)
 !f in 5
 !f in 6"))
 
@@ -134,7 +138,7 @@
   (str/split-lines
    "(def in (pipes/debug))
 (def out (pipes/log))
-(| in (only even?) out)
+(| in (|> (only even?)) out)
 !f in 5
 !f in 6"))
 
@@ -150,5 +154,5 @@
   (str/split-lines
    "(def in (pipes/debug))
 (def out (pipes/log))
-(| in (mapcat (repeat 3)) out)
+(| in (|> (mapcat (repeat 3))) out)
 !f in [5 6]"))

@@ -29,7 +29,7 @@
 (defmethod eval-node ::float   [{:keys [::value]}] value)
 (defmethod eval-node ::builtin [{:keys [::value]}] (core/samak-symbols value))
 
-(defmethod eval-node ::def [{:keys [::name ::rhs]}])
+(defmethod eval-node ::def [{:keys [::rhs]}] (eval-node rhs))
 
 (defmethod eval-node ::pipe [ast] ast)
 

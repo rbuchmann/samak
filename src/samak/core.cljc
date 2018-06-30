@@ -77,7 +77,8 @@
 
 (def samak-symbols
   (merge
-   {'|>      chain
+   {'->      chain
+    '|>      (comp pipes/instrument chain)
     'id      identity
     'map     (curry1fn mapv)
     'filter  (curry1fn filterv)
