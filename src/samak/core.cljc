@@ -165,46 +165,49 @@
 
 
 (def samak-symbols
-  {'|>     chain
-   'id     identity
-   'map    (curry1fn mapv)
-   'filter (curry1fn filterv)
-   'only   #(if* % identity tt/ignore)
-   'remove (curry1fn filterv)
-   'mapcat mapcatv
-   'repeat repeat*
-   'zip    interleave*
-   'take   (curry1 take)
-   'drop   dropv
-   '=      (curry1 =)
-   '<      less
-   '>      more
-   '+      (curry1 +)
-   '*      (curry1 *)
-   'nth    nth*
-   'count  count
-   'many   tt/many
-   'ignore tt/ignore
-   'flatten flattenv
-   'vals   vals*
-   'sort-by (curry1 sort-by)
-   'concat concat*
-   'into   into*
-   'inc    inc*
-   'dec    dec
-   'odd?   odd?
-   'even?  even?
-   'sum    sum
-   'mult   mult
-   'str    str*
-   'or     or*
-   'and    and*
-   'if     if*
-   'const  constantly
-   'when   when*
-   'incase incase
-   'unless unless
-   'loop   loop*
-   'spy    spy
-   'net    net
-   '!      '!})
+  (merge
+   {'->      chain
+    '|>      (comp pipes/instrument chain)
+    'id      identity
+    'map     (curry1fn mapv)
+    'filter  (curry1fn filterv)
+    'only    #(if* % identity tt/ignore)
+    'remove  (curry1fn filterv)
+    'mapcat  mapcatv
+    'repeat  repeat*
+    'zip     interleave*
+    'take    (curry1 take)
+    'drop    dropv
+    '=       (curry1 =)
+    '<       less
+    '>       more
+    '+       (curry1 +)
+    '*       (curry1 *)
+    'nth     nth*
+    'count   count
+    'many    tt/many
+    'ignore  tt/ignore
+    'flatten flattenv
+    'vals    vals*
+    'sort-by (curry1 sort-by)
+    'concat  concat*
+    'into    into*
+    'inc     inc*
+    'dec     dec
+    'odd?    odd?
+    'even?   even?
+    'sum     sum
+    'mult    mult
+    'str     str*
+    'or      or*
+    'and     and*
+    'if      if*
+    'const   constantly
+    'when    when*
+    'incase  incase
+    'unless  unless
+    'loop    loop*
+    'spy     spy
+    'net     net
+    '!       '!}
+   std/pipe-symbols))
