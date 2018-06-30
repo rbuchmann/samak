@@ -1,0 +1,6 @@
+(def log (pipes/log))
+(def init (pipes/debug))
+
+(def iterate (loop (> 0) (|> (spy) dec) 10))
+
+(| init iterate log)

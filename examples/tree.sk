@@ -1,0 +1,22 @@
+(def log (pipes/log))
+(def init (pipes/debug))
+
+(def has-left (|> :-current :-l))
+(def has-right (|> :-current :-r))
+(def has-children (or has-left has-right))
+(def push-child {:stack (|> [:-current :-stack] flatten) :current :-current :result :-result})
+(def iterate-left {:current (|> :-current :-l) :stack :-stack :result :-result})
+(def iterate-right {:current (|> :-current :-r) :stack :-stack :result :-result})
+(def init-iterate {:current id :stack [] :result {}})
+
+(def pop-current {:stack (|> :-stack (drop 1)) :current (|> :-stack (nth 0)) :result :-result})
+(def handle-node {:result (|> [:-result (|> :-current :-value)] sum) :stack :-stack :current :-current})
+
+(def m {:current {:l {:l 1 :value 1} :r {:r 1 :value 2} :value 3} :stack [] :result 0})
+
+(def has-stack (|> :-stack count (> 0)))
+(def not-done (or has-children has-stack))
+
+(def iterate (loop not-done (if has-children (|> push-child iterate-left) (|> pop-current handle-node iterate-right)) id))
+
+(| init iterate log)

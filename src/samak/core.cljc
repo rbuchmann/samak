@@ -2,7 +2,8 @@
   (:require [samak.stdlib             :as std]
             [samak.transduction-tools :as tt]
             [samak.protocols          :as p]
-            [samak.nodes :as n]
+            [samak.nodes              :as n]
+            [samak.tools              :as tools]
             [samak.pipes              :as pipes]
             [net.cgrand.xforms        :as x]))
 
@@ -100,6 +101,37 @@
   [c]
   (fn [x] (< x c)))
 
+(defn more
+  ""
+  [c]
+  (fn [x] (> x c)))
+
+(defn incase
+  [pred then]
+  (if* pred then identity))
+
+(defn unless
+  [pred else]
+  (if* pred identity else))
+
+(defn spy
+  ([] (spy nil))
+  ([prefix]
+   (fn [x]
+     (tools/log "spy " prefix ": " x)
+     x)))
+
+(defn loop*
+  [test body init]
+  (fn [x]
+    (let [test* (p/eval-as-fn test)
+          body* (p/eval-as-fn body)
+          acc (atom ((p/eval-as-fn init) x))]
+      (while (test* @acc)
+        (println (str "test: " (test* @acc)))
+        (reset! acc (body* @acc)))
+      @acc)))
+
 
 (def samak-symbols
   {'|>     chain
@@ -114,6 +146,7 @@
    'drop   (curry1 drop)
    '=      (curry1 =)
    '<      less
+   '>      more
    '+      (curry1 +)
    '*      (curry1 *)
    'nth    nth*
@@ -125,6 +158,7 @@
    'sort-by (curry1 sort-by)
    'concat concat*
    'inc    inc
+   'dec    dec
    'odd?   odd?
    'even?  even?
    'sum    sum
@@ -135,5 +169,9 @@
    'if     if*
    'const  constantly
    'when   when*
+   'incase incase
+   'unless unless
+   'loop   loop*
+   'spy    spy
    'net    net
    '!      '!})
