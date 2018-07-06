@@ -132,6 +132,11 @@
         (reset! acc (body* @acc)))
       @acc)))
 
+(defn dropv
+  [n]
+  (fn [c]
+    (into [] (drop n c))))
+
 
 (def samak-symbols
   {'|>     chain
@@ -143,7 +148,7 @@
    'mapcat mapcatv
    'repeat (curry1 repeat)
    'take   (curry1 take)
-   'drop   (curry1 drop)
+   'drop   dropv
    '=      (curry1 =)
    '<      less
    '>      more

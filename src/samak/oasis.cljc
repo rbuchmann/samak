@@ -242,23 +242,102 @@
                  (api/string "d/")
                  (api/key-fn :samak.nodes/name))
 
-               (defncall 'format-ast '|>
-                 (api/key-fn :samak.nodes/rhs)
-                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '|>)
-                                                                 [(api/key-fn :samak.nodes/type)
-                                                                  (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/string)])])
+               (defncall 'is-string '|>
+                 (api/key-fn :samak.nodes/type)
+                 (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/string)]))
+
+               (defncall 'is-integer '|>
+                 (api/key-fn :samak.nodes/type)
+                 (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/integer)]))
+
+               (defncall 'format-node '|>
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-string)
                                                     (api/key-fn :samak.nodes/type)])
-                 (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '|>)
-                                                             [(api/key-fn :samak.nodes/type)
-                                                              (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/integer)])])
-                                                (api/key-fn :samak.nodes/value)
-                                                (api/symbol 'id)]))
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-integer)
+                                                    (api/key-fn :samak.nodes/value)]))
+
+               (defncall 'init-walk '|>
+                 (api/map {(api/keyword :stack) (api/vector [(api/key-fn :samak.nodes/rhs)])})
+                 (api/fn-call (api/symbol 'concat)
+                              [(api/map {(api/keyword :current) (api/keyword :init)
+                                         (api/keyword :result) (api/vector [])})]))
+
+               (defncall 'has-stack '|>
+                 (api/key-fn :stack)
+                 (api/symbol 'count)
+                 (api/fn-call (api/symbol '>) [(api/integer 0)])
+                 (api/fn-call (api/symbol 'spy) [(api/string "hasstack")])
+                 )
+
+               (defncall 'has-children '|>
+                 (api/key-fn :current)
+                 (api/key-fn :samak.nodes/children)
+                 (api/fn-call (api/symbol 'spy) [(api/string "haschild")])
+                 )
+
+               (defncall 'walk-cont 'or
+                 (api/symbol 'has-stack))
+
+               (defncall 'push-children '|>
+                 (api/map {(api/keyword :stack) (api/fn-call (api/symbol '|>)
+                                                             [(api/vector [(api/key-fn :stack)
+
+                                                                           (api/fn-call (api/symbol '|>) [(api/key-fn :current) (api/key-fn :samak.nodes/children)])])
+                                                              (api/fn-call (api/symbol 'spy) [])
+                                                              (api/symbol 'flatten)])
+                           (api/keyword :current) (api/key-fn :current)
+                           (api/keyword :result) (api/key-fn :result)}))
+
+               (defncall 'handle-children '|>
+                 (api/fn-call (api/symbol 'spy) [(api/string "children")])
+                 (api/fn-call (api/symbol 'incase)
+                              [(api/symbol 'has-children)
+                               (api/symbol 'push-children)])
+                 (api/fn-call (api/symbol 'spy) [(api/string "afterchildren")])
+                 )
+
+               (api/defexp (api/symbol 'pop-current)
+                 (api/map {(api/keyword :stack) (api/fn-call (api/symbol '|>)
+                                                             [(api/key-fn :stack)
+                                                              (api/fn-call (api/symbol 'drop)
+                                                                           [(api/integer 1)])])
+                           (api/keyword :current) (api/fn-call (api/symbol '|>)
+                                                             [(api/key-fn :stack)
+                                                              (api/fn-call (api/symbol 'nth)
+                                                                           [(api/integer 0)])])
+                           (api/keyword :result) (api/key-fn :result)}))
+
+               (defncall 'handle-node '|>
+                 (api/fn-call (api/symbol 'spy) [(api/string "HANDLE")])
+
+                 (api/map {(api/keyword :result) (api/fn-call (api/symbol '|>)
+                                                              [(api/vector [(api/key-fn :result)
+                                                                            (api/fn-call (api/symbol '|>) [(api/key-fn :current) (api/key-fn :samak.nodes/children)])])
+                                                               (api/symbol 'flatten)])
+                           (api/keyword :stack) (api/key-fn :stack)
+                           (api/keyword :current) (api/key-fn :current)}))
+
+
+               (defncall 'walk-node '|>
+                 (api/symbol 'pop-current)
+                 (api/fn-call (api/symbol 'spy) [(api/string "pop")])
+                 (api/symbol 'handle-node)
+                 (api/symbol 'handle-children))
+
+               (defncall 'walk-ast 'loop
+                 (api/symbol 'walk-cont)
+                 (api/symbol 'walk-node)
+                 (api/symbol 'init-walk))
+
+               (defncall 'format-ast '|>
+                 (api/symbol 'walk-ast)
+                 (api/key-fn :result)
+                 (api/fn-call (api/symbol 'spy) []))
 
                (api/defexp (api/symbol 'format-def)
                  (api/map {(api/keyword :id) (api/symbol 'def-name)
                            (api/keyword :name) (api/key-fn :samak.nodes/name)
                            (api/keyword :value) (api/symbol 'format-ast)
-                           ;; (api/keyword :ast) (api/key-fn :samak.nodes/rhs)
                            (api/keyword :width) (api/integer 100)
                            (api/keyword :height) (api/integer 100)}))
 
