@@ -63,6 +63,12 @@
   (fn [x]
     (into init x)))
 
+(defn into*
+  []
+  (fn [[c x]]
+    (println (str "into " c " put " x))
+    (into c x)))
+
 (defn flattenv
   ""
   [x]
@@ -123,12 +129,13 @@
 
 (defn loop*
   [test body init]
-  (fn [x]
-    (let [test* (p/eval-as-fn test)
-          body* (p/eval-as-fn body)
-          acc (atom ((p/eval-as-fn init) x))]
+  (let [test* (p/eval-as-fn test)
+        body* (p/eval-as-fn body)
+        init* (p/eval-as-fn init)
+        acc (atom nil)]
+    (fn [x]
+      (reset! acc (init* x))
       (while (test* @acc)
-        (println (str "test: " (test* @acc)))
         (reset! acc (body* @acc)))
       @acc)))
 
@@ -136,6 +143,25 @@
   [n]
   (fn [c]
     (into [] (drop n c))))
+
+
+(defn interleave*
+  ""
+  []
+  (fn [[c1 c2]]
+    (into [] (map vec (partition 2 (interleave c1 c2))))))
+
+(defn repeat*
+  ""
+  []
+  (fn [[n x]]
+    (into [] (repeat n x))))
+
+(defn inc*
+  ""
+  [f]
+  (fn [x]
+    (inc ((p/eval-as-fn f) x))))
 
 
 (def samak-symbols
@@ -146,7 +172,8 @@
    'only   #(if* % identity tt/ignore)
    'remove (curry1fn filterv)
    'mapcat mapcatv
-   'repeat (curry1 repeat)
+   'repeat repeat*
+   'zip    interleave*
    'take   (curry1 take)
    'drop   dropv
    '=      (curry1 =)
@@ -162,7 +189,8 @@
    'vals   vals*
    'sort-by (curry1 sort-by)
    'concat concat*
-   'inc    inc
+   'into   into*
+   'inc    inc*
    'dec    dec
    'odd?   odd?
    'even?  even?

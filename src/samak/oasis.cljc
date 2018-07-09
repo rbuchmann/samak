@@ -242,6 +242,18 @@
                  (api/string "d/")
                  (api/key-fn :samak.nodes/name))
 
+               (defncall 'is-keyword '|>
+                 (api/key-fn :samak.nodes/type)
+                 (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/keyword)]))
+
+               (defncall 'is-symbol '|>
+                 (api/key-fn :samak.nodes/type)
+                 (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/symbol)]))
+
+               (defncall 'is-long '|>
+                 (api/key-fn :samak.nodes/type)
+                 (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/long)]))
+
                (defncall 'is-string '|>
                  (api/key-fn :samak.nodes/type)
                  (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/string)]))
@@ -250,6 +262,10 @@
                  (api/key-fn :samak.nodes/type)
                  (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/integer)]))
 
+               (defncall 'is-vector '|>
+                 (api/key-fn :samak.nodes/type)
+                 (api/fn-call (api/symbol '=) [(api/keyword :samak.nodes/vector)]))
+
                (defncall 'format-node '|>
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-string)
                                                     (api/key-fn :samak.nodes/type)])
@@ -257,43 +273,56 @@
                                                     (api/key-fn :samak.nodes/value)]))
 
                (defncall 'init-walk '|>
-                 (api/map {(api/keyword :stack) (api/vector [(api/key-fn :samak.nodes/rhs)])})
+                 (api/map {(api/keyword :stack)
+                           (api/vector [(api/vector [(api/key-fn :samak.nodes/rhs)
+                                                     (api/integer 0)])])})
                  (api/fn-call (api/symbol 'concat)
                               [(api/map {(api/keyword :current) (api/keyword :init)
-                                         (api/keyword :result) (api/vector [])})]))
+                                         (api/keyword :result) (api/vector [(api/keyword :g)])
+                                         (api/keyword :counter) (api/integer 0)})]))
 
                (defncall 'has-stack '|>
                  (api/key-fn :stack)
+                 ;; (api/fn-call (api/symbol 'spy) [(api/string "stack")])
                  (api/symbol 'count)
+                 ;; (api/fn-call (api/symbol 'spy) [(api/string "stacksize")])
                  (api/fn-call (api/symbol '>) [(api/integer 0)])
-                 (api/fn-call (api/symbol 'spy) [(api/string "hasstack")])
+                 ;; (api/fn-call (api/symbol 'spy) [(api/string "hasstack")])
                  )
 
                (defncall 'has-children '|>
                  (api/key-fn :current)
                  (api/key-fn :samak.nodes/children)
-                 (api/fn-call (api/symbol 'spy) [(api/string "haschild")])
+                 ;; (api/fn-call (api/symbol 'spy) [(api/string "haschild")])
                  )
 
                (defncall 'walk-cont 'or
                  (api/symbol 'has-stack))
 
+               (defncall 'stack-children '|>
+                 (api/vector [(api/fn-call (api/symbol '|>) [(api/key-fn :current)
+                                                             (api/key-fn :samak.nodes/children)])
+                              (api/fn-call (api/symbol '|>) [(api/vector [(api/integer 10) ;FIXME
+                                                                          (api/fn-call (api/symbol 'inc) [(api/key-fn :level)])])
+                                                             (api/fn-call (api/symbol 'repeat) [])])])
+                 (api/fn-call (api/symbol 'zip) []))
+
                (defncall 'push-children '|>
                  (api/map {(api/keyword :stack) (api/fn-call (api/symbol '|>)
                                                              [(api/vector [(api/key-fn :stack)
-
-                                                                           (api/fn-call (api/symbol '|>) [(api/key-fn :current) (api/key-fn :samak.nodes/children)])])
-                                                              (api/fn-call (api/symbol 'spy) [])
-                                                              (api/symbol 'flatten)])
+                                                                           (api/symbol 'stack-children)])
+                                                              (api/fn-call (api/symbol 'into) [])])
                            (api/keyword :current) (api/key-fn :current)
+                           (api/keyword :level) (api/key-fn :level)
+                           (api/keyword :counter) (api/key-fn :counter)
                            (api/keyword :result) (api/key-fn :result)}))
 
                (defncall 'handle-children '|>
-                 (api/fn-call (api/symbol 'spy) [(api/string "children")])
+                 ;; (api/fn-call (api/symbol 'spy) [(api/string "children")])
                  (api/fn-call (api/symbol 'incase)
                               [(api/symbol 'has-children)
                                (api/symbol 'push-children)])
-                 (api/fn-call (api/symbol 'spy) [(api/string "afterchildren")])
+                 ;; (api/fn-call (api/symbol 'spy) [(api/string "afterchildren")])
                  )
 
                (api/defexp (api/symbol 'pop-current)
@@ -304,35 +333,148 @@
                            (api/keyword :current) (api/fn-call (api/symbol '|>)
                                                              [(api/key-fn :stack)
                                                               (api/fn-call (api/symbol 'nth)
+                                                                           [(api/integer 0)])
+                                                              (api/fn-call (api/symbol 'nth)
                                                                            [(api/integer 0)])])
+                           (api/keyword :level) (api/fn-call (api/symbol '|>)
+                                                             [(api/key-fn :stack)
+                                                              (api/fn-call (api/symbol 'nth)
+                                                                           [(api/integer 0)])
+                                                              (api/fn-call (api/symbol 'nth)
+                                                                           [(api/integer 1)])])
+                           (api/keyword :counter) (api/fn-call (api/symbol 'inc) [(api/key-fn :counter)])
                            (api/keyword :result) (api/key-fn :result)}))
+
+               (defncall 'cell-y '|>
+                 (api/vector [(api/integer 16)
+                              (api/key-fn :counter)])
+                 (api/symbol 'mult))
+
+               (defncall 'cell-x '|>
+                 (api/vector [(api/integer 10)
+                              (api/key-fn :level)])
+                 (api/symbol 'mult))
+
+               (defncall 'cell-pos '|>
+                 (api/map {(api/keyword :x)
+                           (api/symbol 'cell-x)
+                           (api/keyword :y)
+                           (api/symbol 'cell-y)})
+                 (api/symbol 'translate-str))
+
+               (defncall 'type-pos '|>
+                 (api/map {(api/keyword :x)
+                           (api/integer 50)
+                           (api/keyword :y)
+                           (api/symbol 'cell-y)})
+                 (api/symbol 'translate-str))
+
+               (defncall 'make-cell '|>
+                 (api/vector [(api/keyword :g)
+                              (api/vector [(api/keyword :text)
+                                           (api/map {(api/keyword :transform)
+                                                     (api/symbol 'cell-pos)})
+                                           (api/fn-call (api/symbol 'str) [(api/key-fn :value)])])
+                              (api/vector [(api/keyword :text)
+                                           (api/map {(api/keyword :transform)
+                                                     (api/symbol 'type-pos)
+                                                     (api/keyword :font-style)
+                                                     (api/string "italic")
+                                                     (api/keyword :fill)
+                                                     (api/string "darkgrey")})
+                                           (api/fn-call (api/symbol 'str) [(api/key-fn :type)])])]))
+
+               (defncall 'handle-unknown '|>
+                 (api/fn-call (api/symbol 'spy) [(api/string "unknown")])
+                 (api/map {(api/keyword :result)
+                           (api/fn-call (api/symbol '|>)
+                                        [(api/fn-call (api/symbol 'str) [(api/string "unknown: ")
+                                                                         (api/symbol 'id)])
+                                         (api/symbol 'make-cell)])}))
+
+               (defncall 'handle-int '|>
+                 (api/fn-call (api/symbol 'spy) [(api/string "int")])
+                 (api/map {(api/keyword :result)
+                           (api/fn-call (api/symbol '|>)
+                                        [(api/map {(api/keyword :value) (api/fn-call (api/symbol 'str) [(api/fn-call (api/symbol '|>) [(api/key-fn :current)
+                                                                                                                                       (api/key-fn :samak.nodes/value)])])
+                                                   (api/keyword :type) (api/string "int")
+                                                   (api/keyword :counter) (api/key-fn :counter)
+                                                   (api/keyword :level) (api/key-fn :level)})
+                                         (api/symbol 'make-cell)])}))
+
+               (defncall 'handle-str '|>
+                 (api/fn-call (api/symbol 'spy) [(api/string "str")])
+                 (api/map {(api/keyword :result)
+                           (api/fn-call (api/symbol '|>)
+                                        [(api/fn-call (api/symbol 'str) [(api/string "str: ")
+                                                                         (api/key-fn :samak.nodes/value)])
+                                         (api/symbol 'make-cell)])}))
+
+               (defncall 'make-vec '|>
+                 (api/vector [(api/keyword :text)
+                              (api/map {(api/keyword :transform)
+                                        (api/fn-call (api/symbol '|>) [(api/map {(api/keyword :x)
+                                                                                 (api/integer 15)
+                                                                                 (api/keyword :y)
+                                                                                 (api/symbol 'calculate-y)})
+                                                                       (api/symbol 'translate-str)])})]))
+
+               (defncall 'handle-vector '|>
+                 (api/fn-call (api/symbol 'spy) [(api/string "vec")])
+                 (api/map {(api/keyword :result)
+
+                           (api/fn-call (api/symbol '|>)
+                                        [(api/key-fn :samak.nodes/children)
+                                         (api/fn-call (api/symbol 'str) [(api/string "vec: ")
+                                                                         (api/symbol 'id)])
+                                         (api/symbol 'make-cell)])}))
+
+
+
+               (defncall 'handle-by-type '|>
+                 (api/fn-call (api/symbol 'spy) [(api/string "type")])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '|>) [(api/key-fn :current)
+                                                                                   (api/symbol 'is-integer)])
+                                                    (api/symbol 'handle-int)])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '|>) [(api/key-fn :current)
+                                                                                   (api/symbol 'is-vector)])
+                                                    (api/symbol 'handle-vector)])
+                 (api/fn-call (api/symbol 'unless) [(api/key-fn :result) (api/symbol 'handle-unknown)])
+                 (api/key-fn :result)
+                 (api/vector [(api/symbol 'id)])
+                 (api/fn-call (api/symbol 'spy) [(api/string "handled")]))
 
                (defncall 'handle-node '|>
                  (api/fn-call (api/symbol 'spy) [(api/string "HANDLE")])
 
                  (api/map {(api/keyword :result) (api/fn-call (api/symbol '|>)
                                                               [(api/vector [(api/key-fn :result)
-                                                                            (api/fn-call (api/symbol '|>) [(api/key-fn :current) (api/key-fn :samak.nodes/children)])])
-                                                               (api/symbol 'flatten)])
+                                                                            (api/symbol 'handle-by-type)])
+                                                               (api/fn-call (api/symbol 'into) [])])
                            (api/keyword :stack) (api/key-fn :stack)
-                           (api/keyword :current) (api/key-fn :current)}))
+                           (api/keyword :counter) (api/key-fn :counter)
+                           (api/keyword :level) (api/key-fn :level)
+                           (api/keyword :current) (api/key-fn :current)})
+                 (api/fn-call (api/symbol 'spy) [(api/string "after")]))
 
 
                (defncall 'walk-node '|>
                  (api/symbol 'pop-current)
-                 (api/fn-call (api/symbol 'spy) [(api/string "pop")])
+                 ;; (api/fn-call (api/symbol 'spy) [(api/string "pop")])
                  (api/symbol 'handle-node)
                  (api/symbol 'handle-children))
 
                (defncall 'walk-ast 'loop
-                 (api/symbol 'walk-cont)
+                 (api/symbol 'has-stack)
                  (api/symbol 'walk-node)
                  (api/symbol 'init-walk))
 
                (defncall 'format-ast '|>
                  (api/symbol 'walk-ast)
                  (api/key-fn :result)
-                 (api/fn-call (api/symbol 'spy) []))
+                 ;; (api/fn-call (api/symbol 'spy) [(api/string "ast")])
+                 )
 
                (api/defexp (api/symbol 'format-def)
                  (api/map {(api/keyword :id) (api/symbol 'def-name)
@@ -340,18 +482,6 @@
                            (api/keyword :value) (api/symbol 'format-ast)
                            (api/keyword :width) (api/integer 100)
                            (api/keyword :height) (api/integer 100)}))
-
-               (defncall 'first-arg-value '|>
-                 (api/fn-call (api/symbol 'nth) [(api/integer 0)])
-                 (api/key-fn :samak.nodes/value))
-
-               (defncall 'second-arg-value '|>
-                 (api/fn-call (api/symbol 'nth) [(api/integer 1)])
-                 (api/key-fn :samak.nodes/value))
-
-               (defncall 'third-arg-value '|>
-                 (api/fn-call (api/symbol 'nth) [(api/integer 2)])
-                 (api/key-fn :samak.nodes/value))
 
 
                (defncall 'pipe-name 'str
@@ -423,13 +553,18 @@
                                                      (api/keyword :style) (api/map {(api/keyword :fill) (api/string "#fff")
                                                                                     (api/keyword :stroke) (api/string "darkgrey")})})])
                               (api/vector [(api/keyword :text)
-                                           (api/map {(api/keyword :x) (api/integer 0)
-                                                     (api/keyword :y) (api/integer 20)})
+                                           (api/map {(api/keyword :x) (api/integer 5)
+                                                     (api/keyword :y) (api/integer 20)
+                                                     (api/keyword :font-weight) (api/string "bold")})
                                            (api/key-fn :name)])
-                              (api/vector [(api/keyword :text)
-                                           (api/map {(api/keyword :x) (api/integer 0)
-                                                     (api/keyword :y) (api/integer 30)})
-                                           (api/fn-call (api/symbol 'str) [(api/key-fn :value)])])]))
+                              (api/vector [(api/keyword :g)
+                                           (api/map {(api/keyword :transform)
+                                                     (api/fn-call (api/symbol '|>) [(api/map {(api/keyword :x)
+                                                                                              (api/integer 5)
+                                                                                              (api/keyword :y)
+                                                                                              (api/integer 20)})
+                                                                       (api/symbol 'translate-str)])})
+                                           (api/key-fn :value)])]))
 
                (defncall 'graph-nodes '|>
                  (api/key-fn :children)
@@ -521,11 +656,9 @@
                               (pipe 'n 'state-reduce 'state)
                               (pipe 'state 'log-state)
 
-                              (pipe 'state 'format-state 'lay-in)
                               (pipe 'state 'format-state 'layout)
 
                               (pipe 'layout 'log-layout)
-                              (pipe 'lay-in 'log-layout)
 
                               (pipe 'layout 'graph 'svg-render)
                               (pipe 'render 'elements-reduce 'reducer)
