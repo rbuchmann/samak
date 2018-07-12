@@ -21,7 +21,7 @@
 (deftest should-call
   (let [out (chan 1)]
     ((sut/query-call (db/create-empty-db) :b) :foo out)
-    (take! out #(is (= [] %)))))
+    (take! out #(is (= :not-found %)))))
 
 
 (deftest should-db

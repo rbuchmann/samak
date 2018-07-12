@@ -7,9 +7,8 @@
 (def vconj (fnil conj []))
 
 (defn eval-line-with-state [state line]
-  (-> state
-      (update :repl-lines vconj line)
-      (update :defined-symbols repl/eval-line line)))
+  (repl/eval-line line)
+  (update state :repl-lines vconj line))
 
 (defn make [state db]
   (let [lines (reaction (str/join "\n" (:repl-lines @state)))]
