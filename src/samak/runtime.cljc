@@ -5,13 +5,8 @@
             [samak.pipes     :as pipes]
             [clojure.set     :as set]))
 
-(defprotocol SamakRuntime
-  (eval-expression! [this ast])
-  (get-defined-expressions [this])
-  (query [this query]))
-
 (defn eval-all-new! [db tx-records]
-  (println "About to transact these records:" (with-out-str (clojure.pprint/pprint tx-records)))
+  #_(println "About to transact these records:" (with-out-str (clojure.pprint/pprint tx-records)))
   (let [new-ids (-> (db/parse-tree->db! db tx-records)
                     :tempids
                     (dissoc :db/current-tx)
@@ -44,9 +39,9 @@
                                  ::n/to   (to-db-id b)})
                    tx-records (filter map? (concat arguments links))]
                (eval-all-new! db tx-records))
-    [:latest (n/eval-node ast)]))
+    {:latest (n/eval-node ast)}))
 
-(defn link-all-pipes! [db defined-ids linked-pipes]
+(defn link-all-pipes! [linked-pipes db defined-ids]
   (let [pipe-pairs     (->> (db/retrieve-links db)
                             (map (juxt ::n/from ::n/to))
                             (map #(mapv :db/id %))
@@ -61,27 +56,23 @@
                           (map defined-ids)
                           (apply pipes/link!))]))))
 
-(defrecord BasicRuntime [db defined-ids linked-pipes]
-  SamakRuntime
-  (eval-expression! [this ast]
-    (let [new-defines (eval-toplevel-ast! db ast)]
-      (swap! defined-ids merge new-defines)
-      (reset! linked-pipes (link-all-pipes! db @defined-ids @linked-pipes)))
-    this)
-  (get-defined-expressions [_]
-    @defined-ids)
-  (query [_ q]
-    (d/q q @db)))
-
 (defn make-runtime []
-  (BasicRuntime. (db/create-empty-db) (atom {}) (atom {})))
+  {:db           (db/create-empty-db)
+   :defined-ids  (atom {})
+   :linked-pipes (atom {})})
 
-(def ep
-  "(def in (pipes/debug))
-  (def out (pipes/log))
-  (def f inc)
-  (| in (|> f) out)")
+(defn eval-expression! [{:keys [db defined-ids linked-pipes] :as state} ast]
+  (let [new-defines (eval-toplevel-ast! db ast)]
+    (swap! defined-ids (fn [ids] (-> ids
+                                    (dissoc :latest)
+                                    (merge new-defines))))
+    (swap! linked-pipes link-all-pipes! db @defined-ids)
+    state))
 
-(def p (-> (samak.lisparser/parse-all ep) :value))
+(def get-defined-ids  (comp deref :defined-ids))
+(def get-linked-pipes (comp deref :linked-pipes))
 
-(def r (make-runtime))
+(defn get-definition-by-name [state sym]
+  (if-let [id (:db/id (db/load-ast (:db state) sym))]
+    (-> state get-defined-ids (get id))
+    (println "Couldn't find \"" sym "\" in database")))

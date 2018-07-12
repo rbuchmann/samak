@@ -10,7 +10,7 @@
 
 (def tdb (db/create-empty-db))
 
-(deftest should-be-oasis
+#_(deftest should-be-oasis
   (is (some #(and (= (:samak.nodes/type %) :samak.nodes/def)
                   (= (:samak.nodes/name %) 'oasis))
             (sut/start))))

@@ -120,8 +120,8 @@
     (let [ast (or (db/load-ast db input) :not-found)]
       (put! out ast))))
 
-(defn db-persist [args]
-  )
+(defn db-persist [db args]
+  (db/parse-tree->db! db args))
 
 (defn db-query [db query]
   (pipes/async-pipe (query-call db query) nil nil))
