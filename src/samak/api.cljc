@@ -46,3 +46,27 @@
 (defn symbol-node? [s]
   (and (= :samak.nodes/symbol (:samak.nodes/type s))
        (contains? s :samak.nodes/value)))
+
+(defn is-vector?
+  [node]
+  (= (:samak.nodes/type node) :samak.nodes/vector))
+
+(defn is-map?
+  [node]
+  (= (:samak.nodes/type node) :samak.nodes/map))
+
+(defn is-entry?
+  [node]
+  (contains? node :samak.nodes/mapvalue))
+
+(defn is-fn-call?
+  [node]
+  (= (:samak.nodes/type node) :samak.nodes/fn-call))
+
+(defn is-def?
+  [node]
+  (= (:samak.nodes/type node) :samak.nodes/def))
+
+(defn is-pipe?
+  [node]
+  (= (:samak.nodes/type node) :samak.nodes/pipe))

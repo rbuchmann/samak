@@ -34,6 +34,5 @@
   (let [db (:db rt)]
     (is (some? (sut/store db)))
     (let [oasis (db/load-ast db 'oasis)]
-      (is (= 'ui (:samak.nodes/name oasis)))
-      (is (s/valid? :samak.spec/toplevel-exp oasis))))
-  )
+      (is (= 'oasis (:samak.nodes/name oasis)))
+      (is (s/valid? :samak.spec/toplevel-exp oasis)))))

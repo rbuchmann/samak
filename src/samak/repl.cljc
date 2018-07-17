@@ -9,6 +9,7 @@
       [samak.pipes :as pipes]
       [samak.runtime :as run]
       [samak.stdlib :as std]
+      [samak.caravan :as caravan]
       [samak.tools :as t]
       [samak.core :as core])]
     :cljs
@@ -20,6 +21,7 @@
       [samak.pipes :as pipes]
       [samak.runtime :as run]
       [samak.stdlib :as std]
+      [samak.caravan :as caravan]
       [samak.tools :as t]
       [samak.core :as core])]))
 
@@ -55,8 +57,9 @@
   ""
   [length]
   (fn [state [nr exp]]
-    (println (str (int (* (/ nr length) 100)) "%"))
-    (run/eval-expression! state exp)))
+    (let [progress (* (/ nr length) 100)]
+      (when (= 0 (mod progress 10)) (println (str (int progress) "%")))
+      (run/eval-expression! state exp))))
 
 
 (defn start-oasis
@@ -92,7 +95,7 @@
     (when-let [parsed (parse-samak-string input)]
       (println parsed)
       (doseq [expression parsed]
-        (std/notify-source expression))
+        (caravan/repl-eval expression))
       (reduce run/eval-expression! rt parsed))))
 
 (defn group-repl-cmds [lines]
@@ -155,7 +158,15 @@
   (str/split-lines
    "(def in (pipes/debug))
 (def out (pipes/log))
-(| in (pipes/reductions (|> [:-next :-state] sum) 0) out)
+(| in (pipes/reductions (-> [:-next :-state] sum) 0) out)
+!f in 5
+!f in 6"))
+
+(def tl4b
+  (str/split-lines
+   "(def in (pipes/debug))
+(def out (pipes/log))
+(| in (pipes/reductions (-> [:-state :-next] into) {}) out)
 !f in 5
 !f in 6"))
 
