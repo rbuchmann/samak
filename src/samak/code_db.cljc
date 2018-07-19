@@ -36,7 +36,6 @@
 (defn parse-tree->db! [db tree]
   (d/transact! db tree))
 
-
 (defn load-ast
   "loads an ast given by SYMBOL from the database"
   [db sym]
