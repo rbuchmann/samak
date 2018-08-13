@@ -11,7 +11,7 @@
   {:mode            modes/starting-mode
    :path            []
    :repl-lines      []
-   :defined-symbols (merge core/samak-symbols std/pipe-symbols)})
+   :defined-symbols core/samak-symbols})
 
 (defonce app-state (r/atom (make-initial-state)))
 (defonce db (db/create-ratom-db db/schema))
