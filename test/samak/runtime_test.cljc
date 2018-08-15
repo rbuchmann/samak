@@ -3,6 +3,7 @@
             #?(:clj [clojure.test :as t :refer [deftest is]]
 
                :cljs [cljs.test   :as t :include-macros true])
+            [samak.code-db   :as db]
             [datascript.core      :as d]))
 
 (def r (sut/make-runtime))
@@ -85,3 +86,8 @@
   (let [r (-> (sut/make-runtime)
               (sut/eval-expression! other-def-node))]
     (is (= "foo" (sut/get-definition-by-name r 'foo)))))
+
+
+(deftest should-persist-builtins
+  (is (= inc (get @(:defined-ids (sut/load-builtins! (sut/make-runtime) ['inc 'dec])) 1)))
+  )

@@ -11,11 +11,13 @@
 (def schema #:samak.nodes {:arguments  {:db/isComponent true
                                         :db/valueType   :db.type/ref
                                         :db/cardinality :db.cardinality/many}
-                           :fn         {:db/valueType :db.type/ref}
-                           :rhs        {:db/valueType :db.type/ref}
+                           :fn         {:db/valueType   :db.type/ref}
+                           :rhs        {:db/valueType   :db.type/ref}
                            :kv-pairs   {:db/cardinality :db.cardinality/many
                                         :db/isComponent true
                                         :db/valueType   :db.type/ref}
+                           :mapkey     {:db/valueType   :db.type/ref}
+                           :mapvalue   {:db/valueType   :db.type/ref}
                            :children   {:db/cardinality :db.cardinality/many
                                         :db/isComponent true
                                         :db/valueType   :db.type/ref}
@@ -25,7 +27,7 @@
                                         :db/valueType   :db.type/ref}
                            :to         {:db/isComponent false
                                         :db/valueType   :db.type/ref}
-                           :name       {:db/unique :db.unique/value}
+                           :name       {:db/unique      :db.unique/identity}
                            :node       {:db/isComponent true
                                         :db/valueType   :db.type/ref}
                            })

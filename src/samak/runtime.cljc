@@ -56,16 +56,6 @@
                           (map defined-ids)
                           (apply pipes/link!))]))))
 
-(declare load-builtins!)
-
-(defn make-runtime
-  ([]
-   {:db           (db/create-empty-db)
-    :defined-ids  (atom {})
-    :linked-pipes (atom {})})
-  ([builtins]
-   (load-builtins! (make-runtime) builtins)))
-
 (defn eval-expression! [{:keys [db defined-ids linked-pipes] :as state} ast]
   (let [new-defines (eval-toplevel-ast! db ast)]
     (swap! defined-ids (fn [ids] (-> ids
@@ -75,9 +65,19 @@
     state))
 
 (defn load-builtins! [rt builtin-symbols]
-  (->> builtin-symbols
-       (map (fn [s] (api/defexp s (api/builtin s))))
-       (reduce eval-expression! rt)))
+  (let [defs (map (fn [s] (api/defexp s (api/builtin s))) builtin-symbols)]
+    (db/parse-tree->db! (:db rt) defs)
+    (reduce eval-expression! rt defs)
+  ))
+
+(defn make-runtime
+  ([]
+   {:db           (db/create-empty-db)
+    :defined-ids  (atom {})
+    :linked-pipes (atom {})})
+  ([builtins]
+   (load-builtins! (make-runtime) builtins)))
+
 
 (def get-defined-ids  (comp deref :defined-ids))
 (def get-linked-pipes (comp deref :linked-pipes))
