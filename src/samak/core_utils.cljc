@@ -1,6 +1,10 @@
 (ns samak.core-utils
-  (:require [samak.protocols :as p])
-  #?(:cljs (:require-macros samak.core-utils :refer [samakify samakify-all])))
+  #?@
+   (:clj
+    [(:require [samak.protocols :as p])]
+    :cljs
+    [(:require [samak.protocols :as p])
+     (:require-macros [samak.core-utils :refer [samakify samakify-all]])]))
 
 (defn fn-sym? [s]
   (re-matches #"f[0-9]*" (name s)))
