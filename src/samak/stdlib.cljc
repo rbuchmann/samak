@@ -144,13 +144,13 @@
     (a/pipeline 1 source (map (fn [x] (println "ast in: " x) x)) notify-chan)
     (pipes/source source)))
 
-(defn eval-line-call
+#_(defn eval-line-call
   ""
   [input]
   (doseq [expression (lp/parse input)]
     (notify-source expression)))
 
-(defn eval-line
+#_(defn eval-line
   ""
   []
   (let [log-chan (chan)]

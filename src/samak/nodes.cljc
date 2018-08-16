@@ -11,22 +11,6 @@
 
 (def eval-vals (partial map (fn [[k v]] [(::value k) (eval-node v)])))
 
-(defn resolve-from-db
-  ""
-  [s]
-  (let [node (eval-node (db/load-ast *db* s))]
-    ;; here be stateful dragons
-    node))
-
-
-(defn resolve-symbol [s]
-  (or (*symbol-map* s)
-      (let [msg (str "Unknown variable: " s)]
-        (println "symbols" *symbol-map*)
-        (println "Variable: " (pr-str s))
-        #?(:clj  (throw (Exception. msg))
-           :cljs (throw (js/Error.  msg))))))
-
 (defmethod eval-node nil [value] (println (str "eval node broke for " value)))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]

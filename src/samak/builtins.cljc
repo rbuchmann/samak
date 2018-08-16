@@ -1,8 +1,9 @@
 (ns samak.builtins
-  (:require [samak.stdlib    :as std]
-            [samak.protocols :as p]
-            [samak.nodes     :as n]
-            [samak.tools     :as tools]))
+  (:require [samak.stdlib             :as std]
+            [samak.protocols          :as p]
+            [samak.tools              :as tools]
+            [samak.pipes              :as pipes]
+            [samak.transduction-tools :as tt]))
 
 (defn if* [pred then else]
   (let [pred* (p/eval-as-fn pred)
@@ -123,7 +124,6 @@
   (fn [c]
     (into [] (drop n c))))
 
-
 (defn interleave*
   ""
   []
@@ -135,13 +135,6 @@
   []
   (fn [[n x]]
     (into [] (repeat n x))))
-
-(defn inc*
-  ""
-  [f]
-  (fn [x]
-    (inc ((p/eval-as-fn f) x))))
-
 
 (def samak-symbols
   {'->      chain
@@ -170,7 +163,7 @@
    'sort-by (curry1 sort-by)
    'concat  concat*
    'into    into*
-   'inc     inc*
+   'inc     inc
    'dec     dec
    'odd?    odd?
    'even?   even?
@@ -185,6 +178,4 @@
    'incase  incase
    'unless  unless
    'loop    loop*
-   'spy     spy
-   'net     net
-   '!       '!})
+   'spy     spy})

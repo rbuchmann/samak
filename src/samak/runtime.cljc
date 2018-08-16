@@ -3,10 +3,10 @@
             [samak.code-db   :as db]
             [samak.nodes     :as n]
             [samak.pipes     :as pipes]
+            [samak.api       :as api]
             [clojure.set     :as set]))
 
 (defn eval-all-new! [db tx-records]
-  #_(println "About to transact these records:" (with-out-str (clojure.pprint/pprint tx-records)))
   (let [new-ids (-> (db/parse-tree->db! db tx-records)
                     :tempids
                     (dissoc :db/current-tx)
@@ -56,10 +56,15 @@
                           (map defined-ids)
                           (apply pipes/link!))]))))
 
-(defn make-runtime []
-  {:db           (db/create-empty-db)
-   :defined-ids  (atom {})
-   :linked-pipes (atom {})})
+(declare load-builtins!)
+
+(defn make-runtime
+  ([]
+   {:db           (db/create-empty-db)
+    :defined-ids  (atom {})
+    :linked-pipes (atom {})})
+  ([builtins]
+   (load-builtins! (make-runtime) builtins)))
 
 (defn eval-expression! [{:keys [db defined-ids linked-pipes] :as state} ast]
   (let [new-defines (eval-toplevel-ast! db ast)]
@@ -68,6 +73,11 @@
                                     (merge new-defines))))
     (swap! linked-pipes link-all-pipes! db @defined-ids)
     state))
+
+(defn load-builtins! [rt builtin-symbols]
+  (->> builtin-symbols
+       (map (fn [s] (api/defexp s (api/builtin s))))
+       (reduce eval-expression! rt)))
 
 (def get-defined-ids  (comp deref :defined-ids))
 (def get-linked-pipes (comp deref :linked-pipes))

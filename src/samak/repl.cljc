@@ -9,7 +9,8 @@
       [samak.pipes :as pipes]
       [samak.runtime :as run]
       [samak.stdlib :as std]
-      [samak.tools :as t])]
+      [samak.tools :as t]
+      [samak.core :as core])]
     :cljs
     [(:require
       [cljs.reader :as edn]
@@ -19,9 +20,10 @@
       [samak.pipes :as pipes]
       [samak.runtime :as run]
       [samak.stdlib :as std]
-      [samak.tools :as t])]))
+      [samak.tools :as t]
+      [samak.core :as core])]))
 
-(def rt (run/make-runtime))
+(def rt (run/make-runtime (keys core/samak-symbols)))
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -44,8 +46,7 @@
   [pipe-name event]
   (let [pipe (run/get-definition-by-name rt (symbol pipe-name))]
     (if (pipes/pipe? pipe)
-      (do (let [arg (or (run/get-definition-by-name rt (symbol event))
-                        (edn/read-string event))]
+      (do (let [arg (edn/read-string event)]
             (pipes/fire! pipe arg))
           {})
       (println (str "could not find pipe " pipe-name)))))
@@ -63,7 +64,7 @@
    \e (fn [_] (println "Defined symbols:\n" (->> rt
                                                 run/get-defined-ids
                                                 t/pretty)))
-   \p (fn [in _] (println (parse-samak-string in)))})
+   \p (fn [in] (println (parse-samak-string in)))})
 
 (defn run-repl-cmd [s]
   (let [[_ dispatch & rst] s]
@@ -92,6 +93,13 @@
 (defn eval-lines [lines]
   (doseq [line (group-repl-cmds lines)]
     (eval-line line)))
+
+(def t
+  (str/split-lines
+   "(def in (|> inc inc))
+(def out (pipes/log))
+(| in out)
+!f in 5"))
 
 (def tl
   (str/split-lines

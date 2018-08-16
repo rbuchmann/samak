@@ -1,15 +1,18 @@
 (ns samak.code-db
   #?@
    (:clj
-    [(:require [datascript.core :as d])]
+    [(:require [datascript.core :as d]
+               [clojure.walk    :as w])]
     :cljs
-    [(:require [datascript.core :as d] [reagent.core :as r])]))
+    [(:require [datascript.core :as d]
+               [reagent.core :as r]
+               [clojure.walk    :as w])]))
 
 (def schema #:samak.nodes {:arguments  {:db/isComponent true
                                         :db/valueType   :db.type/ref
                                         :db/cardinality :db.cardinality/many}
-                           :rhs        {:db/isComponent true
-                                        :db/valueType   :db.type/ref}
+                           :fn         {:db/valueType :db.type/ref}
+                           :rhs        {:db/valueType :db.type/ref}
                            :kv-pairs   {:db/cardinality :db.cardinality/many
                                         :db/isComponent true
                                         :db/valueType   :db.type/ref}
@@ -51,11 +54,12 @@
 (defn load-by-id
   "loads an ast given by its entity id from the database"
   [db id]
-  (let [res (d/q '[:find [(pull ?id [*]) ...]
-                   :in $ ?id]
-                 @db
-                 id)]
-    (first res)))
+  (w/postwalk (fn [form]
+                (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
+                                  (:db/id form))]
+                 (load-by-id db sub-id)
+                 form))
+             (d/pull @db '[*] id)))
 
 (defn retrieve-links [db]
   (d/q '[:find [(pull ?id [*]) ...]

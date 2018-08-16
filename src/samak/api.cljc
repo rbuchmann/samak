@@ -1,31 +1,23 @@
 (ns samak.api
   (:refer-clojure :exclude [vector map symbol keyword float])
-  (:require [samak.tools :as tools]
-            [samak.core  :as core]))
+  (:require [samak.tools :as tools]))
 
 (defn literal [literal-name body]
   #:samak.nodes{:type  (tools/qualify-kw "samak.nodes" literal-name)
                 :value body})
 
+(defn builtin [identifier]
+  (assoc (literal 'builtin identifier)
+         :name identifier))
+
+(def keyword (partial literal 'keyword))
+(def key-fn  (partial literal 'key-fn))
+(def integer (partial literal 'integer))
+(def float   (partial literal 'float))
+(def string  (partial literal 'string))
+
 (defn symbol [identifier]
-  (if (contains? core/samak-symbols identifier)
-    (literal 'builtin identifier)
-    [:samak.nodes/name identifier]))
-
-(defn keyword [identifier]
-  (literal 'keyword identifier))
-
-(defn key-fn [identifier]
-  (literal 'key-fn identifier))
-
-(defn integer [identifier]
-  (literal 'integer identifier))
-
-(defn float [identifier]
-  (literal 'float identifier))
-
-(defn string [identifier]
-  (literal 'string identifier))
+  [:samak.nodes/name identifier])
 
 (defn pipe [args]
   #:samak.nodes {:type      :samak.nodes/pipe
