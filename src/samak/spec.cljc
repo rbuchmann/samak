@@ -19,6 +19,7 @@
 (defmethod nested-exp :samak.nodes/keyword [_] any?)
 (defmethod nested-exp :samak.nodes/float [_] any?)
 (defmethod nested-exp :samak.nodes/string [_] any?)
+(defmethod nested-exp :samak.nodes/key-fn [_] any?)
 
 
 (s/def :samak.nodes/rhs nested-exp)

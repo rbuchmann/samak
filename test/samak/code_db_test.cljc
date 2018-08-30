@@ -14,8 +14,12 @@
                       (api/keyword :foo) (api/integer 42)})]
     (is (some? (db/parse-tree->db! tdb [ast])))))
 
-(deftest db-load-test
+
+(def builtins ['inc 'dec 'pipes/debug '|>])
+
+(deftest db-save-test
   (let [ast           (:value tt/parsed-example)
+        builtin (db/parse-tree->db! tdb (map #(api/defexp % (api/builtin %)) builtins))
         basic-tree-db (do (db/parse-tree->db! tdb ast) tdb)
         result (d/q '[:find [(pull ?e [*])]
                       :in $ ?name
@@ -27,8 +31,27 @@
 
 (deftest should-load-ast
   (let [db (db/create-empty-db)
+        builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))
         parsed (:value tt/parsed-example)
         base (do (db/parse-tree->db! db parsed) db)
         result (db/load-ast base 'foo)]
-    (is (= 'foo (get-in result [:samak.nodes/name ])))
-    (is (= 'inc (get-in result [:samak.nodes/rhs :samak.nodes/value])))))
+    (is (= 'foo (get-in result [:samak.nodes/name])))
+    (is (= 1 (get-in result [:samak.nodes/rhs :db/id])))))
+
+(deftest should-load-by-id
+  (let [db (db/create-empty-db)
+        builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))
+        parsed (:value tt/parsed-example)
+        base (do (db/parse-tree->db! db parsed) db)
+        result (db/load-by-id base 9)]
+    (is (= 'foo (get-in result [:samak.nodes/name])))
+    (is (= 1 (get-in result [:samak.nodes/rhs :db/id])))))
+
+(deftest should-walk-maps-on-load-by-id
+  (let [db (db/create-empty-db)
+        builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))
+        parsed [(api/map {(api/keyword :key) (api/symbol 'inc)})]
+        base (do (db/parse-tree->db! db parsed) db)
+        result (db/load-by-id base 9)]
+    (is (= :foo result))
+    (is (= 1 (get-in result [:samak.nodes/rhs :db/id])))))

@@ -21,9 +21,13 @@
 
 (deftest eval-program-structures
   (is (= 1 (eval-string "(1 :bar)")))
-  (let [m (eval-string "(:-foo ({:foo 1} !))")]
+  (let [m (eval-string "(:-foo {:foo 1})")]
     (is (= m 1)))
   (is (= [1 :foo :bar] (eval-string "([1 :foo :-foo] {:foo :bar})"))))
 
 (deftest should-evaluate-map
   (is (= {:test 1} (n/eval-node (api/map {(api/keyword :test) (api/integer 1)})))))
+
+(deftest should-eval-builtins
+  (is (= 2 ((n/eval-node (api/defexp 'inc (api/builtin 'inc))) 1)))
+  )

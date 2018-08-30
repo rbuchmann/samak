@@ -51,4 +51,4 @@
               `['~f (samakify ~f ~argvec)])))))
 
 
-(samakify-all (if [pred then else]) [foo (inc [?])])
+;; (samakify-all (if [pred then else]) [foo (inc [?])])

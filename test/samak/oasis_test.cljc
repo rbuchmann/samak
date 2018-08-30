@@ -8,7 +8,7 @@
                 :cljs [[cljs.test         :as t :refer [is deftest] :include-macros true]
                        [cljs.spec.alpha   :as s] :include-macros true])))
 
-(def tdb (db/create-empty-db))
+;; (def tdb (db/create-empty-db))
 
 #_(deftest should-be-oasis
   (is (some #(and (= (:samak.nodes/type %) :samak.nodes/def)

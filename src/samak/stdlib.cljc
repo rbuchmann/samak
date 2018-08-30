@@ -10,8 +10,7 @@
      [samak.tools :as tools]
      [clojure.string :as str]
      [net.cgrand.xforms :as x]
-     [samak.protocols :as p]
-     [samak.lisparser :as lp])]
+     [samak.protocols :as p])]
    :cljs
    [(:require
      [cljs-http.client :as http]
@@ -23,7 +22,6 @@
      [samak.layout :as layout]
      [samak.tools :as tools]
      [samak.protocols :as p]
-     [samak.lisparser :as lp]
      [net.cgrand.xforms :as x])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
@@ -189,7 +187,7 @@
     'pipes/debug       debug
     'pipes/http        http
     'pipes/eval-notify eval-notify
-    'pipes/eval-line   eval-line
+    ;; 'pipes/eval-line   eval-line
     'pipes/reductions  reductions*}
    #?(:cljs
       {'pipes/ui ui

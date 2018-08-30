@@ -11,7 +11,10 @@
 
 (def eval-vals (partial map (fn [[k v]] [(::value k) (eval-node v)])))
 
-(defmethod eval-node nil [value] (println (str "eval node broke for " value)))
+(defmethod eval-node nil [value]
+  (if (and (vector? value) (= 2 (count value)) (= ::name (first value)))
+    (println (str "unknown function: '" (second value) "'"))
+    (println (str "unknown token during evaluation: " (str value)))))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]
