@@ -8,28 +8,28 @@
                [reagent.core :as r]
                [clojure.walk    :as w])]))
 
-(def schema #:samak.nodes {:arguments  {:db/isComponent true
-                                        :db/valueType   :db.type/ref
-                                        :db/cardinality :db.cardinality/many}
-                           :fn         {:db/valueType   :db.type/ref}
-                           :rhs        {:db/valueType   :db.type/ref}
-                           :kv-pairs   {:db/cardinality :db.cardinality/many
-                                        :db/isComponent true
-                                        :db/valueType   :db.type/ref}
-                           :mapkey     {:db/valueType   :db.type/ref}
-                           :mapvalue   {:db/valueType   :db.type/ref}
-                           :children   {:db/cardinality :db.cardinality/many
-                                        :db/isComponent true
-                                        :db/valueType   :db.type/ref}
-                           :expression {:db/isComponent true
-                                        :db/valueType   :db.type/ref}
-                           :from       {:db/isComponent false
-                                        :db/valueType   :db.type/ref}
-                           :to         {:db/isComponent false
-                                        :db/valueType   :db.type/ref}
-                           :name       {:db/unique      :db.unique/identity}
-                           :node       {:db/isComponent true
-                                        :db/valueType   :db.type/ref}
+(def schema #:samak.nodes {:arguments   {:db/isComponent true
+                                         :db/valueType   :db.type/ref
+                                         :db/cardinality :db.cardinality/many}
+                           :fn          {:db/valueType :db.type/ref}
+                           :rhs         {:db/valueType :db.type/ref}
+                           :mapkv-pairs {:db/cardinality :db.cardinality/many
+                                         :db/isComponent true
+                                         :db/valueType   :db.type/ref}
+                           :mapkey      {:db/valueType :db.type/ref}
+                           :mapvalue    {:db/valueType :db.type/ref}
+                           :children    {:db/cardinality :db.cardinality/many
+                                         :db/isComponent true
+                                         :db/valueType   :db.type/ref}
+                           :expression  {:db/isComponent true
+                                         :db/valueType   :db.type/ref}
+                           :from        {:db/isComponent false
+                                         :db/valueType   :db.type/ref}
+                           :to          {:db/isComponent false
+                                         :db/valueType   :db.type/ref}
+                           :name        {:db/unique :db.unique/identity}
+                           :node        {:db/isComponent true
+                                         :db/valueType   :db.type/ref}
                            })
 
 #?(:cljs (defn create-ratom-db [schema]
@@ -70,14 +70,17 @@
          [?id :samak.nodes/type :samak.nodes/link]]
        @db))
 
-(defn write-to-disk [db filename]
-  (->> db d/db pr-str (spit filename)))
+;; TODO: Implement for cljs using node fs stuff
+#?(:clj
+   (do
+     (defn write-to-disk [db filename]
+       (->> db d/db pr-str (spit filename)))
 
-(def read-db #?(:clj  (partial clojure.edn/read-string {:readers d/data-readers})
-                :cljs cljs.reader/read-string))
 
-(defn load-from-disk [filename]
-  (-> filename
-      slurp
-      read-db
-      d/conn-from-db))
+     (def read-db (partial clojure.edn/read-string {:readers d/data-readers}))
+
+     (defn load-from-disk [filename]
+       (-> filename
+           slurp
+           read-db
+           d/conn-from-db))))

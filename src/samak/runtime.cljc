@@ -65,10 +65,9 @@
     state))
 
 (defn load-builtins! [rt builtin-symbols]
-  (let [defs (map (fn [s] (api/defexp s (api/builtin s))) builtin-symbols)]
-    (db/parse-tree->db! (:db rt) defs)
-    (reduce eval-expression! rt defs)
-  ))
+  (->> builtin-symbols
+       (map (fn [s] (api/defexp s (api/builtin s))))
+       (reduce eval-expression! rt)))
 
 (defn make-runtime
   ([]

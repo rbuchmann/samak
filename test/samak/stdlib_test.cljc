@@ -1,12 +1,12 @@
 (ns samak.stdlib-test
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]]))
-  (:require [samak.stdlib :as sut]
-            [samak.pipes :as pipes]
+  (:require [samak.stdlib               :as sut]
+            [samak.pipes                :as pipes]
             #?(:clj [clojure.core.async :as a :refer [go chan take! put!]]
-               :cljs [cljs.core.async :as a :refer [chan take! put!]])
-            #?(:clj [clojure.test :as t :refer [is deftest]]
-               :cljs [cljs.test :as t :include-macros true :refer [is deftest]])
-            [samak.code-db :as db]))
+               :cljs [cljs.core.async   :as a :refer [chan take! put!]])
+            #?(:clj [clojure.test       :as t :refer [is deftest]]
+               :cljs [cljs.test         :as t :include-macros true :refer [is deftest]])
+            [samak.code-db              :as db]))
 
 (deftest should-provide-db
   (is (not (nil? (sut/db-init :a)))))
@@ -24,7 +24,7 @@
     (take! out #(is (= :not-found %)))))
 
 
-(deftest should-db
+#_(deftest should-db
   (let [db (sut/db-init :unused)
         result (sut/db-query db 'foo)
         listener (chan 1)]
@@ -33,7 +33,7 @@
     (pipes/fire! result :foo)))
 
 
-(deftest should-query-db
+#_(deftest should-query-db
   (let [db (sut/db-init :unused)
         result (sut/db-query db 'foo)
         listener (chan 1)]

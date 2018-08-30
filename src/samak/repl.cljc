@@ -101,6 +101,13 @@
 (| in out)
 !f in 5"))
 
+(def tm
+  (str/split-lines
+   "(def in (|> {:foo inc}))
+(def out (pipes/log))
+(| in out)
+!f in 5"))
+
 (def tl
   (str/split-lines
 "(def in (pipes/debug))

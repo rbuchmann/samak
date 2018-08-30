@@ -50,8 +50,12 @@
 (deftest should-walk-maps-on-load-by-id
   (let [db (db/create-empty-db)
         builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))
-        parsed [(api/map {(api/keyword :key) (api/symbol 'inc)})]
-        base (do (db/parse-tree->db! db parsed) db)
-        result (db/load-by-id base 9)]
-    (is (= :foo result))
-    (is (= 1 (get-in result [:samak.nodes/rhs :db/id])))))
+        parsed [(assoc (api/map {(api/keyword :key) (api/symbol 'inc)})
+                       :db/id -1)]
+        map-id (get-in (db/parse-tree->db! db parsed) [:tempids -1])
+        result (db/load-by-id db map-id)
+        kv-pair (first (:samak.nodes/mapkv-pairs result))]
+    (is (= :samak.nodes/map (:samak.nodes/type result)))
+    (is (map? kv-pair))
+    (contains? kv-pair :samak.nodes/mapkey)
+    (contains? kv-pair :samak.nodes/mapvalue)))
