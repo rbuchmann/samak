@@ -187,8 +187,9 @@
     'pipes/debug       debug
     'pipes/http        http
     'pipes/eval-notify eval-notify
+    'pipes/ui ui
     ;; 'pipes/eval-line   eval-line
+    'pipes/layout layout
     'pipes/reductions  reductions*}
    #?(:cljs
-      {'pipes/ui ui
-       'pipes/layout layout})))
+      {})))

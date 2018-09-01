@@ -21,24 +21,24 @@
 
 (defn defncall
   ([sym fn-name]
-   (api/defexp sym (api/fn-call fn-name nil)))
+   (api/defexp sym (api/fn-call (api/symbol fn-name) nil)))
   ([sym fn-name & args]
-   (api/defexp sym (api/fn-call fn-name args))))
+   (api/defexp sym (api/fn-call (api/symbol fn-name) args))))
 
 (defn defmap
   [sym m]
-  (defncall sym (api/fn-call (api/symbol '->) [(api/map m)])))
+  (defncall sym '-> (api/map m)))
 
 (defn defpipe
   ""
   [sym call in-spec out-spec & args]
   (defncall sym call args))
 
-
 (defn pipe
   ""
   [& args]
   (api/pipe (map api/symbol args)))
+
 
 (def get-val (defncall 'get-val '->
                   (api/key-fn :samak.nodes/rhs)
@@ -58,7 +58,7 @@
 
 (defn start
   []
-  (let [oasis [(defncall 'ui (api/symbol 'pipes/ui))
+  (let [oasis [(defncall 'ui 'pipes/ui)
                (defncall 'd 'pipes/debug)
                (defncall 'log 'pipes/log)
                (defncall 'layout 'pipes/layout)
@@ -655,43 +655,43 @@
                                          (api/key-fn :graph)
                                          (api/key-fn :menu)])})})
 
-               (defncall 'oasis 'net
-                 (api/vector [(pipe 'd 'log)
-                              (pipe 'ui 'log)
 
-                              (pipe 'reduced-events 'only-complete 'events)
-                              (pipe 'raw-events 'input-reduce 'reduced-events)
+               (pipe 'd 'log)
+               (pipe 'ui 'log)
 
-                              (pipe 'events 'log-events)
-                              (pipe 'events 'make-eval 'ev)
-                              (pipe 'events 'make-eval 'log)
+               (pipe 'reduced-events 'only-complete 'events)
+               (pipe 'raw-events 'input-reduce 'reduced-events)
 
-                              (pipe 'ui 'filter-input 'raw-events)
-                              (pipe 'ui 'filter-submit 'raw-events)
+               (pipe 'events 'log-events)
+               ;; (pipe 'events 'make-eval 'ev)
+               (pipe 'events 'make-eval 'log)
 
-                              (pipe 'n 'state-reduce 'state)
-                              (pipe 'state 'log-state)
+               (pipe 'ui 'filter-input 'raw-events)
+               (pipe 'ui 'filter-submit 'raw-events)
 
-                              (pipe 'state 'format-state 'layout)
+               (pipe 'n 'state-reduce 'state)
+               (pipe 'state 'log-state)
 
-                              (pipe 'layout 'log-layout)
+               (pipe 'state 'format-state 'layout)
 
-                              (pipe 'layout 'graph 'svg-render)
-                              (pipe 'render 'elements-reduce 'reducer)
-                              (pipe 'render 'elements-reduce 'log-render)
+               (pipe 'layout 'log-layout)
 
-                              (pipe 'reducer 'render-elements 'log)
-                              (pipe 'reducer 'render-elements 'ui)
+               (pipe 'layout 'graph 'svg-render)
+               (pipe 'render 'elements-reduce 'reducer)
+               (pipe 'render 'elements-reduce 'log-render)
 
-                              (pipe 'svg-render 'svg-elements-reduce 'svg-reduced)
-                              (pipe 'svg-reduced 'render-svg 'render)
+               (pipe 'reducer 'render-elements 'log)
+               (pipe 'reducer 'render-elements 'ui)
 
-                              (pipe 'start 'menu-const 'menu-items)
-                              (pipe 'menu-items 'menu-map 'menu)
-                              (pipe 'menu 'render-menu 'svg-render)
-                              (pipe 'start 'header 'render)
-                              (pipe 'start 'repl 'render)])
-                 )]]
+               (pipe 'svg-render 'svg-elements-reduce 'svg-reduced)
+               (pipe 'svg-reduced 'render-svg 'render)
+
+               (pipe 'start 'menu-const 'menu-items)
+               (pipe 'menu-items 'menu-map 'menu)
+               (pipe 'menu 'render-menu 'svg-render)
+               (pipe 'start 'header 'render)
+               (pipe 'start 'repl 'render)
+                 ]]
     oasis))
 
 (defn store [db]

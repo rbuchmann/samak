@@ -41,18 +41,6 @@
 (defn parse-tree->db! [db tree]
   (d/transact! db tree))
 
-(defn load-ast
-  "loads an ast given by SYMBOL from the database"
-  [db sym]
-  (let [res (d/q '[:find [(pull ?e [*]) ...]
-                   :in $ ?sym
-                   :where
-                   [?e :samak.nodes/type :samak.nodes/def]
-                   [?e :samak.nodes/name ?sym]]
-                 @db
-                 sym)]
-    (first res)))
-
 (defn load-by-id
   "loads an ast given by its entity id from the database"
   [db id]
@@ -62,6 +50,18 @@
                  (load-by-id db sub-id)
                  form))
              (d/pull @db '[*] id)))
+
+(defn load-ast
+  "loads an ast given by SYMBOL from the database"
+  [db sym]
+  (let [res (d/q '[:find ?e .
+                   :in $ ?sym
+                   :where
+                   [?e :samak.nodes/type :samak.nodes/def]
+                   [?e :samak.nodes/name ?sym]]
+                 @db
+                 sym)]
+    (load-by-id db  res)))
 
 (defn retrieve-links [db]
   (d/q '[:find [(pull ?id [*]) ...]
