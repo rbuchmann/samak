@@ -27,7 +27,7 @@
 
 (defn defmap
   [sym m]
-  (api/defexp sym (api/map m)))
+  (defncall sym (api/fn-call (api/symbol '->) [(api/map m)])))
 
 (defn defpipe
   ""
