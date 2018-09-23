@@ -33,7 +33,7 @@
 (deftest should-persist
   (let [db (:db rt)]
     (is (some? (sut/store db)))
-    (let [ui (db/load-ast db 'ui)]
-      (is (= 'ui (:samak.nodes/name ui)))
-      (is (s/valid? :samak.spec/toplevel-exp ui))))
+    (let [oasis (db/load-ast db 'oasis)]
+      (is (= 'ui (:samak.nodes/name oasis)))
+      (is (s/valid? :samak.spec/toplevel-exp oasis))))
   )

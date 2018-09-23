@@ -51,10 +51,22 @@
           {})
       (println (str "could not find pipe " pipe-name)))))
 
+(defn eval-oasis
+  ""
+  [length]
+  (fn [state [nr exp]]
+    (println (str (int (* (/ nr length) 100)) "%"))
+    (run/eval-expression! state exp)))
+
+
 (defn start-oasis
   []
-  (let [state (reduce run/eval-expression! rt (oasis/start))]
+  (let [exps (oasis/start)
+        numbered (map-indexed vector exps)
+        state (reduce (eval-oasis (count numbered)) rt numbered)]
+    (println "oasis loaded")
     (fire-event-into-named-pipe "oasis" "1")
+    (println "oasis started")
     (run/get-defined-ids state)))
 
 (def repl-prefixes

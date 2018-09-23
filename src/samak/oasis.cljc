@@ -65,7 +65,7 @@
 
                (defncall 'log-state 'pipes/log (api/string "state: "))
                (defncall 'log-layout 'pipes/log (api/string "layout: "))
-               (defncall 'log-render 'pipes/log (api/string "render: "))
+               (defncall 'log-render 'pipes/log (api/string "render2: "))
                (defncall 'log-events 'pipes/log (api/string "events: "))
                (defncall 'n 'pipes/eval-notify)
 
@@ -98,15 +98,17 @@
                  (api/key-fn :data)
                  (api/symbol 'is-submit))
 
-               (defncall 'filter-input 'if
-                 (api/symbol 'is-input)
-                 (api/symbol 'handle-input)
-                 (api/symbol 'ignore))
+               ;; (defncall 'filter-input '|>
+               ;;   (api/fn-call (api/symbol 'if)
+               ;;                [(api/symbol 'is-input)
+               ;;                 (api/symbol 'handle-input)
+               ;;                 (api/symbol 'ignore)]))
 
-               (defncall 'filter-submit 'if
-                 (api/symbol 'is-submit-data)
-                 (api/symbol 'handle-submit)
-                 (api/symbol 'ignore))
+               ;; (defncall 'filter-submit '|>
+               ;;   (api/fn-call (api/symbol 'if)
+               ;;                [(api/symbol 'is-submit-data)
+               ;;                 (api/symbol 'handle-submit)
+               ;;                 (api/symbol 'ignore)]))
 
                (defncall 'raw-events 'pipes/debug)
                (defncall 'reduced-events 'pipes/debug)
@@ -129,23 +131,24 @@
                               (api/key-fn :next)])
                  (api/fn-call (api/symbol 'concat) [(api/map {})]))
 
-               (defncall 'input-reduce 'pipes/reductions
-                 (api/fn-call (api/symbol 'if) [(api/symbol 'has-submit)
-                                                (api/symbol 'merge-without-submit)
-                                                (api/symbol 'merge-state)])
-                 (api/map {}))
+               ;; (defncall 'input-reduce 'pipes/reductions
+               ;;   (api/fn-call (api/symbol '->) [(api/fn-call (api/symbol 'if) [(api/symbol 'has-submit)
+               ;;                                                                 (api/symbol 'merge-without-submit)
+               ;;                                                                 (api/symbol 'merge-state)])])
+               ;;   (api/map {}))
 
 
                (defncall 'is-complete 'and
                  (api/key-fn :input)
                  (api/key-fn :submit))
 
-               (defncall 'only-complete 'only (api/symbol 'is-complete))
+               (defncall 'only-complete '|>
+                 (api/fn-call (api/symbol 'only) [(api/symbol 'is-complete)]))
 
 
                ;; (defncall 'ev 'pipes/eval-line)
 
-               (api/defexp 'make-eval
+               (defncall 'make-eval '|>
                  (api/key-fn :input))
 
 
@@ -156,7 +159,7 @@
                  (api/key-fn :y)
                  (api/string ")"))
 
-               (defncall 'start 'pipes/debug)
+               (defncall 'oasis 'pipes/debug)
                (defmap 'repl
                  {(api/keyword :repl)
                   (api/map {(api/keyword :oasis.gui/order)
@@ -207,7 +210,7 @@
                                                      (api/keyword :dy) (api/integer 14)})
                                            (api/key-fn :name)])]))
 
-               (defncall 'render-menu '->
+               (defncall 'render-menu '|>
                  (api/fn-call (api/symbol 'map) [(api/symbol 'render-menu-entry)])
                  (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :g)])])
                  (api/vector [(api/keyword :g)
@@ -221,7 +224,7 @@
                (defncall 'menu 'pipes/debug)
                (defncall 'menu-items 'pipes/debug)
 
-               (defncall 'menu-const '->
+               (defncall 'menu-const '|>
                  (api/vector [(api/string "first")
                               (api/string "second")
                               (api/string "third")])
@@ -547,7 +550,7 @@
                  (api/fn-call (api/symbol 'mapcat) [(api/symbol 'extract-connection)])
                  (api/fn-call (api/symbol 'map) [(api/symbol 'format-pipe)]))
 
-               (defncall 'format-state '->
+               (defncall 'format-state '|>
                  (api/map {(api/keyword :defs) (api/symbol 'filter-nodes)
                            (api/keyword :pipes) (api/symbol 'filter-connections)})
                  (api/map {(api/keyword :id) (api/string "root")
@@ -615,7 +618,9 @@
 
                (defncall 'elements-reduce 'pipes/reductions
                  (api/fn-call (api/symbol '->)
-                              [(api/vector [(api/key-fn :state) (api/key-fn :next)])
+                              [(api/fn-call (api/symbol 'spy) [(api/string "!!!red")])
+                               (api/vector [(api/key-fn :state) (api/key-fn :next)])
+                               (api/fn-call (api/symbol 'spy) [(api/string "!!!red2")])
                                (api/fn-call (api/symbol 'concat) [(api/map {})]) ])
                  (api/map {}))
 
@@ -629,8 +634,11 @@
                (defncall 'render 'pipes/debug (api/keyword :oasis.spec/render))
 
                ;; render elements to hiccup
-               (defncall 'render-elements '->
+               (defncall 'render-elements '|>
+                 (api/fn-call (api/symbol 'spy) [(api/string "render")])
+
                  (api/fn-call (api/symbol 'vals) nil)
+                 (api/fn-call (api/symbol 'spy) [(api/string "vals")])
                  ;; (api/fn-call (api/symbol 'sort-by [(api/symbol 'id)]))
                  (api/fn-call (api/symbol 'map) [(api/key-fn :oasis.gui/element)])
                  (api/fn-call (api/symbol 'concat) [(api/vector [(api/keyword :div)])]))
@@ -660,14 +668,14 @@
                (pipe 'ui 'log)
 
                (pipe 'reduced-events 'only-complete 'events)
-               (pipe 'raw-events 'input-reduce 'reduced-events)
+               ;; (pipe 'raw-events 'input-reduce 'reduced-events)
 
                (pipe 'events 'log-events)
                ;; (pipe 'events 'make-eval 'ev)
                (pipe 'events 'make-eval 'log)
 
-               (pipe 'ui 'filter-input 'raw-events)
-               (pipe 'ui 'filter-submit 'raw-events)
+               ;; (pipe 'ui 'filter-input 'raw-events)
+               ;; (pipe 'ui 'filter-submit 'raw-events)
 
                (pipe 'n 'state-reduce 'state)
                (pipe 'state 'log-state)
@@ -676,7 +684,9 @@
 
                (pipe 'layout 'log-layout)
 
-               (pipe 'layout 'graph 'svg-render)
+               (api/pipe [(api/symbol 'layout)
+                         (api/fn-call (api/symbol '|>) [(api/symbol 'graph)])
+                         (api/symbol 'svg-render)])
                (pipe 'render 'elements-reduce 'reducer)
                (pipe 'render 'elements-reduce 'log-render)
 
@@ -684,13 +694,18 @@
                (pipe 'reducer 'render-elements 'ui)
 
                (pipe 'svg-render 'svg-elements-reduce 'svg-reduced)
-               (pipe 'svg-reduced 'render-svg 'render)
+               (api/pipe [(api/symbol 'svg-reduced)
+                          (api/fn-call (api/symbol '|>) [(api/symbol 'render-svg)])
+                          (api/symbol 'render)])
 
-               (pipe 'start 'menu-const 'menu-items)
+               (pipe 'oasis 'menu-const 'menu-items)
                (pipe 'menu-items 'menu-map 'menu)
                (pipe 'menu 'render-menu 'svg-render)
-               (pipe 'start 'header 'render)
-               (pipe 'start 'repl 'render)
+               (api/pipe [(api/symbol 'oasis)
+                          (api/fn-call (api/symbol '|>) [(api/symbol 'header)])
+                          (api/symbol 'render)])
+               ;; (pipe 'oasis 'repl 'render)
+               (pipe 'oasis 'log)
                  ]]
     oasis))
 

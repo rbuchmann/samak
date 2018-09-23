@@ -61,7 +61,9 @@
                    [?e :samak.nodes/name ?sym]]
                  @db
                  sym)]
-    (load-by-id db  res)))
+    (if (some? res)
+      (load-by-id db res)
+      (println "error: could not find symbol in DB: " sym))))
 
 (defn retrieve-links [db]
   (d/q '[:find [(pull ?id [*]) ...]
