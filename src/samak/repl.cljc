@@ -26,6 +26,7 @@
       [samak.core :as core])]))
 
 (def rt (run/make-runtime (keys core/samak-symbols)))
+(caravan/init (:db rt))
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]

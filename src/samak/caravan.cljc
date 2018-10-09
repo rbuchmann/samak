@@ -1,8 +1,10 @@
 (ns samak.caravan
   (:require [clojure.string :as s]
-            [samak.api :as api]
-            [samak.stdlib :as std]))
+            [samak.api      :as api]
+            [samak.code-db  :as db]
+            [samak.stdlib   :as std]))
 
+(def db-conn (atom {}))
 (def fns (atom {}))
 (def net (atom []))
 
@@ -13,7 +15,7 @@
   :samak.nodes/fn-call
   [node]
   {:type "func"
-   :value (str (second (:samak.nodes/fn node)))})
+   :value (str (:samak.nodes/name (:samak.nodes/fn node)))})
 
 (defmethod handle-node
   :samak.nodes/integer
@@ -107,7 +109,6 @@
   (std/notify-source src))
 
 
-
 (defn is-sink?
   ""
   [exp]
@@ -125,6 +126,7 @@
   ""
   [sym fn]
   (swap! fns assoc sym fn)
+  (println (str "state is: " @fns))
   (notify-source {:caravan/type (if (is-sink? fn) :caravan/sink :caravan/func)
                   :caravan/name sym
                   :caravan/ast (make-cell-list fn)}))
@@ -175,15 +177,28 @@
       (println (str "cell: " cell " - " par)))))
 
 
+(defn persist!
+  ""
+  [db tx-records]
+  (let [new-ids (-> (db/parse-tree->db! db tx-records)
+                    :tempids
+                    (dissoc :db/current-tx)
+                    vals)]
+    (into {}
+          (for [id new-ids]
+            [id (db/load-by-id db id)]))))
+
 (defn create-sink
   ""
   []
   (fn [x]
     (println "create sink: " x)
-    (let [node-name (:name x)
-          sym (symbol (str node-name "-" (rand-int 1000000000)))
-          exp (api/defexp (api/symbol sym) (api/fn-call (api/symbol (str "pipes/" node-name)) nil))]
-      (add-node sym exp)
+    (let [pipe-name (:name x)
+          sym (str pipe-name "-" (rand-int 1000000000))
+          exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
+          loaded (persist! @db-conn [(assoc exp :db/id -1)])
+          ast (first (vals loaded))]
+      (add-node sym ast)
       exp)))
 
 (defn connect
@@ -192,11 +207,16 @@
   (fn [{:keys [:source :sink] :as x}]
     (println "connect: " x)
     (let [connector (symbol (str "c/" source "-" sink))
-          fn (api/defexp (api/symbol connector) (api/fn-call (api/symbol '|>) [(api/symbol 'id)]))
+          fn (api/defexp connector (api/fn-call (api/symbol '|>) [(api/symbol 'id)]))
           pipe (api/pipe [(api/symbol source) (api/symbol connector) (api/symbol sink)])]
       (add-node connector fn)
       (add-pipe pipe)
       [fn pipe])))
+
+(defn init
+  [rt-db]
+  (println "db init: " rt-db)
+  (reset! db-conn rt-db))
 
 (def symbols
   {'create-sink create-sink
