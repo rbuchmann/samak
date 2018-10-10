@@ -3,12 +3,14 @@
             [samak.repl                   :as repl]
             [samak.nodes                  :as nodes]
             [samak.code-db                :as db]
+            [samak.runtime                :as runtime]
+            [samak.core                   :as c]
             #?@(:clj [[clojure.test       :as t :refer [is deftest]]
                       [clojure.spec.alpha :as s]]
                 :cljs [[cljs.test         :as t :refer [is deftest] :include-macros true]
                        [cljs.spec.alpha   :as s] :include-macros true])))
 
-;; (def tdb (db/create-empty-db))
+(def rt (runtime/make-runtime (keys c/samak-symbols)))
 
 #_(deftest should-be-oasis
   (is (some #(and (= (:samak.nodes/type %) :samak.nodes/def)
@@ -28,8 +30,9 @@
     (is (= true (every? #(s/valid? :samak.spec/toplevel-exp %) code)))))
 
 
-#_(deftest should-persist
-  (is (some? (sut/persist tdb)))
-  (let [ui (db/load-ast tdb 'ui)]
-    (is (= 'ui (:samak.nodes/name ui)))
-    (is (s/valid? :samak.spec/toplevel-exp ui))))
+(deftest should-persist
+  (let [db (:db rt)]
+    (is (some? (sut/store db)))
+    (let [oasis (db/load-ast db 'oasis)]
+      (is (= 'oasis (:samak.nodes/name oasis)))
+      (is (s/valid? :samak.spec/toplevel-exp oasis)))))

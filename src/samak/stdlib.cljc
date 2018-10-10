@@ -64,6 +64,7 @@
 (defmulti convert-event #(:type (to-clj %)))
 (defmethod convert-event "change" [ev] {:target {:value (.-value (:target (to-clj ev)))}})
 (defmethod convert-event "submit" [ev] (do (.preventDefault ev) (to-clj ev)))
+(defmethod convert-event "click"  [ev] {:target {:id (.-id (:target (to-clj ev)))}})
 (defmethod convert-event nil [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 (defmethod convert-event :default [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 
@@ -97,6 +98,50 @@
 
 #?(:clj (defn ui []))
 
+#?(:cljs
+   (defn mouse []
+     (let [c (chan)]
+       (set! (.-onmousedown (.-body js/document))
+             (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
+                                   {:samak.mouse/type :down
+                                    :samak.mouse/button (.-button event)
+                                    :samak.mouse/page-x (.-pageX event)
+                                    :samak.mouse/page-y (.-pageY event)
+                                    :samak.mouse/target (.-id (.-target event))}
+                                   ))
+                         false)))
+       (set! (.-onmouseup (.-body js/document))
+             (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
+                                   {:samak.mouse/type :up
+                                    :samak.mouse/button (.-button event)
+                                    :samak.mouse/page-x (.-pageX event)
+                                    :samak.mouse/page-y (.-pageY event)
+                                    :samak.mouse/target (.-id (.-target event))
+                                   }))
+                         false)))
+       (set! (.-onmousemove (.-body js/document))
+             (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
+                                   {:samak.mouse/type :move
+                                    :samak.mouse/page-x (.-pageX event)
+                                    :samak.mouse/page-y (.-pageY event)}))
+                         false)))
+       (pipes/source c))))
+
+#?(:clj (defn mouse []))
+
+#?(:cljs
+   (defn keyboard []
+     (let [c (chan)]
+       (set! (.-onkeypress js/document)
+             (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
+                                   {:which (.-which event)
+                                    :ctrl-key (.-ctrlKey event)
+                                    :meta-key (.-metaKey event)
+                                    :target (.-id (.-target event))}))
+                         false)))
+       (pipes/source c))))
+
+#?(:clj (defn keyboard []))
 
 ;; Networking
 
@@ -187,8 +232,9 @@
     'pipes/debug       debug
     'pipes/http        http
     'pipes/eval-notify eval-notify
+    'pipes/ui          ui
     ;; 'pipes/eval-line   eval-line
-    'pipes/reductions  reductions*}
-   #?(:cljs
-      {'pipes/ui ui
-       'pipes/layout layout})))
+    'pipes/mouse       mouse
+    'pipes/keyboard    keyboard
+    'pipes/layout      layout
+    'pipes/reductions  reductions*}))

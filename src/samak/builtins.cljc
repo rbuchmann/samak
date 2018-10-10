@@ -1,9 +1,11 @@
 (ns samak.builtins
   (:require [samak.stdlib             :as std]
+            [samak.transduction-tools :as tt]
             [samak.protocols          :as p]
+            [samak.caravan            :as c]
+            [clojure.string           :as s]
             [samak.tools              :as tools]
-            [samak.pipes              :as pipes]
-            [samak.transduction-tools :as tt]))
+            [samak.pipes              :as pipes]))
 
 (defn if* [pred then else]
   (let [pred* (p/eval-as-fn pred)
@@ -59,12 +61,13 @@
 (defn concat*
   [init]
   (fn [x]
+    ;; (println (str "!!! concat: " init " - " x))
     (into init x)))
 
 (defn into*
   []
   (fn [[c x]]
-    (println (str "into " c " put " x))
+    ;; (println (str "!!! into: " c " - " x))
     (into c x)))
 
 (defn flattenv
@@ -80,7 +83,7 @@
   ""
   [i]
   (fn [col]
-    (nth col i)))
+    (get col i)))
 
 (defn less
   ""
@@ -124,11 +127,17 @@
   (fn [c]
     (into [] (drop n c))))
 
+
 (defn interleave*
   ""
   []
   (fn [[c1 c2]]
     (into [] (map vec (partition 2 (interleave c1 c2))))))
+
+(defn partitionv
+  [n]
+  (fn [c]
+    (into [] (map vec (partition n c)))))
 
 (defn repeat*
   ""
@@ -136,46 +145,103 @@
   (fn [[n x]]
     (into [] (repeat n x))))
 
+(defn inc*
+  ""
+  [f]
+  (fn [x]
+    (inc ((p/eval-as-fn f) x))))
+
+(defn index-of*
+  ""
+  [s]
+  (fn [x]
+    (when x (s/index-of x s))))
+
+(defn negate
+  ""
+  []
+  (fn [x]
+    (- x)))
+
+
+(defn distinct*
+  ""
+  []
+  (fn [x]
+    (distinct x)))
+
+
+(defn join*
+  ""
+  []
+  (fn [s]
+    (s/join s)))
+
+
+(defn max*
+  ""
+  []
+  (fn [x]
+    (apply max x)))
+
+(defn min*
+  ""
+  []
+  (fn [x]
+    (apply min x)))
+
+
 (def samak-symbols
-  {'->      chain
-   '|>      (comp pipes/instrument chain)
-   'id      identity
-   'map     (curry1fn mapv)
-   'filter  (curry1fn filterv)
-   'only    #(if* % identity tt/ignore)
-   'remove  (curry1fn filterv)
-   'mapcat  mapcatv
-   'repeat  repeat*
-   'zip     interleave*
-   'take    (curry1 take)
-   'drop    dropv
-   '=       (curry1 =)
-   '<       less
-   '>       more
-   '+       (curry1 +)
-   '*       (curry1 *)
-   'nth     nth*
-   'count   count
-   'many    tt/many
-   'ignore  tt/ignore
+  {'->     chain
+   '|>     (comp pipes/instrument chain)
+   'id     identity
+   'map    (curry1fn mapv)
+   'filter (curry1fn filterv)
+   'only   #(if* % identity tt/ignore)
+   'remove (curry1fn filterv)
+   'mapcat mapcatv
+   'repeat repeat*
+   'zip    interleave*
+   'take   (curry1 take)
+   'drop   dropv
+   '=      (curry1 =)
+   '<      less
+   '>      more
+   '+      (curry1 +)
+   '-      (curry1 -)
+   '*      (curry1 *)
+   'negate negate
+   'nth    nth*
+   'count  count
+   'many   tt/many
+   'ignore tt/ignore
    'flatten flattenv
-   'vals    vals*
+   'vals   vals*
    'sort-by (curry1 sort-by)
-   'concat  concat*
-   'into    into*
-   'inc     inc
-   'dec     dec
-   'odd?    odd?
-   'even?   even?
-   'sum     sum
-   'mult    mult
-   'str     str*
-   'or      or*
-   'and     and*
-   'if      if*
-   'const   constantly
-   'when    when*
-   'incase  incase
-   'unless  unless
-   'loop    loop*
-   'spy     spy})
+   'concat concat*
+   'into   into*
+   'inc    inc
+   'dec    dec
+   'odd?   odd?
+   'even?  even?
+   'sum    sum
+   'mult   mult
+   'max    max*
+   'min    min*
+   'unique distinct*
+   'str    str*
+   'index-of index-of*
+   'join   join*
+   'or     or*
+   'and    and*
+   'if     if*
+   'const  constantly
+   'when   when*
+   'incase incase
+   'unless unless
+   'loop   loop*
+   'spy    spy
+   'create-sink c/create-sink
+   'connect c/connect
+   'add-cell c/add-cell
+   '!      '!})

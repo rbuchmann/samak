@@ -1,0 +1,36 @@
+(def start (pipes/debug))
+
+(def log (pipes/log))
+(def ui (pipes/ui))
+(def http (pipes/http))
+
+(def jokes (pipes/debug))
+
+(def render-joke [:li (-> :-value (str :-id ": " :-joke))])
+
+(def render-ui (|> [:div [:form {:on-submit :submit} [:input {:on-change :change}]] [:ul (if (-> count (< 1)) [:li "-"] (map render-joke))]]))
+
+(def events (pipes/debug))
+(def raw-events (pipes/debug))
+
+(def is-change (-> :-data (= :change)))
+(def is-submit (-> :-data (= :submit)))
+(def handle-event (|> (if is-change {:data :change :value (-> :-event :-target :-value)} {:data :submit})))
+
+(def has-submit (-> :-state :-submit))
+(def drop-submit (-> [{:input (-> :-state :-input)} :-next] (concat {})))
+(def concat-events (-> [:-state :-next] (concat {})))
+
+(def combine-event (pipes/reductions (if has-submit drop-submit concat-events) {}))
+
+(def fetch-joke (|> {:url (str "http://api.icndb.com/jokes/" :-value)}))
+(def fetch-on-submit (|> (if is-submit fetch-joke ignore)))
+
+(def init-jokes (|> [:foo]))
+(def reduce-jokes (pipes/reductions (-> [:-state :-next] flatten) []))
+
+(def id id)
+
+(| ui handle-event raw-events) (| raw-events combine-event events) (| events (|> id) log) (| events fetch-on-submit http) (| http reduce-jokes jokes) (| jokes (|> id) log) (| start init-jokes jokes) (| jokes render-ui ui)
+
+(def todo (net [(| ui handle-event raw-events) (| raw-events combine-event events) (| events log) (| events fetch-on-submit http) (| http reduce-jokes jokes) (| jokes log) (| start init-jokes jokes) (| jokes render-ui ui)]))

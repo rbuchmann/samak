@@ -9,6 +9,7 @@
       [samak.pipes :as pipes]
       [samak.runtime :as run]
       [samak.stdlib :as std]
+      [samak.caravan :as caravan]
       [samak.tools :as t]
       [samak.core :as core])]
     :cljs
@@ -20,10 +21,12 @@
       [samak.pipes :as pipes]
       [samak.runtime :as run]
       [samak.stdlib :as std]
+      [samak.caravan :as caravan]
       [samak.tools :as t]
       [samak.core :as core])]))
 
 (def rt (run/make-runtime (keys core/samak-symbols)))
+(caravan/init (:db rt))
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -51,10 +54,23 @@
           {})
       (println (str "could not find pipe " pipe-name)))))
 
+(defn eval-oasis
+  ""
+  [length]
+  (fn [state [nr exp]]
+    (let [progress (* (/ nr length) 100)]
+      (when (= 0 (mod progress 10)) (println (str (int progress) "%")))
+      (run/eval-expression! state exp))))
+
+
 (defn start-oasis
   []
-  (let [state (reduce run/eval-expression! rt (oasis/start))]
+  (let [exps (oasis/start)
+        numbered (map-indexed vector exps)
+        state (reduce (eval-oasis (count numbered)) rt numbered)]
+    (println "oasis loaded")
     (fire-event-into-named-pipe "oasis" "1")
+    (println "oasis started")
     (run/get-defined-ids state)))
 
 (def repl-prefixes
@@ -80,7 +96,7 @@
     (when-let [parsed (parse-samak-string input)]
       (println parsed)
       (doseq [expression parsed]
-        (std/notify-source expression))
+        (caravan/repl-eval expression))
       (reduce run/eval-expression! rt parsed))))
 
 (defn group-repl-cmds [lines]
@@ -144,6 +160,14 @@
    "(def in (pipes/debug))
 (def out (pipes/log))
 (| in (pipes/reductions (-> [:-next :-state] sum) 0) out)
+!f in 5
+!f in 6"))
+
+(def tl4b
+  (str/split-lines
+   "(def in (pipes/debug))
+(def out (pipes/log))
+(| in (pipes/reductions (-> [:-state :-next] into) {}) out)
 !f in 5
 !f in 6"))
 

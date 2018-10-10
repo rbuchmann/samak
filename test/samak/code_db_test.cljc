@@ -59,3 +59,14 @@
     (is (map? kv-pair))
     (contains? kv-pair :samak.nodes/mapkey)
     (contains? kv-pair :samak.nodes/mapvalue)))
+
+(deftest should-refer-fn-by-id
+  (let [db (db/create-empty-db)
+        builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))
+        src [(assoc (api/defexp 'foo (api/symbol 'inc)) :db/id -1)]
+        foo-id (get-in (db/parse-tree->db! db src) [:tempids -1])
+        used [(assoc (api/defexp 'bar (api/fn-call {:db/id foo-id} [])) :db/id -1)]
+        result-id (get-in (db/parse-tree->db! db used) [:tempids -1])
+        result (db/load-by-id db result-id)]
+    (is (= 'bar (get-in result [:samak.nodes/name])))
+    (is (= foo-id (get-in result [:samak.nodes/rhs :samak.nodes/fn :db/id])))))

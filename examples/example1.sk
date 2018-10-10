@@ -1,4 +1,4 @@
 (def in (pipes/debug))
 (def out (pipes/log))
-(| in [:div id] out)
+(| in (|> [:div id]) out)
 !f in 42
