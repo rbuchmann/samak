@@ -21,35 +21,44 @@ $ electron . # in another tab
 
 In case you don't have electron installed globally, run =npm run start=.
 
-* Todos, roughly sorted by ascending awesomeness*difficulty
+* Roadmaps
 
-- Better state cleanup for reloading ✔
-- Actually store state in db
-- Persistence (Should be very easy with datascript)
-- Less awful layout ( Tiny progress )
-- Get rid of multiple react versions -.- ✔
-- Pipe instrumentation, debugging
-- Program structure graph (Pipe layout with e.g. klayjs). Could show
-  latest channel state with comment boxes.
-- Allow sending of messages to channels for testing/debugging ✔
-- Pipe configs instead of parameters, to allow different settings for testing etc.
-- Improved single arg function support, e.g. #{:foo id} -> (fn [x] {:foo x}) ✔
-- async requests, easy to model with core.async's "pipeline-async" ✔
-- Type checker (Either piggybacking on +core.typed+ or hand-rolled +with+
-  +core.logic+, haven't decided) -> It's actually either spectrum or hand-rolled now.
+** Samak
+
+- Get repl somewhat stable release
+- Rework functions to take a vector or map of arguments, no nested
+  combinators except for datastructures
+- Separate definition of graphs from running them
+  - Pipe configs instead of parameters, to allow different settings for testing etc.
+- Server support, remote runtime
+- Deployments to other runtimes
+- Type checker (Either piggybacking on +core.typed+ or hand-rolled
+  +with+ +core.logic+, haven't decided) -> It's actually either
+  spectrum or hand-rolled now.
 - Typed pipes (related)
-- Code in datascript db: Already works, needs sexpress like editing
-  though, not very useful when everything gets parsed from scratch
-  every time
-- More backends, python, maybe Go, everything that's easy to generate and has channels (-> Rust experiment underway)
+- More backends, python, maybe Go, everything that's easy to generate
+  and has channels (-> Rust experiment underway)
 - Auto conversion between languages, e.g. input pipe from python,
   output to browser, should be easy to automatically link
-- Disallow lambda, only backus style function composition: Probably
-  needs zero type annotations with this change ✔
-- Related: Allow fat pipes (title is work in progress ;) ), like
+- Allow fat pipes (title is work in progress ;) ), like
   e.g. a pipe that not only provides a client to a db but also runs a
   docker image for it
 - Assisted pipeline synthesis from tests a la [[https://github.com/webyrd/Barliman][barliman]]
+- Disallow lambda, only backus style function composition ✔
+- Better state cleanup for reloading ✔
+- Persistence (Should be very easy with datascript) ✔
+- Actually store state in db ✔
+- Allow sending of messages to channels for testing/debugging ✔
+- Improved single arg function support, e.g. #{:foo id} -> (fn [x] {:foo x}) ✔
+- async requests, easy to model with core.async's "pipeline-async" ✔
+  needs zero type annotations with this change ✔
+- Get rid of multiple react versions -.- ✔
+
+** Oasis
+
+- Could show latest channel state with comment boxes.
+- Improve layout
+- Program structure graph (Pipe layout with e.g. klayjs). ✔
 
 * Rationale
 
@@ -69,7 +78,7 @@ better or worse, you decide. The core ideas of Samak are:
 - Text has very, very limited use for visualizing what's going on in
   your program.
 
-**  Stream or event based systems allow for great flexibility
+** Stream or event based systems allow for great flexibility
 - Samak is not a classical stream based language, actually it isn't a
   traditional language at all, but since all programs essentially
   transform input into output, Samak strongly emphasizes sources,
