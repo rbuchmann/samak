@@ -31,6 +31,15 @@
   ([] (pipes/pipe (chan)))
   ([spec] (pipes/checked-pipe (debug) spec spec)))
 
+(defn log-through
+  ([]
+   (log-through nil))
+  ([prefix]
+   (pipes/transduction-pipe
+    (map (if prefix
+           (partial tools/log prefix)
+           tools/log)))))
+
 (defn log
   ([] (log nil))
   ([prefix]
@@ -229,6 +238,7 @@
 (def pipe-symbols
   (merge
    {'pipes/log         log
+    'pipes/log-through log-through
     'pipes/debug       debug
     'pipes/http        http
     'pipes/eval-notify eval-notify
