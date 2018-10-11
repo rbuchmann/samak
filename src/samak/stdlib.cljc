@@ -37,8 +37,8 @@
   ([prefix]
    (pipes/transduction-pipe
     (map (if prefix
-           (partial tools/log prefix)
-           tools/log)))))
+           (fn [x] (tools/log prefix x) x)
+           (fn [x] (tools/log x) x))))))
 
 (defn log
   ([] (log nil))
