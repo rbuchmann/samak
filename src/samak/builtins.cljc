@@ -64,6 +64,13 @@
     ;; (println (str "!!! concat: " init " - " x))
     (into init x)))
 
+(defn dissoc*
+  ""
+  [keys]
+  (fn [x]
+    (update-in x (drop-last keys) dissoc (last keys))))
+
+
 (defn into*
   []
   (fn [[c x]]
@@ -219,6 +226,7 @@
    'vals   vals*
    'sort-by (curry1 sort-by)
    'concat concat*
+   'dissoc dissoc*
    'into   into*
    'inc    inc
    'dec    dec
@@ -228,6 +236,7 @@
    'mult   mult
    'max    max*
    'min    min*
+   'random rand-int
    'unique distinct*
    'str    str*
    'index-of index-of*
