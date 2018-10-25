@@ -42,28 +42,20 @@
   (d/transact! db tree))
 
 (defn load-by-id
-  "loads an ast given by its entity id from the database"
+  "Loads an ast given by its entity id from the database.
+   Will not resolve refs automatically."
   [db id]
-  (w/postwalk (fn [form]
-                (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
-                                  (:db/id form))]
-                 (load-by-id db sub-id)
-                 form))
-             (d/pull @db '[*] id)))
+  (d/pull @db '[*] id))
 
-(defn load-ast
-  "loads an ast given by SYMBOL from the database"
+(defn resolve-name
+  "Returns the db id for a given name"
   [db sym]
-  (let [res (d/q '[:find ?e .
-                   :in $ ?sym
-                   :where
-                   [?e :samak.nodes/type :samak.nodes/def]
-                   [?e :samak.nodes/name ?sym]]
-                 @db
-                 sym)]
-    (if (some? res)
-      (load-by-id db res)
-      (println "error: could not find symbol in DB: " sym))))
+  (d/q '[:find ?e .
+         :in $ ?sym
+         :where
+         [?e :samak.nodes/name ?sym]]
+       @db
+       sym))
 
 (defn retrieve-links [db]
   (d/q '[:find [(pull ?id [*]) ...]
