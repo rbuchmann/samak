@@ -1,6 +1,9 @@
 (ns samak.nodes
   (:require [samak.core      :as core]
-            [samak.protocols :as p]))
+            [samak.protocols :as p]
+            [samak.tools     :refer [fail]]))
+
+(def ^:dynamic *environment* {})
 
 (defmulti eval-node ::type)
 
@@ -11,10 +14,22 @@
 
 (def eval-vals (partial map (fn [[k v]] [(::value k) (eval-node v)])))
 
+(defn ref? [m]
+  (and (map? m) (= (keys m) [:db/id])))
+
+(defn unresolved-name? [value]
+  (and (vector? value)
+       (= 2 (count value))
+       (= ::name (first value))))
+
 (defmethod eval-node nil [value]
-  (if (and (vector? value) (= 2 (count value)) (= ::name (first value)))
-    (println (str "unknown function: '" (second value) "'"))
-    (println (str "unknown token during evaluation: " (str value)))))
+  (cond
+    (unresolved-name? value) (fail "Tried to eval unresolved name:"
+                                   (str  "'" (second value) "'"))
+    (ref? value)             (let [id (:db/id value)]
+                               (or (get *environment* id)
+                                   (fail "Referenced id " id " was undefined")))
+    :default                 (fail (str "unknown token during evaluation: " (str value)))))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]

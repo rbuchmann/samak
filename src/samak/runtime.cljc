@@ -50,7 +50,7 @@
         to-link        (set/difference pipe-pairs already-linked)
         to-unlink      (set/difference already-linked pipe-pairs)]
     (doseq [edge to-unlink]
-      (pipes/disconnect (linked-pipes edge)))
+      (pipes/clean-up (linked-pipes edge)))
     (into {} (for [edge to-link]
                [edge (->> edge
                           (map defined-ids)
