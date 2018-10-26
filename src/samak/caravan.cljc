@@ -113,12 +113,10 @@
   ""
   [exp]
   (let [rhs-fn (:samak.nodes/fn (:samak.nodes/rhs exp))
-        is-vec (vector? rhs-fn)
-        has-name (= :samak.nodes/name (first rhs-fn))
-        fn-name (str (second rhs-fn))
+        has-name (get rhs-fn :samak.nodes/name)
+        fn-name (str (:samak.nodes/name rhs-fn))
         is-stdlib (s/starts-with? fn-name "pipes/")]
     (and (api/is-def? exp)
-         is-vec
          has-name
          is-stdlib)))
 
@@ -127,9 +125,13 @@
   [sym fn]
   (swap! fns assoc sym fn)
   (println (str "state is: " @fns))
-  (notify-source {:caravan/type (if (is-sink? fn) :caravan/sink :caravan/func)
-                  :caravan/name sym
-                  :caravan/ast (make-cell-list fn)}))
+  (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
+        ast (make-cell-list fn)]
+    (if (empty? ast)
+      (println (str "ERROR: no ast for: " sym " - " fn))
+      (notify-source {:caravan/type type
+                      :caravan/name sym
+                      :caravan/ast ast}))))
 
 (defn add-pipe
   ""
@@ -154,6 +156,7 @@
 
 (defn find-cell
   [src cell counter parent]
+  ;; (println (str "find: " src ",  " cell ",  " counter ",  " parent))
   (if (= counter cell)
     [src parent]
     (first (filter some? (map-indexed
@@ -166,17 +169,6 @@
   (let [root (:samak.nodes/rhs src)]
     (find-cell root cell 0 nil)))
 
-(defn add-cell
-  ""
-  []
-  (fn [x]
-    (let [src (get @fns (symbol (:name x)))
-          idx (dec (:cell x))
-          [cell par] (add-cell-internal src idx)]
-
-      (println (str "cell: " cell " - " par)))))
-
-
 (defn persist!
   ""
   [db tx-records]
@@ -188,6 +180,36 @@
           (for [id new-ids]
             [id (db/load-by-id db id)]))))
 
+
+(defn single!
+  ""
+  [exp]
+  (let [loaded (persist! @db-conn [(assoc exp :db/id -1)])
+        ast (first (vals loaded))]
+    ast))
+
+(defn add-cell
+  ""
+  []
+  (fn [x]
+    (println (str "adding: " x))
+    (let [sym (symbol (:name x))
+          src (get @fns sym)
+          idx (dec (:cell x))]
+      (when (and sym src idx)
+          (let [[cell par] (add-cell-internal src idx)
+                cell-id (:db/id cell)
+                content (api/string "bar")
+                updated (update cell :samak.nodes/arguments conj {:db/id -1 :order 1 :samak.nodes/node content})]
+            (println (str "cell: " cell " - " par))
+            (println (str "updated: " updated))
+            (let [write (persist! @db-conn [updated])
+                  load (db/load-by-id @db-conn cell-id)
+                  exp (api/defexp sym load)]
+              (println (str "res: " exp))
+              (add-node sym exp)))))))
+
+
 (defn create-sink
   ""
   []
@@ -196,10 +218,9 @@
     (let [pipe-name (:name x)
           sym (str pipe-name "-" (rand-int 1000000000))
           exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
-          loaded (persist! @db-conn [(assoc exp :db/id -1)])
-          ast (first (vals loaded))]
+          ast (single! exp)]
       (add-node sym ast)
-      exp)))
+      :okay)))
 
 (defn connect
   ""
@@ -207,18 +228,30 @@
   (fn [{:keys [:source :sink] :as x}]
     (println "connect: " x)
     (let [connector (symbol (str "c/" source "-" sink))
-          fn (api/defexp connector (api/fn-call (api/symbol '|>) [(api/symbol 'id)]))
+          fn (api/defexp connector (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol 'id) [])]))
+          fn-ast (single! fn)
           pipe (api/pipe [(api/symbol source) (api/symbol connector) (api/symbol sink)])]
-      (add-node connector fn)
+      (add-node connector fn-ast)
       (add-pipe pipe)
-      [fn pipe])))
+      ;; [fn-ast pipe]
+      :okay)))
+
+(defn load-node
+  ""
+  []
+  (let [oasis (db/load-ast @db-conn 'oasis)]
+    (println (str "oasis: " oasis))
+    ;; (add-node 'oasis )
+    )
+  )
+
 
 (defn init
   [rt-db]
-  (println "db init: " rt-db)
   (reset! db-conn rt-db))
 
 (def symbols
   {'create-sink create-sink
+   'load-node load-node
    'connect connect
    'add-cell add-cell})
