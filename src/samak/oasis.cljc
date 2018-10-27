@@ -188,12 +188,21 @@
                  (api/key-fn :input))
 
 
+               ;; helpers
+
                (defncall 'translate-str 'str
                  (api/string "translate(")
                  (api/key-fn :x)
                  (api/string ",")
                  (api/key-fn :y)
                  (api/string ")"))
+
+               (defncall 'fn-name-from-select '->
+                 (api/fn-call (api/symbol 'drop) [(api/integer 7)]) ;; func/d/
+                 (api/fn-call (api/symbol 'join) []))
+
+
+               ;; repl
 
                (defncall 'oasis 'pipes/debug)
                (defmap 'repl
@@ -292,6 +301,11 @@
                               (api/symbol 'id)])
                  (api/map {(api/keyword :sink-menu) (api/symbol 'id)}))
 
+               (defncall 'get-menu-state '->
+                 (api/vector [(api/string "mode: ") (api/fn-call (api/symbol '->) [(api/key-fn :editor)
+                                                                                 (api/key-fn :mode)])])
+                 (api/fn-call (api/symbol 'join) []))
+
                (defncall 'render-action-menu '->
                  (api/map {(api/keyword :action-menu)
                            (api/vector [(api/keyword :g)
@@ -307,10 +321,13 @@
                                                      (api/map {(api/keyword :height) (api/integer 20)
                                                                (api/keyword :width) (api/string "100%")
                                                                (api/keyword :text-anchor) (api/keyword :middle)
-                                                               (api/keyword :x) (api/integer 0)
-                                                               (api/keyword :y) (api/integer 35)
+                                                               (api/keyword :x) (api/integer 600)
+                                                               (api/keyword :y) (api/integer 5)
                                                                (api/keyword :dy) (api/integer 14)})
-                                                     (api/string "actions:")])])}))
+                                                     (api/fn-call (api/symbol '->)
+                                                                  [(api/vector [(api/string "state: ")
+                                                                                (api/symbol 'get-menu-state)])
+                                                                   (api/fn-call (api/symbol 'join) [])])])])}))
 
                (defncall 'source-menu 'pipes/debug)
                (defncall 'source-menu-items 'pipes/debug)
@@ -487,6 +504,18 @@
                  (api/key-fn :which)
                  (api/fn-call (api/symbol '=) [(api/integer 102)]))  ;; F
 
+               (defncall 'is-kb-edit '->
+                 (api/key-fn :which)
+                 (api/fn-call (api/symbol '=) [(api/integer 101)]))  ;; E
+
+               (defncall 'is-kb-remove '->
+                 (api/key-fn :which)
+                 (api/fn-call (api/symbol '=) [(api/integer 114)]))  ;; R
+
+               (defncall 'is-kb-whatever '->
+                 (api/key-fn :which)
+                 (api/fn-call (api/symbol '=) [(api/integer 113)]))  ;; Q
+
 
                (defncall 'construct-cursor '->
                  (api/map {(api/keyword :command) (api/keyword :cursor)
@@ -500,16 +529,22 @@
                  (api/keyword :down)
                  (api/symbol 'construct-cursor))
 
+               (defncall 'construct-insert-mode '->
+                 (api/map {(api/keyword :command) (api/keyword :mode)
+                           (api/keyword :data) (api/keyword :insert)}))
+
                (defncall 'construct-insert '->
                  (api/map {(api/keyword :command) (api/keyword :insert)
                            (api/keyword :type) (api/keyword :immediate)
                            (api/keyword :data) (api/keyword :none)}))
 
-               (defncall 'filter-cursor '->
+               (defncall 'filter-edit '->
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-mark-down)
                                                     (api/symbol 'construct-down)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-mark-up)
                                                     (api/symbol 'construct-up)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-insert)
+                                                    (api/symbol 'construct-insert)])
                  (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
                                                     (api/symbol 'ignore)]))
                (defncall 'is-kb-menu '->
@@ -533,8 +568,6 @@
                                                     (api/symbol 'construct-menu)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-load)
                                                     (api/symbol 'construct-load)])
-                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-insert)
-                                                    (api/symbol 'construct-insert)])
                  (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
                                                     (api/symbol 'ignore)]))
 
@@ -713,6 +746,7 @@
                (defncall 'editor-events 'pipes/debug)
                (defncall 'editor-cooked 'pipes/debug)
                (defncall 'editor-immediate 'pipes/debug)
+               (defncall 'editor-actions 'pipes/debug)
                (defncall 'editor-state 'pipes/debug)
                (defncall 'select-events 'pipes/debug)
 
@@ -767,7 +801,7 @@
 
                (defncall 'handle-cursor '->
                  (api/key-fn :data)
-                 (api/map {(api/keyword :mark)
+                 (api/map {(api/keyword :cursor)
                            (api/symbol 'id)}))
 
                (defncall 'is-menu '->
@@ -788,6 +822,15 @@
                  (api/symbol 'load-node)
                  (api/map {(api/keyword :load) (api/keyword :none)}))
 
+               (defncall 'is-mode-change '->
+                 (api/key-fn :command)
+                 (api/fn-call (api/symbol '=) [(api/keyword :mode)]))
+
+               (defncall 'handle-mode '->
+                 (api/key-fn :data)
+                 (api/fn-call (api/symbol 'spy) [(api/string "mode")])
+                 (api/map {(api/keyword :mode) (api/symbol 'id)}))
+
 
                (defncall 'handle-commands '->
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-create-sink)
@@ -802,17 +845,29 @@
                                                     (api/symbol 'handle-menu)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-load)
                                                     (api/symbol 'handle-load)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mode-change)
+                                                    (api/symbol 'handle-mode)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-command)
                                                     (api/symbol 'ignore)]))
 
-               (defncall 'is-next-mark '->
+               (defncall 'is-next-cursor '->
                  (api/key-fn :next)
-                 (api/key-fn :mark))
+                 (api/key-fn :cursor))
+
+               (defncall 'get-fn-size '->
+                 (api/vector [(api/key-fn :eval)
+                              (api/fn-call (api/symbol '->) [(api/key-fn :selected)
+                                                             (api/symbol 'fn-name-from-select)])])
+                 (api/fn-call (api/symbol 'lookup) [])
+                 (api/key-fn :caravan/ast)
+                 (api/symbol 'count))
 
                (defncall 'calc-down '->
                  (api/key-fn :state)
-                 (api/key-fn :mark)
-                 (api/symbol 'inc))
+                 (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :mark)
+                                                             (api/symbol 'inc)])
+                              (api/symbol 'get-fn-size)])
+                 (api/fn-call (api/symbol 'min) []))
 
                (defncall 'calc-up '->
                  (api/key-fn :state)
@@ -822,15 +877,31 @@
                  (api/fn-call (api/symbol 'max) []))
 
                (defncall 'calculate-mark '->
-                 (api/fn-call (api/symbol 'if)[(api/fn-call (api/symbol '->) [(api/symbol 'is-next-mark)
-                                                                              (api/fn-call (api/symbol '=) [(api/keyword :down)])])
-                                               (api/symbol 'calc-down)
-                                               (api/symbol 'calc-up)]))
+                 (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '->) [(api/symbol 'is-next-cursor)
+                                                                               (api/fn-call (api/symbol '=) [(api/keyword :down)])])
+                                                (api/symbol 'calc-down)
+                                                (api/symbol 'calc-up)]))
 
-               (defncall 'handle-mark '->
+               (defncall 'change-mark '->
                  (api/map {(api/keyword :state) (api/key-fn :state)
                            (api/keyword :next) (api/map {(api/keyword :mark)
                                                          (api/symbol 'calculate-mark)})}))
+               (defncall 'is-mode-navigate '->
+                 (api/key-fn :state)
+                 (api/key-fn :mode)
+                 (api/fn-call (api/symbol '=) [(api/keyword :navigate)]))
+
+               (defncall 'is-mode-insert '->
+                 (api/key-fn :state)
+                 (api/key-fn :mode)
+                 (api/fn-call (api/symbol '=) [(api/keyword :insert)]))
+
+               (defncall 'process-cursor '->
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mode-navigate)
+                                                    (api/symbol 'change-mark)])
+                 ;; (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mode-insert)
+                 ;;                                    (api/symbol 'change-mark)])
+                 )
 
                (defncall 'reset-mark '->
                  (api/map {(api/keyword :state) (api/key-fn :state)
@@ -840,14 +911,15 @@
 
                (defncall 'editor-state-reduce 'pipes/reductions
                  (api/fn-call (api/symbol '->)
-                              [(api/fn-call (api/symbol 'incase) [(api/symbol 'is-next-mark)
-                                                                  (api/symbol 'handle-mark)])
+                              [(api/fn-call (api/symbol 'incase) [(api/symbol 'is-next-cursor)
+                                                                  (api/symbol 'process-cursor)])
                                (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :selected)])
                                                                   (api/symbol 'reset-mark)])
                                (api/vector [(api/key-fn :state)
                                             (api/key-fn :next)])
-                               (api/fn-call (api/symbol 'concat) [(api/map {})]) ])
-                 (api/map {(api/keyword :mark) (api/integer 1)}))
+                               (api/fn-call (api/symbol 'concat) [(api/map {})])])
+                 (api/map {(api/keyword :mode) (api/keyword :navigate)
+                           (api/keyword :mark) (api/integer 1)}))
 
                ;; global state
 
@@ -1052,14 +1124,17 @@
 
                (defncall 'lay-in 'pipes/debug)
 
+
+               (defncall 'edit-information '->
+                 (api/symbol 'id))
+
                ;; handling complex state sideeffects
 
                (defncall 'get-selected-fn-name '->
                  (api/key-fn :state)
                  (api/key-fn :editor)
                  (api/key-fn :selected)
-                 (api/fn-call (api/symbol 'drop) [(api/integer 7)]) ;; func/d/
-                 (api/fn-call (api/symbol 'join) []))
+                 (api/symbol 'fn-name-from-select))
 
                (defncall 'get-mark '->
                  (api/key-fn :state)
@@ -1362,12 +1437,18 @@
                                                   (api/key-fn :sink-menu)
                                                   (api/key-fn :action-menu)])})}))
 
+               (defncall 'init-view '->
+                 (api/map {(api/keyword :view) (api/map {(api/keyword :x) (api/integer 150)
+                                                         (api/keyword :y) (api/integer 50)})}))
+
+               ;; networks
+
                (pipe 'd 'log)
                (pipe 'ui 'log)
 
                (red 'mouse 'mouse-reduce 'mouse-state)
 
-               (pipe 'keyboard 'filter-cursor 'editor-commands)
+               (pipe 'keyboard 'filter-edit 'editor-commands)
                (pipe 'keyboard 'filter-menu 'editor-commands)
                (pipe 'keyboard 'log-keyboard)
 
@@ -1419,16 +1500,21 @@
                (pipe 'eval-state 'format-state 'layout)
                (pipe 'eval-state 'format-state 'log-layout)
 
+               (pipe 'eval-state 'edit-information 'editor-events)
+
                (pipe 'layout 'tag-layout 'layout-state)
                                ;; (pipe 'layout-state 'log-layout)
                (red 'layout-state 'state-reduce 'state)
 
-               (red 'select-events 'center-view 'view-events)
-               (red 'layout-state 'center-view 'view-events)
+               ;; (red 'select-events 'center-view 'view-events)
+               ;; (red 'layout-state 'center-view 'view-events)
 
-               (red 'editor-state 'handle-state 'log-command)
-               (red 'editor-immediate 'handle-state 'log-command)
-                               ;; (red 'editor-commands 'handle-state 'log-command)
+               ;; (red 'editor-state ' 'state)
+
+               (pipe 'editor-state 'editor-actions)
+               (pipe 'editor-immediate 'editor-actions)
+
+               (red 'editor-actions 'handle-state 'log-command)
 
                (pipe 'state 'graph 'svg-render)
                (red 'render 'elements-reduce 'reducer)
@@ -1450,12 +1536,11 @@
                (red 'sink-menu-items 'sink-menu-map 'sink-menu)
                (pipe 'sink-menu 'render-sink-menu 'svg-render)
 
-                ;;                (pipe 'state 'render-action-menu 'svg-render)
+               (pipe 'state 'render-action-menu 'svg-render)
 
-                               (pipe 'oasis 'header 'render)
+               (pipe 'oasis 'header 'render)
                 ;;                (pipe 'oasis 'repl 'render)
-               (pipe 'oasis 'view-events)
-               (pipe 'oasis 'log)
+               (pipe 'oasis 'init-view 'view-events)
 
                ]]
                oasis))
