@@ -92,6 +92,12 @@
   (fn [col]
     (get col i)))
 
+(defn get-by-key
+  ""
+  []
+  (fn [[col i]]
+    (get col i)))
+
 (defn less
   ""
   [c]
@@ -219,6 +225,7 @@
    '*      (curry1 *)
    'negate negate
    'nth    nth*
+   'lookup get-by-key
    'count  count
    'many   tt/many
    'ignore tt/ignore

@@ -193,7 +193,7 @@
   []
   (fn [x]
     (println (str "adding: " x))
-    (let [sym (symbol (:name x))
+    (let [sym (:name x)
           src (get @fns sym)
           idx (dec (:cell x))]
       (when (and sym src idx)
@@ -227,8 +227,8 @@
   []
   (fn [{:keys [:source :sink] :as x}]
     (println "connect: " x)
-    (let [connector (symbol (str "c/" source "-" sink))
-          fn (api/defexp connector (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol 'id) [])]))
+    (let [connector  (str "c/" source "-" sink)
+          fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol 'id) [])]))
           fn-ast (single! fn)
           pipe (api/pipe [(api/symbol source) (api/symbol connector) (api/symbol sink)])]
       (add-node connector fn-ast)
