@@ -14,30 +14,35 @@
 (defmethod handle-node
   :samak.nodes/fn-call
   [node]
-  {:type "func"
+  {:type :caravan/func
+   :display "func"
    :value (str (:samak.nodes/name (:samak.nodes/fn node)))})
 
 (defmethod handle-node
   :samak.nodes/integer
   [node]
-  {:type "int"
+  {:type :caravan/int
+   :display "int"
    :value (str (:samak.nodes/value node))})
 
 (defmethod handle-node
   :samak.nodes/string
   [node]
-  {:type "str"
+  {:type :caravan/str
+   :display "str"
    :value (str (:samak.nodes/value node))})
 
 (defmethod handle-node
   :samak.nodes/keyword
   [node]
-  {:type "kw"
+  {:type :caravan/kw
+   :display "kw"
    :value (str (:samak.nodes/value node))})
 
 (defn make-sym
   [value]
-  {:type "sym"
+  {:type :caravan/sym
+   :display "sym"
    :value value})
 
 (defmethod handle-node
@@ -48,25 +53,29 @@
 (defmethod handle-node
   :samak.nodes/float
   [node]
-  {:type "float"
+  {:type :caravan/float
+   :display "float"
    :value (str (:samak.nodes/value node))})
 
 (defmethod handle-node
   :samak.nodes/map
   [node]
-  {:type "table"
+  {:type :caravan/table
+   :display "table"
    :value "###"})
 
 (defmethod handle-node
   :samak.nodes/vector
   [node]
-  {:type "list"
+  {:type :caravan/list
+   :display "list"
    :value "---"})
 
 (defmethod handle-node
   :samak.nodes/key-fn
   [node]
-  {:type "acc"
+  {:type :caravan/acc
+   :display "acc"
    :value (str ":-" (name (:samak.nodes/value node)))})
 
 (defmethod handle-node
