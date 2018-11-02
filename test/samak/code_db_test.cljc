@@ -34,7 +34,8 @@
         builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))
         parsed (:value tt/parsed-example)
         base (do (db/parse-tree->db! db parsed) db)
-        result (db/load-ast base 'foo)]
+        id (db/resolve-name base 'foo)
+        result (db/load-by-id base id)]
     (is (= 'foo (get-in result [:samak.nodes/name])))
     (is (= 1 (get-in result [:samak.nodes/rhs :db/id])))))
 

@@ -171,7 +171,7 @@
 (defn query-call
   [db query]
   (fn [input out]
-    (let [ast (or (db/load-ast db input) :not-found)]
+    (let [ast (or (db/load-by-id input) :not-found)]
       (put! out ast))))
 
 (defn db-persist [db args]
