@@ -17,7 +17,8 @@
 (def string  (partial literal 'string))
 
 (defn symbol [identifier]
-  [:samak.nodes/name identifier])
+  #:samak.nodes{:type :fn-ref
+                :fn   [:samak.nodes/name identifier]})
 
 (defn pipe [args]
   #:samak.nodes {:type      :samak.nodes/pipe
