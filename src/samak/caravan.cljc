@@ -133,7 +133,7 @@
   ""
   [sym fn]
   (swap! fns assoc sym fn)
-  (println (str "state is: " @fns))
+  (println (str "function cache: " @fns))
   (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
         ast (make-cell-list fn)]
     (if (empty? ast)
@@ -207,17 +207,35 @@
           idx (dec (:cell x))]
       (when (and sym src idx)
           (let [[cell par] (add-cell-internal src idx)
-                cell-id (:db/id cell)
+                root-id (:db/id src)
                 content (api/string "bar")
                 updated (update cell :samak.nodes/arguments conj {:db/id -1 :order 1 :samak.nodes/node content})]
             (println (str "cell: " cell " - " par))
             (println (str "updated: " updated))
             (let [write (persist! @db-conn [updated])
-                  load (db/load-by-id @db-conn cell-id)
-                  exp (api/defexp sym load)]
+                  exp (db/load-by-id @db-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)))))))
 
+(defn edit-cell
+  ""
+  []
+  (fn [x]
+    (println (str "editing: " x))
+    (let [sym (:name x)
+          src (get @fns sym)
+          idx (dec (:cell x))]
+      (println (str "src: " src))
+      (when (and sym src idx)
+          (let [[cell par] (add-cell-internal src idx)
+                root-id (:db/id src)
+                updated (assoc cell :samak.nodes/value (:value x))]
+            (println (str "cell: " cell " - " par))
+            (println (str "updated: " updated))
+            (let [write (persist! @db-conn [updated])
+                  exp (db/load-by-id @db-conn root-id)]
+              (println (str "res: " exp))
+              (add-node sym exp)))))))
 
 (defn create-sink
   ""
@@ -263,4 +281,5 @@
   {'create-sink create-sink
    'load-node load-node
    'connect connect
-   'add-cell add-cell})
+   'add-cell add-cell
+   'edit-cell edit-cell})

@@ -142,12 +142,13 @@
    (defn keyboard []
      (let [c (chan)]
        (set! (.-onkeypress js/document)
-             (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
-                                   {:which (.-which event)
+             (fn [e] (do (let [event (js->clj e :keywordize-keys true)]
+                           (put! c {:which (.-which event)
                                     :ctrl-key (.-ctrlKey event)
                                     :meta-key (.-metaKey event)
-                                    :target (.-id (.-target event))}))
-                         false)))
+                                    :target (.-id (.-target event))
+                                    :type (.-tagName (.-target event))})
+                           (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
        (pipes/source c))))
 
 #?(:clj (defn keyboard []))
