@@ -35,14 +35,19 @@
   #:samak.nodes {:type     :samak.nodes/map
                  :mapkv-pairs (vec (clojure.core/map map-entry kvs))})
 
+(defn network [network-name forms]
+  #:samak.nodes {:type     :samak.nodes/network
+                 :name     network-name
+                 :children (tools/ordered forms)})
+
 (defn vector [items]
   #:samak.nodes {:type     :samak.nodes/vector
                  :children (tools/ordered items)})
 
 (defn fn-call [fn-expression args]
-  #:samak.nodes {:type      :samak.nodes/fn-call
-                 :fn        fn-expression
-                 :arguments (if args (tools/ordered args) [])})
+  #:samak.nodes {:type          :samak.nodes/fn-call
+                 :fn-expression fn-expression
+                 :arguments     (if args (tools/ordered args) [])})
 
 (defn defexp [expression-name rhs]
   #:samak.nodes{:type :samak.nodes/def
@@ -76,3 +81,7 @@
 (defn is-pipe?
   [node]
   (= (:samak.nodes/type node) :samak.nodes/pipe))
+
+(defn is-network?
+  [node]
+  (= (:samak.nodes/type node) :samak.nodes/network))

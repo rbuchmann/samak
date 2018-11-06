@@ -1,87 +1,52 @@
 (ns samak.runtime
-  (:require [datascript.core :as d]
-            [samak.code-db   :as db]
-            [samak.nodes     :as n]
-            [samak.pipes     :as pipes]
-            [samak.api       :as api]
-            [clojure.set     :as set]))
-
-(defn eval-all-new! [db tx-records]
-  (let [new-ids (-> (db/parse-tree->db! db tx-records)
-                    :tempids
-                    (dissoc :db/current-tx)
-                    vals)]
-    (into {}
-          (for [id new-ids]
-            [id (n/eval-node (db/load-by-id db id))]))))
-
-;; If it's a map, take out the tempid,
-;; otherwise assume that it's a lookup ref
-(defn to-db-id [record]
-  (if (map? record)
-    (:db/id record)
-    record))
-
-(defn eval-toplevel-ast! [db ast]
-  (condp (fn [k form] (= (::n/type form) k)) ast
-    ::n/def  (eval-all-new! db [(assoc ast :db/id -1)])
-    ::n/pipe (let [arguments  (->> ast
-                                   ::n/arguments
-                                   (sort-by :order)
-                                   (map ::n/node)
-                                   (map-indexed (fn [i arg]
-                                                  (if (map? arg)
-                                                    (assoc arg :db/id (- (inc i)))
-                                                    arg))))
-                   links      (for [[a b] (partition 2 1 arguments)]
-                                {::n/type ::n/link
-                                 ::n/from (to-db-id a)
-                                 ::n/to   (to-db-id b)})
-                   tx-records (filter map? (concat arguments links))]
-               (eval-all-new! db tx-records))
-    {:latest (n/eval-node ast)}))
-
-(defn link-all-pipes! [linked-pipes db defined-ids]
-  (let [pipe-pairs     (->> (db/retrieve-links db)
-                            (map (juxt ::n/from ::n/to))
-                            (map #(mapv :db/id %))
-                            set)
-        already-linked (-> linked-pipes keys set)
-        to-link        (set/difference pipe-pairs already-linked)
-        to-unlink      (set/difference already-linked pipe-pairs)]
-    (doseq [edge to-unlink]
-      (pipes/clean-up (linked-pipes edge)))
-    (into {} (for [edge to-link]
-               [edge (->> edge
-                          (map defined-ids)
-                          (apply pipes/link!))]))))
-
-(defn eval-expression! [{:keys [db defined-ids linked-pipes] :as state} ast]
-  (let [new-defines (eval-toplevel-ast! db ast)]
-    (swap! defined-ids (fn [ids] (-> ids
-                                    (dissoc :latest)
-                                    (merge new-defines))))
-    (swap! linked-pipes link-all-pipes! db @defined-ids)
-    state))
-
-(defn load-builtins! [rt builtin-symbols]
-  (->> builtin-symbols
-       (map (fn [s] (api/defexp s (api/builtin s))))
-       (reduce eval-expression! rt)))
+  (:require [samak.runtime.stores  :as stores]
+            [samak.runtime.servers :as servers]
+            [samak.nodes           :as n]
+            [samak.api             :as api]))
 
 (defn make-runtime
   ([]
-   {:db           (db/create-empty-db)
-    :defined-ids  (atom {})
-    :linked-pipes (atom {})})
+   {:store  (stores/make-local-store)
+    :server (servers/make-local-server)})
   ([builtins]
-   (load-builtins! (make-runtime) builtins)))
+   (update (make-runtime) :store stores/load-builtins! builtins)))
 
+;; Toplevel code transformation
 
-(def get-defined-ids  (comp deref :defined-ids))
-(def get-linked-pipes (comp deref :linked-pipes))
+(defmulti transform-expression ::n/type)
 
-(defn get-definition-by-name [state sym]
-  (if-let [id (:db/id (db/load-ast (:db state) sym))]
-    (-> state get-defined-ids (get id))
-    (println "Couldn't find \"" sym "\" in database")))
+(defmethod transform-expression ::n/pipe [ast]
+  (let [arguments (->> ast ::n/arguments (sort-by :order))]
+    (map-indexed
+     (for [[a b] (partition 2 1 arguments)]
+       {::n/type ::n/link
+        ::n/from (assoc a :db/id -1)
+        ::n/to   (assoc b :db/id -2)}))))
+
+(defmethod transform-expression ::n/def [ast]
+  [(assoc ast :db/id -1)])
+
+;; Applying the transformation and apply network
+
+(defn wrap-network [network-name forms]
+  (map (partial api/network network-name) forms))
+
+(defn rewrite-expression [network-name form]
+  (->> form
+       transform-expression
+       (wrap-network network-name)))
+
+;; Evaluation - Dumb and without dependency resolution for now
+
+(defn store-and-eval! [store server tx-records]
+  (let [new-ids (-> (stores/persist-tree! store tx-records)
+                    :tempids
+                    (dissoc :db/current-tx)
+                    vals)]
+    (doseq [id new-ids]
+      (servers/eval-ast! store (stores/load-by-id store id)))))
+
+(defn eval-expression! [{:keys [store server]} form]
+  (reduce (partial store-and-eval! store)
+   server
+   (rewrite-expression "user" form)))
