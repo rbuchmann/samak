@@ -53,5 +53,5 @@
 
 (defmethod eval-node ::fn-ref [{:keys [::fn]}]
   (p/eval-as-fn (eval-node fn)))
-(defmethod eval-node ::fn-call [{:keys [::fn ::arguments]}]
-  (apply (p/eval-as-fn (eval-node fn)) (eval-reordered arguments)))
+(defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
+  (apply (p/eval-as-fn (eval-node fn-expression)) (eval-reordered arguments)))

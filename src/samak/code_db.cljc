@@ -8,29 +8,58 @@
                [reagent.core :as r]
                [clojure.walk    :as w])]))
 
-(def schema #:samak.nodes {:arguments   {:db/isComponent true
-                                         :db/valueType   :db.type/ref
-                                         :db/cardinality :db.cardinality/many}
-                           :fn          {:db/valueType :db.type/ref}
-                           :rhs         {:db/valueType :db.type/ref}
-                           :mapkv-pairs {:db/cardinality :db.cardinality/many
-                                         :db/isComponent true
-                                         :db/valueType   :db.type/ref}
-                           :mapkey      {:db/valueType :db.type/ref}
-                           :mapvalue    {:db/valueType :db.type/ref}
-                           :children    {:db/cardinality :db.cardinality/many
-                                         :db/isComponent true
-                                         :db/valueType   :db.type/ref}
-                           :expression  {:db/isComponent true
-                                         :db/valueType   :db.type/ref}
-                           :from        {:db/isComponent false
-                                         :db/valueType   :db.type/ref}
-                           :to          {:db/isComponent false
-                                         :db/valueType   :db.type/ref}
-                           :name        {:db/unique :db.unique/identity}
-                           :node        {:db/isComponent true
-                                         :db/valueType   :db.type/ref}
-                           })
+(def schema #:samak.nodes {:arguments     {:db/isComponent true
+                                           :db/valueType   :db.type/ref
+                                           :db/cardinality :db.cardinality/many}
+                           :fn            {:db/valueType   :db.type/ref
+                                           :db/isComponent false}
+                           :fn-expression {:db/valueType   :db.type/ref
+                                           :db/isComponent true}
+                           :rhs           {:db/valueType   :db.type/ref
+                                           :db/isComponent true}
+                           :mapkv-pairs   {:db/cardinality :db.cardinality/many
+                                           :db/isComponent true
+                                           :db/valueType   :db.type/ref}
+                           :mapkey        {:db/valueType   :db.type/ref
+                                           :db/isComponent true}
+                           :mapvalue      {:db/valueType   :db.type/ref
+                                           :db/isComponent true}
+                           :children      {:db/cardinality :db.cardinality/many
+                                           :db/isComponent true
+                                           :db/valueType   :db.type/ref}
+                           :from          {:db/isComponent true
+                                           :db/valueType   :db.type/ref}
+                           :to            {:db/isComponent true
+                                           :db/valueType   :db.type/ref}
+                           :name          {:db/unique :db.unique/identity}
+                           :node          {:db/isComponent true
+                                           :db/valueType   :db.type/ref}})
+
+(defn mapcatv [f col]
+  (vec (mapcat f col)))
+
+(def dependency-rule
+  (concat
+   (mapcatv
+    (fn [[k {:keys [db/valueType db/isComponent]}]]
+      (cond-> []
+        ;; All ref attribues are children
+        (= :db.type/ref valueType) (conj ['(child ?p ?c)
+                                          ['?p k '?c]])
+        ;; All non-component refs are dependencies
+        (and (not isComponent)
+             (= :db.type/ref valueType)) (conj ['(depends ?p ?c)
+                                                ['?p k '?c]])))
+    schema)
+   '[[(depends ?p ?c)
+      (child ?p ?intermediate)
+      (depends ?intermediate ?c)]
+     [(dep-for ?p ?a ?b)
+      [(= ?p ?a)]
+      (depends ?a ?b)]
+     [(dep-for ?p ?a ?b)
+      (depends ?p ?a)
+      (depends ?a ?b)]]))
 
 #?(:cljs (defn create-ratom-db [schema]
            (r/atom (d/empty-db schema) :meta {:listeners (atom {}) })))
@@ -63,6 +92,22 @@
          :where
          [?id :samak.nodes/type :samak.nodes/link]]
        @db))
+
+(defn load-dependencies [db id]
+  (d/q '[:find [?x ...]
+         :in $ % ?id
+         :where (depends ?id ?x)]
+       @db
+       dependency-rule
+       id))
+
+(defn load-dependency-edges [db id]
+  (d/q '[:find ?a ?b
+         :in $ % ?id
+         :where (dep-for ?id ?a ?b)]
+       @db
+       dependency-rule
+       id))
 
 ;; TODO: Implement for cljs using node fs stuff
 #?(:clj
