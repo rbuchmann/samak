@@ -90,10 +90,10 @@
   ""
   [node]
   (cond
-    (api/is-vector? node) (map :samak.nodes/node (get node :samak.nodes/children))
+    (api/is-vector? node) (map :samak.nodes/node (sort-by :order (get node :samak.nodes/children)))
     (api/is-map? node) (get node :samak.nodes/mapkv-pairs)
     (api/is-entry? node) [(get node :samak.nodes/mapvalue)]
-    (api/is-fn-call? node) (map :samak.nodes/node (get node :samak.nodes/arguments))))
+    (api/is-fn-call? node) (map :samak.nodes/node (sort-by :order (get node :samak.nodes/arguments)))))
 
 
 (defn parse-node
@@ -237,6 +237,31 @@
               (println (str "res: " exp))
               (add-node sym exp)))))))
 
+
+(defn fall-cell
+  ""
+  []
+  (fn [x]
+    (println (str "fall: " x))
+    (let [sym (:name x)
+          src (get @fns sym)
+          idx (dec (:cell x))]
+      (println (str "src: " src))
+      (when (and sym src idx)
+          (let [[cell par] (add-cell-internal src idx)
+                root-id (:db/id src)
+                sorted (update par :samak.nodes/arguments #(sort-by :order %))
+                fall1 (update-in sorted [:samak.nodes/arguments 0] #(assoc % :order 1))
+                fall2 (update-in fall1 [:samak.nodes/arguments 1] #(assoc % :order 0))
+                ]
+            (println (str "cell: " cell " - " par))
+            (println (str "updated: " fall2))
+            (let [write (persist! @db-conn [fall2])
+                  exp (db/load-by-id @db-conn root-id)]
+              (println (str "res: " exp))
+              (add-node sym exp))
+            )))))
+
 (defn create-sink
   ""
   []
@@ -282,4 +307,5 @@
    'load-node load-node
    'connect connect
    'add-cell add-cell
+   'fall-cell fall-cell
    'edit-cell edit-cell})

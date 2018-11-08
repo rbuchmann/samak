@@ -95,8 +95,8 @@
 (defn get-by-key
   ""
   []
-  (fn [[col i]]
-    (get col i)))
+  (fn [[col i not-found]]
+    (get col i not-found)))
 
 (defn less
   ""
