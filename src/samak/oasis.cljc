@@ -595,6 +595,38 @@
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/string "1")]))
 
+               (defncall 'is-kb-second '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "2")]))
+
+               (defncall 'is-kb-third '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "3")]))
+
+               (defncall 'is-kb-fourth '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "4")]))
+
+               (defncall 'is-kb-fifth '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "5")]))
+
+               (defncall 'is-kb-sixth '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "6")]))
+
+               (defncall 'is-kb-seventh '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "7")]))
+
+               (defncall 'is-kb-eigth '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "8")]))
+
+               (defncall 'is-kb-ninth '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "9")]))
+
                (defncall 'is-kb-accept '->
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/string "Enter")]))
@@ -637,6 +669,38 @@
                  (api/keyword :first)
                  (api/symbol 'construct-action))
 
+               (defncall 'construct-second '->
+                 (api/keyword :second)
+                 (api/symbol 'construct-action))
+
+               (defncall 'construct-third '->
+                 (api/keyword :third)
+                 (api/symbol 'construct-action))
+
+               (defncall 'construct-fourth '->
+                 (api/keyword :fourth)
+                 (api/symbol 'construct-action))
+
+               (defncall 'construct-fifth '->
+                 (api/keyword :fifth)
+                 (api/symbol 'construct-action))
+
+               (defncall 'construct-sixth '->
+                 (api/keyword :sixth)
+                 (api/symbol 'construct-action))
+
+               (defncall 'construct-seventh '->
+                 (api/keyword :seventh)
+                 (api/symbol 'construct-action))
+
+               (defncall 'construct-eigth '->
+                 (api/keyword :eigth)
+                 (api/symbol 'construct-action))
+
+               (defncall 'construct-ninth '->
+                 (api/keyword :ninth)
+                 (api/symbol 'construct-action))
+
                (defncall 'construct-accept '->
                  (api/keyword :accept)
                  (api/symbol 'construct-action))
@@ -672,6 +736,22 @@
                                                     (api/symbol 'construct-edit-mode)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-first)
                                                     (api/symbol 'construct-first)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-second)
+                                                    (api/symbol 'construct-second)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-third)
+                                                    (api/symbol 'construct-third)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-fourth)
+                                                    (api/symbol 'construct-fourth)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-fifth)
+                                                    (api/symbol 'construct-fifth)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-sixth)
+                                                    (api/symbol 'construct-sixth)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-seventh)
+                                                    (api/symbol 'construct-seventh)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-eigth)
+                                                    (api/symbol 'construct-eigth)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-ninth)
+                                                    (api/symbol 'construct-ninth)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-accept)
                                                     (api/symbol 'construct-accept)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-cancel)
@@ -1011,7 +1091,6 @@
                  (api/fn-call (api/symbol 'max) []))
 
                (defncall 'calculate-mark '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "mark")])
                  (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '->) [(api/symbol 'is-next-cursor)
                                                                                (api/fn-call (api/symbol '=) [(api/keyword :down)])])
                                                 (api/symbol 'calc-down)
@@ -1048,7 +1127,6 @@
 
 
                (defncall 'process-select '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "sel-change")])
                  (api/map {(api/keyword :state) (api/key-fn :state)
                            (api/keyword :next) (api/map {(api/keyword :mark) (api/integer 1)
                                                          (api/keyword :mode) (api/keyword :navigate)
@@ -1057,7 +1135,6 @@
                                                          (api/keyword :ast) (api/symbol 'selected-source)})}))
 
                (defncall 'selected-source-change '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "ast-change")])
                  (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :next)
                                                              (api/key-fn :eval)])
                               (api/fn-call (api/symbol '->) [(api/key-fn :state)
@@ -1066,7 +1143,6 @@
                  (api/fn-call (api/symbol 'lookup) []))
 
                (defncall 'process-eval '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "evaling")])
                  (api/map {(api/keyword :state) (api/key-fn :state)
                            (api/keyword :next) (api/map {(api/keyword :eval) (api/fn-call (api/symbol '->) [(api/key-fn :next)
                                                                                                             (api/key-fn :eval)])
@@ -1105,12 +1181,10 @@
                                                              (api/symbol 'dec)])])
                  (api/fn-call (api/symbol 'lookup) [])
                  (api/key-fn :type)
-                 (api/fn-call (api/symbol 'spy) [(api/string "editable")])
                  (api/fn-call (api/symbol '=) [(api/keyword :caravan/str)])
                  )
 
                (defncall 'mode-set-edit '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "mode-edit")])
                  (api/fn-call (api/symbol 'unless) [(api/symbol 'is-cell-editable)
                                                     (api/symbol 'mode-set-navigate)]))
 
@@ -1370,16 +1444,33 @@
                  (api/key-fn :editor)
                  (api/key-fn :mark))
 
+               (defncall 'map-choice-to-type '->
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :first)])
+                                                    (api/keyword :string)])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :second)])
+                                                    (api/keyword :integer)])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :third)])
+                                                    (api/keyword :keyword)])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :fourth)])
+                                                    (api/keyword :symbol)])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :fifth)])
+                                                    (api/keyword :float)])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :sixth)])
+                                                    (api/keyword :table)])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :seventh)])
+                                                    (api/keyword :list)])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :eigth)])
+                                                    (api/keyword :accessor)]))
+
                (defncall 'insert-call '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "insert-call")])
-                 (api/map {(api/keyword :name) (api/symbol 'get-selected-fn-name)
+                 (api/map {(api/keyword :sym) (api/symbol 'get-selected-fn-name)
                            (api/keyword :cell) (api/symbol 'get-mark)
-                           (api/keyword :uuid) (api/fn-call (api/symbol '->) [(api/key-fn :next)
-                                                                              (api/key-fn :data)])})
+                           (api/keyword :type) (api/fn-call (api/symbol '->) [(api/key-fn :next)
+                                                                              (api/key-fn :data)
+                                                                              (api/symbol 'map-choice-to-type)])})
                  (api/fn-call (api/symbol 'add-cell) []))
 
                (defncall 'insert-at-pos '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "insert-pos")])
                  (api/map {(api/keyword :state) (api/key-fn :state)
                            (api/keyword :next) (api/map {(api/keyword :editor)
                                                          (api/fn-call (api/symbol '->)
@@ -1390,8 +1481,7 @@
                                                          (api/symbol 'insert-call)})}))
 
                (defncall 'edit-call '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "edit-call")])
-                 (api/map {(api/keyword :name) (api/symbol 'get-selected-fn-name)
+                 (api/map {(api/keyword :sym) (api/symbol 'get-selected-fn-name)
                            (api/keyword :cell) (api/symbol 'get-mark)
                            (api/keyword :value) (api/fn-call (api/symbol '->) [(api/key-fn :state)
                                                                                (api/key-fn :events)
@@ -1401,26 +1491,45 @@
 
 
                (defncall 'edit-at-pos '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "edit-pos")])
                  (api/map {(api/keyword :state) (api/key-fn :state)
                            (api/keyword :next) (api/map {(api/keyword :result)
                                                          (api/symbol 'edit-call)})}))
 
-               (defncall 'fall-call '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "fall-call")])
-                 (api/map {(api/keyword :name) (api/symbol 'get-selected-fn-name)
-                           (api/keyword :cell) (api/symbol 'get-mark)})
-                 (api/fn-call (api/symbol 'fall-cell) []))
+               (defncall 'swap-call '->
+                 (api/map {(api/keyword :sym) (api/symbol 'get-selected-fn-name)
+                           (api/keyword :cell-idx) (api/symbol 'get-mark)
+                           (api/keyword :target) (api/key-fn :target)})
+                 (api/fn-call (api/symbol 'swap-cell) []))
 
-               (defncall 'fall-at-pos '->
-                 (api/fn-call (api/symbol 'spy) [(api/string "fall-pos")])
+               (defncall 'swap-at-pos '->
                  (api/map {(api/keyword :state) (api/key-fn :state)
                            (api/keyword :next) (api/map {(api/keyword :result)
-                                                         (api/symbol 'fall-call)})}))
+                                                         (api/symbol 'swap-call)})}))
+
+               (defncall 'fall-at-pos '->
+                 (api/map {(api/keyword :state) (api/key-fn :state)
+                           (api/keyword :next) (api/key-fn :next)
+                           (api/keyword :target) (api/fn-call (api/symbol '->) [(api/symbol 'get-mark)
+                                                                                (api/symbol 'inc)])})
+                 (api/symbol 'swap-at-pos))
+
+               (defncall 'leap-at-pos '->
+                 (api/map {(api/keyword :state) (api/key-fn :state)
+                           (api/keyword :next) (api/key-fn :next)
+                           (api/keyword :target) (api/fn-call (api/symbol '->) [(api/symbol 'get-mark)
+                                                                                (api/symbol 'dec)])})
+                 (api/symbol 'swap-at-pos))
 
                (defncall 'is-insert-state '->
                  (api/key-fn :data)
-                 (api/fn-call (api/symbol '=) [(api/keyword :first)]))
+                 (api/fn-call (api/symbol 'or) [(api/fn-call (api/symbol '=) [(api/keyword :first)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :second)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :third)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :fourth)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :fifth)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :sixth)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :seventh)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :eigth)])]))
 
 
                (defncall 'should-insert '->
@@ -1450,6 +1559,11 @@
                  (api/key-fn :data)
                  (api/fn-call (api/symbol '=) [(api/keyword :fall)]))
 
+               (defncall 'should-leap '->
+                 (api/key-fn :next)
+                 (api/key-fn :data)
+                 (api/fn-call (api/symbol '=) [(api/keyword :leap)]))
+
                (defncall 'handle-state 'pipes/reductions
                  (api/fn-call (api/symbol '->)
                               [(api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-insert)
@@ -1457,6 +1571,8 @@
                                                                   (api/symbol 'insert-at-pos)])
                                (api/fn-call (api/symbol 'incase) [(api/symbol 'should-fall)
                                                                   (api/symbol 'fall-at-pos)])
+                               (api/fn-call (api/symbol 'incase) [(api/symbol 'should-leap)
+                                                                  (api/symbol 'leap-at-pos)])
                                (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-edit)
                                                                                                   (api/symbol 'is-editor-mode-edit)])
                                                                   (api/symbol 'edit-at-pos)])
@@ -1467,7 +1583,15 @@
 
                (defncall 'add-insert-actions '->
                  (api/map {(api/keyword :state) (api/key-fn :state)
-                           (api/keyword :next) (api/map {(api/keyword :actions) (api/vector [(api/string "Q back") (api/string "1 string") (api/string "2 number")])})}))
+                           (api/keyword :next) (api/map {(api/keyword :actions) (api/vector [(api/string "Q back")
+                                                                                             (api/string "1 string")
+                                                                                             (api/string "2 number")
+                                                                                             (api/string "3 keyword")
+                                                                                             (api/string "4 symbol")
+                                                                                             (api/string "5 float")
+                                                                                             (api/string "6 table")
+                                                                                             (api/string "7 list")
+                                                                                             (api/string "8 accessor")])})}))
 
                (defncall 'is-change-insert '->
                  (api/key-fn :editor)
@@ -1476,7 +1600,7 @@
 
                (defncall 'add-nav-actions '->
                  (api/map {(api/keyword :state) (api/key-fn :state)
-                           (api/keyword :next) (api/map {(api/keyword :actions) (api/vector [(api/string "WASD navigate") (api/string "F insert")])})}))
+                           (api/keyword :next) (api/map {(api/keyword :actions) (api/vector [(api/string "WASD navigate") (api/string "F insert") (api/string "Shift-WS Swap")])})}))
 
                (defncall 'is-change-navigate '->
                  (api/key-fn :editor)

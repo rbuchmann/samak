@@ -48,3 +48,7 @@
     (sut/init db)
     (sut/repl-eval all-things-samak)
     (is (= "foo" ((sut/add-cell) {:name 'test :cell 1})))))
+
+(deftest should-swap-order
+  (is (= [{:order 1 :a 1} {:order 0 :a 2}]
+         (sut/change-order [{:order 0 :a 1} {:order 1 :a 2}] 0 1))))

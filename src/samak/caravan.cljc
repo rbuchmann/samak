@@ -164,19 +164,19 @@
 
 
 (defn find-cell
-  [src cell counter parent]
+  [src cell counter parent parent-idx]
   ;; (println (str "find: " src ",  " cell ",  " counter ",  " parent))
   (if (= counter cell)
-    [src parent]
+    [src parent parent-idx]
     (first (filter some? (map-indexed
-                          (fn [i child] (find-cell child cell (+ counter i 1) src))
+                          (fn [i child] (find-cell child cell (+ counter i 1) src counter))
                           (get-children src))))))
 
 (defn add-cell-internal
   ""
   [src cell]
   (let [root (:samak.nodes/rhs src)]
-    (find-cell root cell 0 nil)))
+    (find-cell root cell 0 nil 0)))
 
 (defn persist!
   ""
@@ -197,21 +197,32 @@
         ast (first (vals loaded))]
     ast))
 
+(defn content-from-type
+  ""
+  [x]
+  (case x
+    :string (api/string "")
+    :integer (api/integer 0)
+    :float (api/float 0.0)
+    :symbol (api/symbol 'id)
+    :keyword (api/keyword :div)
+    :table (api/map {})
+    :list (api/vector [])
+    :accessor (api/key-fn :test)))
+
+
 (defn add-cell
   ""
   []
-  (fn [x]
+  (fn [{:keys [sym cell type] :as x}]
     (println (str "adding: " x))
-    (let [sym (:name x)
-          src (get @fns sym)
-          idx (dec (:cell x))]
-      (when (and sym src idx)
+    (let [src (get @fns sym)
+          idx (dec cell)]
+      (when (and sym src idx type)
           (let [[cell par] (add-cell-internal src idx)
                 root-id (:db/id src)
-                content (api/string "bar")
+                content (content-from-type type)
                 updated (update cell :samak.nodes/arguments conj {:db/id -1 :order 1 :samak.nodes/node content})]
-            (println (str "cell: " cell " - " par))
-            (println (str "updated: " updated))
             (let [write (persist! @db-conn [updated])
                   exp (db/load-by-id @db-conn root-id)]
               (println (str "res: " exp))
@@ -220,43 +231,44 @@
 (defn edit-cell
   ""
   []
-  (fn [x]
+  (fn [{:keys [sym cell value] :as x}]
     (println (str "editing: " x))
-    (let [sym (:name x)
-          src (get @fns sym)
-          idx (dec (:cell x))]
-      (println (str "src: " src))
-      (when (and sym src idx)
+    (let [src (get @fns sym)
+          idx (dec cell)]
+      (when (and sym src idx value)
           (let [[cell par] (add-cell-internal src idx)
                 root-id (:db/id src)
-                updated (assoc cell :samak.nodes/value (:value x))]
-            (println (str "cell: " cell " - " par))
-            (println (str "updated: " updated))
+                updated (assoc cell :samak.nodes/value value)]
             (let [write (persist! @db-conn [updated])
                   exp (db/load-by-id @db-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)))))))
 
 
-(defn fall-cell
+(defn change-order
+  "switch the :order value inside the children at the two given indexes"
+  [v from to]
+  (let [fi (update-in v [from :order] (constantly to))
+        scd (update-in fi [to :order] (constantly from))]
+    scd))
+
+
+(defn swap-cell
   ""
   []
-  (fn [x]
-    (println (str "fall: " x))
-    (let [sym (:name x)
-          src (get @fns sym)
-          idx (dec (:cell x))]
-      (println (str "src: " src))
-      (when (and sym src idx)
-          (let [[cell par] (add-cell-internal src idx)
+  (fn [{:keys [:sym :cell-idx :target] :as x}]
+    (println (str "swap: " x))
+    (let [src (get @fns sym)
+          idx (dec cell-idx)]
+      (when (and sym src idx target)
+          (let [[cell par par-idx] (add-cell-internal src idx)
                 root-id (:db/id src)
-                sorted (update par :samak.nodes/arguments #(sort-by :order %))
-                fall1 (update-in sorted [:samak.nodes/arguments 0] #(assoc % :order 1))
-                fall2 (update-in fall1 [:samak.nodes/arguments 1] #(assoc % :order 0))
-                ]
-            (println (str "cell: " cell " - " par))
-            (println (str "updated: " fall2))
-            (let [write (persist! @db-conn [fall2])
+                arg-source-idx (- idx 1 par-idx)
+                arg-target-idx (- target 2 par-idx)
+                sorted-args (vec (sort-by :order (:samak.nodes/arguments par))) ;; need to make a copy because sort-by is inplace sometimes
+                changed (change-order sorted-args arg-source-idx arg-target-idx)
+                node (assoc par :samak.nodes/arguments changed)]
+            (let [write (persist! @db-conn [node])
                   exp (db/load-by-id @db-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp))
@@ -307,5 +319,5 @@
    'load-node load-node
    'connect connect
    'add-cell add-cell
-   'fall-cell fall-cell
+   'swap-cell swap-cell
    'edit-cell edit-cell})
