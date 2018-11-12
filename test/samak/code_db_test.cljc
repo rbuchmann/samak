@@ -70,3 +70,17 @@
         result (db/load-by-id db result-id)]
     (is (= 'bar (get-in result [:samak.nodes/name])))
     (is (= foo-id (get-in result [:samak.nodes/rhs :samak.nodes/fn :db/id])))))
+
+(deftest should-retract-from-args
+  (let [db (db/create-empty-db)
+        builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))
+        parsed (:value tt/parsed-example)
+        base (do (db/parse-tree->db! db parsed) db)
+        persisted (db/load-by-id base 15)
+        updated [(assoc persisted :samak.nodes/arguments [])]
+        upsert (do (db/parse-tree->db! db updated) db)
+        result (db/load-by-id upsert 15)
+        _ (println (str "res: " result))
+        ]
+    (is (= 'foo (get-in result [:samak.nodes/name])))
+    (is (= 1 (get-in result [:samak.nodes/rhs :db/id])))))

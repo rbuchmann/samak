@@ -52,3 +52,8 @@
 (deftest should-swap-order
   (is (= [{:order 1 :a 1} {:order 0 :a 2}]
          (sut/change-order [{:order 0 :a 1} {:order 1 :a 2}] 0 1))))
+
+(deftest should-remove-arg
+  (is (= [{:order 0 :a 2} {:order 1 :a 3}]
+         (sut/remove-arg [{:order 1 :a 1} {:order 0 :a 2} {:order 2 :a 3}] 1)))
+  )

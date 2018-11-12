@@ -140,6 +140,12 @@
   (fn [c]
     (into [] (drop n c))))
 
+(defn eq*
+  ""
+  []
+  (fn [v]
+    (apply = v)))
+
 
 (defn interleave*
   ""
@@ -218,6 +224,7 @@
    'take   (curry1 take)
    'drop   dropv
    '=      (curry1 =)
+   'eq     eq*
    '<      less
    '>      more
    '+      (curry1 +)

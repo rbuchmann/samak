@@ -274,6 +274,35 @@
               (add-node sym exp))
             )))))
 
+(defn remove-arg
+  ""
+  [v idx]
+  (vec (for [elem v
+             :when (not (= (:order elem) idx))]
+         (if (> (:order elem) idx)
+           (update elem :order dec)
+           elem))))
+
+
+(defn cut-cell
+  ""
+  []
+  (fn [{:keys [sym cell-idx] :as x}]
+    (println (str "cut: " x))
+    (let [src (get @fns sym)
+          idx (dec cell-idx)]
+      (when (and sym src idx type)
+          (let [[cell par par-idx] (add-cell-internal src idx)
+                root-id (:db/id src)
+                arg-idx (- idx 1 par-idx)
+                removed-args (remove-arg (:samak.nodes/arguments par) arg-idx)
+                _ (println (str "upd: " removed-args))
+                updated (assoc par :samak.nodes/arguments removed-args)]
+            (let [write (persist! @db-conn [updated])
+                  exp (db/load-by-id @db-conn root-id)]
+              (println (str "res: " exp))
+              (add-node sym exp)))))))
+
 (defn create-sink
   ""
   []
@@ -320,4 +349,5 @@
    'connect connect
    'add-cell add-cell
    'swap-cell swap-cell
+   'cut-cell cut-cell
    'edit-cell edit-cell})
