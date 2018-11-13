@@ -567,6 +567,14 @@
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/string "s")]))
 
+               (defncall 'is-kb-indent '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "d")]))
+
+               (defncall 'is-kb-dedent '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "a")]))
+
                (defncall 'is-kb-swap-up '->
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/string "W")]))
@@ -669,6 +677,14 @@
                            (api/keyword :type) (api/keyword :immediate)
                            (api/keyword :data) (api/symbol 'id)}))
 
+               (defncall 'construct-indent '->
+                 (api/keyword :indent)
+                 (api/symbol 'construct-action))
+
+               (defncall 'construct-dedent '->
+                 (api/keyword :dedent)
+                 (api/symbol 'construct-action))
+
                (defncall 'construct-rename '->
                  (api/keyword :rename)
                  (api/symbol 'construct-action))
@@ -738,6 +754,10 @@
                                                     (api/symbol 'construct-down)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-mark-up)
                                                     (api/symbol 'construct-up)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-indent)
+                                                    (api/symbol 'construct-indent)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-dedent)
+                                                    (api/symbol 'construct-dedent)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-swap-down)
                                                     (api/symbol 'construct-fall)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-swap-up)
@@ -778,7 +798,7 @@
                                                     (api/symbol 'ignore)]))
                (defncall 'is-kb-menu '->
                  (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/string 94)])) ;; ^
+                 (api/fn-call (api/symbol '=) [(api/string "^")]))
 
                (defncall 'construct-menu '->
                  (api/map {(api/keyword :command) (api/keyword :menu)
@@ -786,7 +806,7 @@
 
                (defncall 'is-kb-load '->
                  (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/string 108)])) ;; L
+                 (api/fn-call (api/symbol '=) [(api/string "l")]))
 
                (defncall 'construct-load '->
                  (api/map {(api/keyword :command) (api/keyword :load)
@@ -1546,6 +1566,16 @@
                                                                                 (api/symbol 'dec)])})
                  (api/symbol 'swap-at-pos))
 
+               (defncall 'indent-call '->
+                 (api/map {(api/keyword :sym) (api/symbol 'get-selected-fn-name)
+                           (api/keyword :cell-idx) (api/symbol 'get-mark)})
+                 (api/fn-call (api/symbol 'indent-cell) []))
+
+               (defncall 'indent-at-pos '->
+                 (api/map {(api/keyword :state) (api/key-fn :state)
+                           (api/keyword :next) (api/map {(api/keyword :result)
+                                                         (api/symbol 'indent-call)})}))
+
                (defncall 'is-insert-state '->
                  (api/key-fn :data)
                  (api/fn-call (api/symbol 'or) [(api/fn-call (api/symbol '=) [(api/keyword :first)])
@@ -1595,6 +1625,16 @@
                  (api/key-fn :data)
                  (api/fn-call (api/symbol '=) [(api/keyword :cut)]))
 
+               (defncall 'should-indent '->
+                 (api/key-fn :next)
+                 (api/key-fn :data)
+                 (api/fn-call (api/symbol '=) [(api/keyword :indent)]))
+
+               (defncall 'should-dedent '->
+                 (api/key-fn :next)
+                 (api/key-fn :data)
+                 (api/fn-call (api/symbol '=) [(api/keyword :dedent)]))
+
                (defncall 'handle-state 'pipes/reductions
                  (api/fn-call (api/symbol '->)
                               [(api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-insert)
@@ -1604,6 +1644,8 @@
                                                                   (api/symbol 'fall-at-pos)])
                                (api/fn-call (api/symbol 'incase) [(api/symbol 'should-leap)
                                                                   (api/symbol 'leap-at-pos)])
+                               (api/fn-call (api/symbol 'incase) [(api/symbol 'should-indent)
+                                                                  (api/symbol 'indent-at-pos)])
                                (api/fn-call (api/symbol 'incase) [(api/symbol 'should-cut)
                                                                   (api/symbol 'cut-at-pos)])
                                (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-edit)

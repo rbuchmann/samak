@@ -1,7 +1,7 @@
 * Editing
 
 ** edit more types
-*** lists
+*** DONE lists
 *** kw
 *** funcs
 *** accessors
@@ -11,15 +11,17 @@
 
 ** other edit operations
 *** DONE swap up/down
-*** TODO in-/dedent
+*** DONE in-/dedent
 *** grow/shorten?
 *** name function/
 *** other meta data?
 
 *** split source/sink
 *** subfunction handling/blocks?
+*** cut
 *** copy/paste?
 
+*** revert
 * Cleanup
 ** change caravan to be pipe based
 ** configuration
