@@ -95,8 +95,8 @@
 (defn get-by-key
   ""
   []
-  (fn [[col i]]
-    (get col i)))
+  (fn [[col i not-found]]
+    (get col i not-found)))
 
 (defn less
   ""
@@ -139,6 +139,12 @@
   [n]
   (fn [c]
     (into [] (drop n c))))
+
+(defn eq*
+  ""
+  []
+  (fn [v]
+    (apply = v)))
 
 
 (defn interleave*
@@ -218,6 +224,7 @@
    'take   (curry1 take)
    'drop   dropv
    '=      (curry1 =)
+   'eq     eq*
    '<      less
    '>      more
    '+      (curry1 +)

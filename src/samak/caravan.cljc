@@ -14,30 +14,35 @@
 (defmethod handle-node
   :samak.nodes/fn-call
   [node]
-  {:type "func"
+  {:type :caravan/func
+   :display "func"
    :value (str (:samak.nodes/name (:samak.nodes/fn node)))})
 
 (defmethod handle-node
   :samak.nodes/integer
   [node]
-  {:type "int"
+  {:type :caravan/int
+   :display "int"
    :value (str (:samak.nodes/value node))})
 
 (defmethod handle-node
   :samak.nodes/string
   [node]
-  {:type "str"
+  {:type :caravan/str
+   :display "str"
    :value (str (:samak.nodes/value node))})
 
 (defmethod handle-node
   :samak.nodes/keyword
   [node]
-  {:type "kw"
+  {:type :caravan/kw
+   :display "kw"
    :value (str (:samak.nodes/value node))})
 
 (defn make-sym
   [value]
-  {:type "sym"
+  {:type :caravan/sym
+   :display "sym"
    :value value})
 
 (defmethod handle-node
@@ -48,25 +53,29 @@
 (defmethod handle-node
   :samak.nodes/float
   [node]
-  {:type "float"
+  {:type :caravan/float
+   :display "float"
    :value (str (:samak.nodes/value node))})
 
 (defmethod handle-node
   :samak.nodes/map
   [node]
-  {:type "table"
+  {:type :caravan/table
+   :display "table"
    :value "###"})
 
 (defmethod handle-node
   :samak.nodes/vector
   [node]
-  {:type "list"
+  {:type :caravan/list
+   :display "list"
    :value "---"})
 
 (defmethod handle-node
   :samak.nodes/key-fn
   [node]
-  {:type "acc"
+  {:type :caravan/acc
+   :display "acc"
    :value (str ":-" (name (:samak.nodes/value node)))})
 
 (defmethod handle-node
@@ -81,10 +90,10 @@
   ""
   [node]
   (cond
-    (api/is-vector? node) (map :samak.nodes/node (get node :samak.nodes/children))
+    (api/is-vector? node) (map :samak.nodes/node (sort-by :order (get node :samak.nodes/children)))
     (api/is-map? node) (get node :samak.nodes/mapkv-pairs)
     (api/is-entry? node) [(get node :samak.nodes/mapvalue)]
-    (api/is-fn-call? node) (map :samak.nodes/node (get node :samak.nodes/arguments))))
+    (api/is-fn-call? node) (map :samak.nodes/node (sort-by :order (get node :samak.nodes/arguments)))))
 
 
 (defn parse-node
@@ -124,7 +133,7 @@
   ""
   [sym fn]
   (swap! fns assoc sym fn)
-  (println (str "state is: " @fns))
+  (println (str "function cache: " @fns))
   (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
         ast (make-cell-list fn)]
     (if (empty? ast)
@@ -155,19 +164,19 @@
 
 
 (defn find-cell
-  [src cell counter parent]
+  [src cell counter parent parent-idx]
   ;; (println (str "find: " src ",  " cell ",  " counter ",  " parent))
   (if (= counter cell)
-    [src parent]
+    [src parent parent-idx]
     (first (filter some? (map-indexed
-                          (fn [i child] (find-cell child cell (+ counter i 1) src))
+                          (fn [i child] (find-cell child cell (+ counter i 1) src counter))
                           (get-children src))))))
 
 (defn add-cell-internal
   ""
   [src cell]
   (let [root (:samak.nodes/rhs src)]
-    (find-cell root cell 0 nil)))
+    (find-cell root cell 0 nil 0)))
 
 (defn persist!
   ""
@@ -188,27 +197,111 @@
         ast (first (vals loaded))]
     ast))
 
+(defn content-from-type
+  ""
+  [x]
+  (case x
+    :string (api/string "")
+    :integer (api/integer 0)
+    :float (api/float 0.0)
+    :symbol (api/symbol 'id)
+    :keyword (api/keyword :div)
+    :table (api/map {})
+    :list (api/vector [])
+    :accessor (api/key-fn :test)))
+
+
 (defn add-cell
   ""
   []
-  (fn [x]
+  (fn [{:keys [sym cell type] :as x}]
     (println (str "adding: " x))
-    (let [sym (:name x)
-          src (get @fns sym)
-          idx (dec (:cell x))]
-      (when (and sym src idx)
+    (let [src (get @fns sym)
+          idx (dec cell)]
+      (when (and sym src idx type)
           (let [[cell par] (add-cell-internal src idx)
-                cell-id (:db/id cell)
-                content (api/string "bar")
+                root-id (:db/id src)
+                content (content-from-type type)
                 updated (update cell :samak.nodes/arguments conj {:db/id -1 :order 1 :samak.nodes/node content})]
-            (println (str "cell: " cell " - " par))
-            (println (str "updated: " updated))
             (let [write (persist! @db-conn [updated])
-                  load (db/load-by-id @db-conn cell-id)
-                  exp (api/defexp sym load)]
+                  exp (db/load-by-id @db-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)))))))
 
+(defn edit-cell
+  ""
+  []
+  (fn [{:keys [sym cell value] :as x}]
+    (println (str "editing: " x))
+    (let [src (get @fns sym)
+          idx (dec cell)]
+      (when (and sym src idx value)
+          (let [[cell par] (add-cell-internal src idx)
+                root-id (:db/id src)
+                updated (assoc cell :samak.nodes/value value)]
+            (let [write (persist! @db-conn [updated])
+                  exp (db/load-by-id @db-conn root-id)]
+              (println (str "res: " exp))
+              (add-node sym exp)))))))
+
+
+(defn change-order
+  "switch the :order value inside the children at the two given indexes"
+  [v from to]
+  (let [fi (update-in v [from :order] (constantly to))
+        scd (update-in fi [to :order] (constantly from))]
+    scd))
+
+
+(defn swap-cell
+  ""
+  []
+  (fn [{:keys [:sym :cell-idx :target] :as x}]
+    (println (str "swap: " x))
+    (let [src (get @fns sym)
+          idx (dec cell-idx)]
+      (when (and sym src idx target)
+          (let [[cell par par-idx] (add-cell-internal src idx)
+                root-id (:db/id src)
+                arg-source-idx (- idx 1 par-idx)
+                arg-target-idx (- target 2 par-idx)
+                sorted-args (vec (sort-by :order (:samak.nodes/arguments par))) ;; need to make a copy because sort-by is inplace sometimes
+                changed (change-order sorted-args arg-source-idx arg-target-idx)
+                node (assoc par :samak.nodes/arguments changed)]
+            (let [write (persist! @db-conn [node])
+                  exp (db/load-by-id @db-conn root-id)]
+              (println (str "res: " exp))
+              (add-node sym exp))
+            )))))
+
+(defn remove-arg
+  ""
+  [v idx]
+  (vec (for [elem v
+             :when (not (= (:order elem) idx))]
+         (if (> (:order elem) idx)
+           (update elem :order dec)
+           elem))))
+
+
+(defn cut-cell
+  ""
+  []
+  (fn [{:keys [sym cell-idx] :as x}]
+    (println (str "cut: " x))
+    (let [src (get @fns sym)
+          idx (dec cell-idx)]
+      (when (and sym src idx type)
+          (let [[cell par par-idx] (add-cell-internal src idx)
+                root-id (:db/id src)
+                arg-idx (- idx 1 par-idx)
+                removed-args (remove-arg (:samak.nodes/arguments par) arg-idx)
+                _ (println (str "upd: " removed-args))
+                updated (assoc par :samak.nodes/arguments removed-args)]
+            (let [write (persist! @db-conn [updated])
+                  exp (db/load-by-id @db-conn root-id)]
+              (println (str "res: " exp))
+              (add-node sym exp)))))))
 
 (defn create-sink
   ""
@@ -254,4 +347,7 @@
   {'create-sink create-sink
    'load-node load-node
    'connect connect
-   'add-cell add-cell})
+   'add-cell add-cell
+   'swap-cell swap-cell
+   'cut-cell cut-cell
+   'edit-cell edit-cell})

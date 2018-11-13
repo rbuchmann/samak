@@ -1,0 +1,46 @@
+* Editing
+
+** edit more types
+*** lists
+*** kw
+*** funcs
+*** accessors
+*** tables
+*** sym?
+*** integer/float
+
+** other edit operations
+*** DONE swap up/down
+*** TODO in-/dedent
+*** grow/shorten?
+*** name function/
+*** other meta data?
+
+*** split source/sink
+*** subfunction handling/blocks?
+*** copy/paste?
+
+* Cleanup
+** change caravan to be pipe based
+** configuration
+*** TODO color/syntax highlighting
+*** keyboard shortcuts
+** drag and drop
+** animations
+
+* Navigation
+** Zooming
+** Navigation across nets
+** Search
+
+* Testing
+* Types
+* Load/Save
+
+* "Inspect"
+
+** instrumentation, show events
+** event log?
+** show real content?
+
+* Code Generation
