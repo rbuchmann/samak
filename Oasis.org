@@ -2,40 +2,58 @@
 
 ** edit more types
 *** DONE lists
-*** kw
-*** funcs
-*** accessors
-*** tables
+*** DONE kw
+*** DONE funcs
+*** DONE accessors
+*** TODO tables
 *** sym?
-*** integer/float
+*** DONE integer/float
 
 ** other edit operations
 *** DONE swap up/down
-*** DONE in-/dedent
+*** in/out
+**** DONE indent
+**** TODO dedent
 *** grow/shorten?
-*** name function/
+*** name function
 *** other meta data?
+
+*** mouse reorder
 
 *** split source/sink
 *** subfunction handling/blocks?
+*** DONE "delete"
 *** cut
 *** copy/paste?
 
 *** revert
+*** line numbers
+*** "flip" mode
 * Cleanup
 ** change caravan to be pipe based
+** nicer menu bar
+** global menu
 ** configuration
-*** TODO color/syntax highlighting
+*** DONE color/syntax highlighting
 *** keyboard shortcuts
 ** drag and drop
 ** animations
-
+*** hover source/sink
+*** hover cell
+*** dropping/layout
+*** colors
 * Navigation
 ** Zooming
+*** zoom in/out
+*** autoscroll to target
+*** autozoom to fit
 ** Navigation across nets
 ** Search
 
 * Testing
+* Linting
+** general function setup/robustness
+** safeguard edit operations
 * Types
 * Load/Save
 
@@ -43,6 +61,8 @@
 
 ** instrumentation, show events
 ** event log?
-** show real content?
+** show content in runtime?
 
+* Merging
+* Pairing
 * Code Generation

@@ -117,6 +117,24 @@
                (defmap 'get-font
                  {(api/string "str") (api/string "serif")})
 
+               (defmap 'get-syntax-color
+                 {(api/string "str") (api/map {(api/keyword :cell-content) (api/string "#60ac39")
+                                               (api/keyword :cell-active-content) (api/string "#60ac39")})
+                  (api/string "kw") (api/map {(api/keyword :cell-content) (api/string "#b65611")
+                                              (api/keyword :cell-active-content) (api/string "#b65611")})
+                  (api/string "int") (api/map {(api/keyword :cell-content) (api/string "#1fad83")
+                                               (api/keyword :cell-active-content) (api/string "#1fad83")})
+                  (api/string "float") (api/map {(api/keyword :cell-content) (api/string "#1fad83")
+                                               (api/keyword :cell-active-content) (api/string "#1fad83")})
+                  (api/string "acc") (api/map {(api/keyword :cell-content) (api/string "#ae9513")
+                                               (api/keyword :cell-active-content) (api/string "#ae9513")})
+                  (api/string "func") (api/map {(api/keyword :cell-content) (api/string "#6684e1")
+                                                (api/keyword :cell-active-content) (api/string "#6684e1")})
+                  (api/string "table") (api/map {(api/keyword :cell-content) (api/string "#d43552")
+                                                (api/keyword :cell-active-content) (api/string "#d43552")})
+                  (api/string "list") (api/map {(api/keyword :cell-content) (api/string "#b854d4")
+                                                (api/keyword :cell-active-content) (api/string "#b854d4")})})
+
                (defncall 'config-color '->
                  (api/symbol 'get-color))
 
@@ -286,7 +304,18 @@
                                                      (api/keyword :stroke) (api/fn-call (api/symbol '->) [(api/keyword :element-highlight-stroke)
                                                                                                           (api/symbol 'get-color)])
                                                      (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :menu-entry-bg)
-                                                                                                        (api/symbol 'get-color)])})])
+                                                                                                        (api/symbol 'get-color)])})
+                                           ;; (api/vector [(api/keyword :animate)
+                                           ;;              (api/map {(api/keyword :attributeName) (api/string "stroke")
+                                           ;;                        (api/keyword :values) (api/string "#999580;#6684e1;#6684e1;#6684e1;#999580")
+                                           ;;                        (api/keyword :dur) (api/string "3s")
+                                           ;;                        (api/keyword :repeatCount) (api/string "indefinite")})])
+                                           ;; (api/vector [(api/keyword :animate)
+                                           ;;              (api/map {(api/keyword :attributeName) (api/string "r")
+                                           ;;                        (api/keyword :values) (api/string "43;37;37;37;35")
+                                           ;;                        (api/keyword :dur) (api/string "3s")
+                                           ;;                        (api/keyword :repeatCount) (api/string "indefinite")})])
+                                           ])
                               (api/vector [(api/keyword :text)
                                            (api/map {(api/keyword :height) (api/integer 20)
                                                      (api/keyword :width) (api/string "100%")
@@ -591,10 +620,6 @@
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/string "e")]))
 
-               (defncall 'is-kb-rename '->
-                 (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/string "r")]))
-
                (defncall 'is-kb-cut '->
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/string "x")]))
@@ -602,6 +627,30 @@
                (defncall 'is-kb-back '->
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/string "q")]))
+
+               ;; future use
+
+               (defncall 'is-kb-rename '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "r")]))
+
+               (defncall 'is-kb-copy '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "c")]))
+
+               (defncall 'is-kb-paste '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "v")]))
+
+               (defncall 'is-kb-comment '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "<")]))
+
+               (defncall 'is-kb-insert-go '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "g")]))
+
+               ;; generic actions
 
                (defncall 'is-kb-first '->
                  (api/key-fn :key)
@@ -1217,7 +1266,12 @@
                                                              (api/symbol 'dec)])])
                  (api/fn-call (api/symbol 'lookup) [])
                  (api/key-fn :type)
-                 (api/fn-call (api/symbol '=) [(api/keyword :caravan/str)])
+                 (api/fn-call (api/symbol 'or) [(api/fn-call (api/symbol '=) [(api/keyword :caravan/str)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :caravan/kw)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :caravan/acc)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :caravan/int)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :caravan/float)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :caravan/func)])])
                  )
 
                (defncall 'mode-set-edit '->
@@ -1496,7 +1550,9 @@
                  (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :seventh)])
                                                     (api/keyword :list)])
                  (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :eigth)])
-                                                    (api/keyword :accessor)]))
+                                                    (api/keyword :accessor)])
+                 (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :ninth)])
+                                                    (api/keyword :function)]))
 
                (defncall 'insert-call '->
                  (api/map {(api/keyword :sym) (api/symbol 'get-selected-fn-name)
@@ -1585,7 +1641,8 @@
                                                 (api/fn-call (api/symbol '=) [(api/keyword :fifth)])
                                                 (api/fn-call (api/symbol '=) [(api/keyword :sixth)])
                                                 (api/fn-call (api/symbol '=) [(api/keyword :seventh)])
-                                                (api/fn-call (api/symbol '=) [(api/keyword :eigth)])]))
+                                                (api/fn-call (api/symbol '=) [(api/keyword :eigth)])
+                                                (api/fn-call (api/symbol '=) [(api/keyword :ninth)])]))
 
 
                (defncall 'should-insert '->
@@ -1726,13 +1783,30 @@
                  (api/fn-call (api/symbol 'lookup) [])
                  )
 
+
+               (defncall 'default-syntax-color '->
+                 (api/map {(api/keyword :cell-content)
+                           (api/fn-call (api/symbol '->) [(api/keyword :cell-content)
+                                                          (api/symbol 'get-color)])
+                           (api/keyword :cell-active-content)
+                           (api/fn-call (api/symbol '->) [(api/keyword :cell-active-content)
+                                                          (api/symbol 'get-color)])}))
+
+               (defncall 'get-type-color '->
+                 (api/key-fn :exp)
+                 (api/key-fn :type)
+                 (api/vector [(api/symbol 'get-syntax-color)
+                              (api/symbol 'id)
+                              (api/symbol 'default-syntax-color)])
+                 (api/fn-call (api/symbol 'lookup) []))
+
                (defncall 'get-cell-content-color '->
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-active-cell)
-                                                    (api/fn-call (api/symbol '->) [(api/keyword :cell-content)
-                                                                                   (api/symbol 'get-color)])])
+                                                    (api/fn-call (api/symbol '->) [(api/symbol 'get-type-color)
+                                                                                   (api/key-fn :cell-content)])])
                  (api/fn-call (api/symbol 'incase) [(api/key-fn :exp)
-                                                    (api/fn-call (api/symbol '->) [(api/keyword :cell-active-content)
-                                                                                   (api/symbol 'get-color)])]))
+                                                    (api/fn-call (api/symbol '->) [(api/symbol 'get-type-color)
+                                                                                   (api/key-fn :cell-active-content)])]))
 
                (defncall 'graph-display-value '->
                  (api/vector [(api/keyword :text)
@@ -1749,12 +1823,16 @@
                  (api/key-fn :context)
                  (api/key-fn :input))
 
+               (defncall 'get-value-from-exp '->
+                 ;; (api/fn-call (api/symbol 'spy) [(api/string "value")])
+                 (api/key-fn :value))
+
                (defncall 'get-input-or-value '->
                  (api/fn-call (api/symbol 'if) [(api/symbol 'get-input)
                                                 (api/symbol 'get-input)
                                                 (api/fn-call (api/symbol '->)
                                                              [(api/key-fn :exp)
-                                                              (api/key-fn :value)])]))
+                                                              (api/symbol 'get-value-from-exp)])]))
 
                (defncall 'graph-exp-edit-value '->
                  (api/vector [(api/keyword :foreignObject)

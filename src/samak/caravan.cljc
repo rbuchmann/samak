@@ -189,7 +189,7 @@
   (if (api/is-pipe? exp)
     (add-pipe exp)
     (let [loaded (single! exp)]
-      (add-node (:samak.nodes/name exp) loaded))))
+      (add-node (str (:samak.nodes/name exp)) loaded))))
 
 
 ;; TODO: this is broken if other nodes have children
@@ -217,9 +217,10 @@
     :float (api/float 0.0)
     :symbol (api/symbol 'id)
     :keyword (api/keyword :div)
-    :table (api/map {})
+    :table (api/map {(api/keyword :a) (api/integer 0)})
     :list (api/vector [])
-    :accessor (api/key-fn :test)))
+    :accessor (api/key-fn :test)
+    :function (api/fn-call (api/symbol 'id) [])))
 
 
 (defn is-listy-node
@@ -227,10 +228,6 @@
   [cell]
   (contains? #{:samak.nodes/vector :samak.nodes/fn-call}
              (:samak.nodes/type cell)))
-
-
-
-
 
 (defn add-cell
   ""
@@ -244,13 +241,22 @@
                 root-id (:db/id src)
                 content (content-from-type type)
                 target (if (is-listy-node cell) cell par)
-                target-key (get-child-key cell)
+                target-key (get-child-key target)
                 target-args (get target target-key)
                 updated (update target target-key conj {:db/id -1 :order (count target-args) :samak.nodes/node content})]
             (let [write (persist! @db-conn [updated])
                   exp (db/load-by-id @db-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)))))))
+
+(defn value-from-type
+  ""
+  [cell value]
+  (println (str "type: " cell " - " value))
+  (case (:samak.nodes/type cell)
+    :samak.nodes/fn-call (assoc cell :samak.nodes/fn (api/symbol (symbol value)))
+    (assoc cell :samak.nodes/value value)))
+
 
 (defn edit-cell
   ""
@@ -262,7 +268,7 @@
       (when (and sym src idx value)
           (let [[cell par] (add-cell-internal src idx)
                 root-id (:db/id src)
-                updated (assoc cell :samak.nodes/value value)]
+                updated (value-from-type cell value)]
             (let [write (persist! @db-conn [updated])
                   exp (db/load-by-id @db-conn root-id)]
               (println (str "res: " exp))
