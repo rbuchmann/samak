@@ -1,34 +1,38 @@
 * Editing
+  :PROPERTIES:
+  :COOKIE_DATA: todo recursive
+  :END:
 
-** edit more types
+** edit more types [4/6]
 *** DONE lists
 *** DONE kw
-*** DONE funcs
+*** TODO funcs
 *** DONE accessors
 *** TODO tables
 *** sym?
 *** DONE integer/float
 
-** other edit operations
+** other edit operations [2/13]
 *** DONE swap up/down
 *** in/out
 **** DONE indent
 **** TODO dedent
-*** grow/shorten?
-*** name function
-*** other meta data?
+*** TODO grow/shorten?
+*** TODO name function
+*** TODO other meta data?
 
-*** mouse reorder
+*** TODO mouse reorder
 
-*** split source/sink
-*** subfunction handling/blocks?
+*** TODO split source/sink
+*** TODO subfunction handling/blocks?
 *** DONE "delete"
-*** cut
-*** copy/paste?
+*** TODO cut
+*** TODO copy/paste?
 
-*** revert
-*** line numbers
-*** "flip" mode
+*** TODO revert
+*** TODO line numbers
+*** TODO "flip" mode
+
 * Cleanup
 ** change caravan to be pipe based
 ** nicer menu bar
