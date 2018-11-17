@@ -217,7 +217,7 @@
     :float (api/float 0.0)
     :symbol (api/symbol 'id)
     :keyword (api/keyword :div)
-    :table (api/map {(api/keyword :a) (api/integer 0)})
+    :table (api/map {})
     :list (api/vector [])
     :accessor (api/key-fn :test)
     :function (api/fn-call (api/symbol 'id) [])))
@@ -226,8 +226,38 @@
 (defn is-listy-node
   ""
   [cell]
-  (contains? #{:samak.nodes/vector :samak.nodes/fn-call}
+  (contains? #{:samak.nodes/vector :samak.nodes/map :samak.nodes/fn-call}
              (:samak.nodes/type cell)))
+
+(defn is-map-node
+  ""
+  [cell]
+  (= (:samak.nodes/type cell) :samak.nodes/map))
+
+(defn is-mapish
+  ""
+  [cell]
+  (or (is-map-node cell)
+      (contains? cell :samak.nodes/mapkey)))
+
+
+
+(defn add-map
+  ""
+  [target key content]
+  (let [wrap (api/map-entry [(api/integer key) content])]
+    (update target :samak.nodes/mapkv-pairs #(into %2 %1) [wrap]))
+)
+
+
+(defn add-list
+  ""
+  [target content]
+  (let [target-key (get-child-key target)
+        target-args (get target target-key)
+        updated (update target target-key conj {:db/id -1 :order (count target-args) :samak.nodes/node content})]
+    updated))
+
 
 (defn add-cell
   ""
@@ -237,17 +267,18 @@
     (let [src (get @fns sym)
           idx (dec cell)]
       (when (and sym src idx type)
-          (let [[cell par] (add-cell-internal src idx)
-                root-id (:db/id src)
-                content (content-from-type type)
-                target (if (is-listy-node cell) cell par)
-                target-key (get-child-key target)
-                target-args (get target target-key)
-                updated (update target target-key conj {:db/id -1 :order (count target-args) :samak.nodes/node content})]
+        (let [[cell par par-idx] (add-cell-internal src idx)
+              _ (println (str "cell: " cell))
+              root-id (:db/id src)
+              content (content-from-type type)
+              updated (if (is-mapish cell)
+                        (add-map (if (is-map-node cell) cell par) (- idx 1 par-idx) content)
+                        (add-list (if (is-listy-node cell) cell par) content))]
             (let [write (persist! @db-conn [updated])
                   exp (db/load-by-id @db-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp)))))))
+              (add-node sym exp)
+              :done))))))
 
 (defn value-from-type
   ""
@@ -321,7 +352,7 @@
     (println (str "cut: " x))
     (let [src (get @fns sym)
           idx (dec cell-idx)]
-      (when (and sym src idx type)
+      (when (and sym src idx)
           (let [[cell par par-idx] (add-cell-internal src idx)
                 root-id (:db/id src)
                 arg-idx (- idx 1 par-idx)
