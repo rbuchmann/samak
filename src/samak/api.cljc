@@ -23,11 +23,16 @@
   #:samak.nodes {:type      :samak.nodes/pipe
                  :arguments (tools/ordered args)})
 
+(defn map-entry
+  ""
+  [[k v]]
+  {:samak.nodes/mapkey k
+   :samak.nodes/mapvalue v})
+
+
 (defn map [kvs]
   #:samak.nodes {:type     :samak.nodes/map
-                 :mapkv-pairs (vec (clojure.core/map (fn [[k v]] {:samak.nodes/mapkey k
-                                                                  :samak.nodes/mapvalue v})
-                                                     kvs))})
+                 :mapkv-pairs (vec (clojure.core/map map-entry kvs))})
 
 (defn vector [items]
   #:samak.nodes {:type     :samak.nodes/vector

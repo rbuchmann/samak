@@ -73,14 +73,10 @@
 
 (deftest should-retract-from-args
   (let [db (db/create-empty-db)
-        builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))
-        parsed (:value tt/parsed-example)
-        base (do (db/parse-tree->db! db parsed) db)
-        persisted (db/load-by-id base 15)
-        updated [(assoc persisted :samak.nodes/arguments [])]
-        upsert (do (db/parse-tree->db! db updated) db)
-        result (db/load-by-id upsert 15)
-        _ (println (str "res: " result))
-        ]
-    (is (= 'foo (get-in result [:samak.nodes/name])))
-    (is (= 1 (get-in result [:samak.nodes/rhs :db/id])))))
+        test-ast (api/defexp 'test (api/vector [(api/integer 0) (api/integer 1)]))
+        base (do (db/parse-tree->db! db [test-ast]) db)
+        persisted (db/load-by-id base 2)
+        updated (assoc persisted :samak.nodes/children [])
+        upsert (do (db/parse-tree->db! db [[:db/retract 2 :samak.nodes/children 3]]) db)
+        result (db/load-by-id upsert 2)]
+    (is (= 1 (count (get-in result [:samak.nodes/children]))))))
