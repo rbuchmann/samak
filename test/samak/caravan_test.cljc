@@ -84,6 +84,19 @@
                                         (is (= :samak.nodes/integer (get-in m [:samak.nodes/mapkv-pairs 1 :samak.nodes/mapvalue :samak.nodes/type])))))}
       #((sut/add-cell) {:sym "test" :cell 3 :type :integer}))))
 
+(deftest should-add-map-cell-from-value
+  (let [db (db/create-empty-db)
+        builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))]
+    (sut/init db)
+    (sut/repl-eval all-things-samak)
+    (with-redefs-fn {#'sut/add-node (fn [s f]
+                                      (is (= "test" s))
+                                      (let [m (get-in f [:samak.nodes/rhs :samak.nodes/arguments 0 :samak.nodes/node])
+                                            assert-map (is (= :samak.nodes/map (:samak.nodes/type m)))]
+                                        (is (= 2 (count (:samak.nodes/mapkv-pairs m))))
+                                        (is (= :samak.nodes/integer (get-in m [:samak.nodes/mapkv-pairs 1 :samak.nodes/mapvalue :samak.nodes/type])))))}
+      #((sut/add-cell) {:sym "test" :cell 4 :type :integer}))))
+
 (deftest should-swap-order
   (is (= [{:order 1 :a 1} {:order 0 :a 2}]
          (sut/change-order [{:order 0 :a 1} {:order 1 :a 2}] 0 1))))

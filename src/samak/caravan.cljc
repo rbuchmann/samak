@@ -269,6 +269,7 @@
       (when (and sym src idx type)
         (let [[cell par par-idx] (add-cell-internal src idx)
               _ (println (str "cell: " cell))
+              _ (println (str "par: " par))
               root-id (:db/id src)
               content (content-from-type type)
               updated (if (is-mapish cell)

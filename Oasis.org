@@ -12,7 +12,12 @@
 *** sym?
 *** DONE integer/float
 
-** other edit operations [2/13]
+** fixes [0/3]
+*** TODO symbols
+*** TODO reductions
+*** TODO dynamic width
+
+** other edit operations [3/17]
 *** DONE swap up/down
 *** in/out
 **** DONE indent
@@ -20,6 +25,7 @@
 *** TODO grow/shorten?
 *** TODO name function
 *** TODO other meta data?
+*** TODO type change
 
 *** TODO mouse reorder
 
@@ -33,7 +39,15 @@
 *** TODO line numbers
 *** TODO "flip" mode
 
+*** TODO new slate
+
 * Cleanup
+** switch caravan to datalog ops [0/5]
+*** TODO add
+*** TODO edit
+*** TODO cut
+*** TODO swap
+*** TODO indent
 ** change caravan to be pipe based
 ** nicer menu bar
 ** global menu

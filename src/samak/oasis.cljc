@@ -1383,7 +1383,8 @@
                (defncall 'type-pos '->
                  (api/map {(api/keyword :x)
                            (api/fn-call (api/symbol '->) [(api/vector [(api/integer 190)
-                                                                       (api/symbol 'cell-x)])
+                                                                       ;; (api/symbol 'cell-x)
+                                                                       (api/integer 10)])
                                                           (api/symbol 'sum)])
                            (api/keyword :y)
                            (api/integer 0)})
