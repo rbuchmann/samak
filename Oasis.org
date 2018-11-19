@@ -1,7 +1,6 @@
-* Editing
-  :PROPERTIES:
-  :COOKIE_DATA: todo recursive
-  :END:
+Oasis roadmap
+
+* Editing [26%]
 
 ** edit more types [4/6]
 *** DONE lists
@@ -41,45 +40,47 @@
 
 *** TODO new slate
 
-* Cleanup
+* Cleanup [7%]
 ** switch caravan to datalog ops [0/5]
 *** TODO add
 *** TODO edit
 *** TODO cut
 *** TODO swap
 *** TODO indent
-** change caravan to be pipe based
-** nicer menu bar
-** global menu
-** configuration
+** TODO change caravan to be pipe based
+** TODO nicer menu bar
+** TODO global menu
+** configuration [1/1]
 *** DONE color/syntax highlighting
 *** keyboard shortcuts
-** drag and drop
-** animations
-*** hover source/sink
-*** hover cell
-*** dropping/layout
-*** colors
-* Navigation
-** Zooming
-*** zoom in/out
-*** autoscroll to target
-*** autozoom to fit
-** Navigation across nets
-** Search
+** TODO drag and drop
+** animations [0/4]
+*** TODO hover source/sink
+*** TODO hover cell
+*** TODO dropping/layout
+*** TODO colors
+* Navigation [12%]
+** Zooming [1/6]
+*** TODO zoom in/out [1/3]
+**** DONE general zoom
+**** TODO reduce over zoom state
+**** TODO less detail/rerender on zooming
+*** TODO autoscroll to target
+*** TODO autozoom to fit
+** TODO Navigation across nets
+** TODO Search
 
-* Testing
-* Linting
-** general function setup/robustness
-** safeguard edit operations
+* Testing [%]
+* Linting [0%]
+** TODO general function setup/robustness
+** TODO safeguard edit operations
 * Types
 * Load/Save
+* "Inspect" [0%]
 
-* "Inspect"
-
-** instrumentation, show events
-** event log?
-** show content in runtime?
+** TODO instrumentation, show events
+** TODO event log?
+** TODO show content in runtime?
 
 * Merging
 * Pairing
