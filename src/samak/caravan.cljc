@@ -133,10 +133,12 @@
   (let [rhs-fn (:samak.nodes/fn (:samak.nodes/rhs exp))
         has-name (get rhs-fn :samak.nodes/name)
         fn-name (str (:samak.nodes/name rhs-fn))
-        is-stdlib (s/starts-with? fn-name "pipes/")]
+        is-stdlib (s/starts-with? fn-name "pipes/")
+        is-reductions (= "pipes/reductions" fn-name)]
     (and (api/is-def? exp)
          has-name
-         is-stdlib)))
+         is-stdlib
+         (not is-reductions))))
 
 (defn add-node
   ""
