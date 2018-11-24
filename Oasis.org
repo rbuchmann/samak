@@ -1,6 +1,6 @@
 Oasis roadmap
 
-* Editing [26%]
+* Editing [34%]
 
 ** edit more types [4/6]
 *** DONE lists
@@ -11,12 +11,12 @@ Oasis roadmap
 *** sym?
 *** DONE integer/float
 
-** fixes [0/3]
+** fixes [1/3]
 *** TODO symbols
-*** TODO reductions
+*** DONE reductions
 *** TODO dynamic width
 
-** other edit operations [3/17]
+** other edit operations [4/17]
 *** DONE swap up/down
 *** in/out
 **** DONE indent
@@ -35,7 +35,7 @@ Oasis roadmap
 *** TODO copy/paste?
 
 *** TODO revert
-*** TODO line numbers
+*** DONE line numbers
 *** TODO "flip" mode
 
 *** TODO new slate

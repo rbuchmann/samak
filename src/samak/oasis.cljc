@@ -100,6 +100,7 @@
                   (api/keyword :cell-dividers) (api/string "#6e6b5e")
                   (api/keyword :cell-type-fill) (api/string "#6e6b5e")
                   (api/keyword :cell-type-stroke) (api/string "#20201d")
+                  (api/keyword :cell-counter-stroke) (api/string "#6e6b5e")
                   (api/keyword :node-selected) (api/string "#6684e1")
                   (api/keyword :node-bg) (api/string "#292824")
                   (api/keyword :node-name-stroke) (api/string "#e8e4cf")
@@ -1408,6 +1409,12 @@
                            (api/integer 0)})
                  (api/symbol 'translate-str))
 
+               (defncall 'counter-pos '->
+                 (api/map {(api/keyword :x)
+                           (api/integer 10)
+                           (api/keyword :y)
+                           (api/integer 0)})
+                 (api/symbol 'translate-str))
 
                (defncall 'type-pos '->
                  (api/map {(api/keyword :x)
@@ -1838,6 +1845,16 @@
                                                     (api/fn-call (api/symbol '->) [(api/symbol 'get-type-color)
                                                                                    (api/key-fn :cell-active-content)])]))
 
+               (defncall 'graph-exp-counter '->
+                 (api/vector [(api/keyword :text)
+                              (api/map {(api/keyword :transform)
+                                        (api/fn-call (api/symbol '->) [(api/key-fn :exp) (api/symbol 'counter-pos)])
+                                        (api/keyword :text-anchor)
+                                        (api/string "end")
+                                        (api/keyword :fill)
+                                        (api/fn-call (api/symbol '->) [(api/keyword :cell-counter-stroke) (api/symbol 'get-color)])})
+                              (api/fn-call (api/symbol 'str) [(api/fn-call (api/symbol '->) [(api/key-fn :exp) (api/key-fn :counter)])])]))
+
                (defncall 'graph-display-value '->
                  (api/vector [(api/keyword :text)
                               (api/map {(api/keyword :transform)
@@ -1906,6 +1923,7 @@
 
                (defncall 'graph-exp-content '->
                  (api/vector [(api/keyword :g)
+                              (api/symbol 'graph-exp-counter)
                               (api/symbol 'graph-exp-value)
                               (api/symbol 'graph-exp-type)]))
 
