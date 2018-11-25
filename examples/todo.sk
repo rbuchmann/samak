@@ -29,8 +29,8 @@
 (def init-jokes (|> [:foo]))
 (def reduce-jokes (pipes/reductions (-> [:-state :-next] flatten) []))
 
-(def id id)
+(def idx (|> id))
 
-(| ui handle-event raw-events) (| raw-events combine-event events) (| events (|> id) log) (| events fetch-on-submit http) (| http reduce-jokes jokes) (| jokes (|> id) log) (| start init-jokes jokes) (| jokes render-ui ui)
+(| ui handle-event raw-events) (| raw-events combine-event events) (| events idx log) (| events fetch-on-submit http) (| http reduce-jokes jokes) (| jokes idx log) (| start init-jokes jokes) (| jokes render-ui ui)
 
 (def todo (net [(| ui handle-event raw-events) (| raw-events combine-event events) (| events log) (| events fetch-on-submit http) (| http reduce-jokes jokes) (| jokes log) (| start init-jokes jokes) (| jokes render-ui ui)]))

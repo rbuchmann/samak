@@ -869,6 +869,33 @@
                  (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
                                                     (api/symbol 'ignore)]))
 
+               (defncall 'is-kb-zoom-in '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "+")]))
+
+               (defncall 'is-kb-zoom-out '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/string "-")]))
+
+               (defncall 'construct-zoom-out '->
+                 (api/map {(api/keyword :command) (api/keyword :zoom)
+                           (api/keyword :data) (api/keyword 0.5)}))
+
+               (defncall 'construct-zoom-in '->
+                 (api/map {(api/keyword :command) (api/keyword :zoom)
+                           (api/keyword :data) (api/integer 1)}))
+
+               (defncall 'filter-view '->
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-zoom-in)
+                                                    (api/symbol 'construct-zoom-in)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-zoom-out)
+                                                    (api/symbol 'construct-zoom-out)])
+                 (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
+                                                    (api/symbol 'ignore)]))
+
+               (defncall 'make-zoom '->
+                 (api/map {(api/keyword :zoom) (api/key-fn :data)}))
+
                (defncall 'is-command '->
                  (api/key-fn :command))
 
@@ -945,52 +972,54 @@
                  (api/map {(api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :delta)
                                                                            (api/key-fn :x)])
                            (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :delta)
-                                                                           (api/key-fn :y)])})
-                 (api/map {(api/keyword :view) (api/symbol 'id)}))
+                                                                           (api/key-fn :y)])}))
 
                (defncall 'center-view 'pipes/reductions
                  (api/fn-call (api/symbol '->)
-                              [(api/map {(api/keyword :view) (api/map {(api/keyword :x) (api/integer 150)
-                                                                       (api/keyword :y) (api/integer 50)})})])
+                              [(api/map {(api/keyword :x) (api/integer 150)
+                                         (api/keyword :y) (api/integer 50)})])
                  (api/map {}))
 
                (defncall 'view-reduce 'pipes/reductions
                  (api/fn-call (api/symbol '->)
-                              [(api/key-fn :next)])
-                 (api/map {(api/keyword :view) (api/map {(api/keyword :x) (api/integer 150)
-                                                         (api/keyword :y) (api/integer 50)})}))
+                              [(api/vector [(api/key-fn :state) (api/key-fn :next)])
+                               (api/fn-call (api/symbol 'concat) [(api/map {})]) ])
+                 (api/map {(api/keyword :zoom) (api/integer 1)
+                           (api/keyword :x) (api/integer 150)
+                           (api/keyword :y) (api/integer 50)}))
+
+               (defncall 'tag-view '->
+                 (api/map {(api/keyword :view) (api/symbol 'id)}))
 
 
+               (defncall 'view-commands 'pipes/debug)
                (defncall 'view-events 'pipes/debug)
 
                (defncall 'view-delta 'pipes/reductions
                  (api/fn-call (api/symbol '->)
                               [(api/map {(api/keyword :x)
                                          (api/fn-call (api/symbol '->) [(api/vector [(api/fn-call (api/symbol '->)
-                                                                                                 [(api/key-fn :next)
-                                                                                                  (api/key-fn :view)
+                                                                                                  [(api/key-fn :next)
                                                                                                   (api/key-fn :x)])
                                                                                     (api/fn-call (api/symbol '->)
                                                                                                  [(api/key-fn :state)
-                                                                                                  (api/key-fn :view)
                                                                                                   (api/key-fn :x)])])
                                                                         (api/symbol 'sum)])
                                          (api/keyword :y)
                                          (api/fn-call (api/symbol '->) [(api/vector [(api/fn-call (api/symbol '->)
-                                                                                                 [(api/key-fn :next)
-                                                                                                  (api/key-fn :view)
+                                                                                                  [(api/key-fn :next)
                                                                                                   (api/key-fn :y)])
                                                                                     (api/fn-call (api/symbol '->)
                                                                                                  [(api/key-fn :state)
-                                                                                                  (api/key-fn :view)
                                                                                                   (api/key-fn :y)])])
-                                                                        (api/symbol 'sum)])
-                                         })
-                               (api/map {(api/keyword :view) (api/symbol 'id)})])
-                 (api/map {(api/keyword :view) (api/map {(api/keyword :x) (api/integer 150)
-                                                         (api/keyword :y) (api/integer 50)})}))
+                                                                        (api/symbol 'sum)])}
+                                        )])
+                 (api/map {(api/keyword :x) (api/integer 150)
+                           (api/keyword :y) (api/integer 50)}))
 
 
+               (defncall 'view-raw 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+                 )
                (defncall 'view-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
                  )
                (defncall 'view-deltas 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
@@ -1383,7 +1412,8 @@
                (defncall 'type-pos '->
                  (api/map {(api/keyword :x)
                            (api/fn-call (api/symbol '->) [(api/vector [(api/integer 190)
-                                                                       (api/symbol 'cell-x)])
+                                                                       ;; (api/symbol 'cell-x)
+                                                                       (api/integer 10)])
                                                           (api/symbol 'sum)])
                            (api/keyword :y)
                            (api/integer 0)})
@@ -2047,13 +2077,24 @@
                                                                                   (api/key-fn :selected)])
                            (api/keyword :events) (api/key-fn :events)}))
 
+
+               (defncall 'translate-graph 'str
+                 (api/string "translate(")
+                 (api/key-fn :x)
+                 (api/string ",")
+                 (api/key-fn :y)
+                 (api/string ")")
+                 (api/string "scale(")
+                 (api/key-fn :zoom)
+                 (api/string ")"))
+
                (defncall 'graph '->
                  (api/map {(api/keyword :layout) (api/key-fn :layout)
                            (api/keyword :view) (api/key-fn :view)
                            (api/keyword :context) (api/symbol 'build-context)})
                  (api/map {(api/keyword :graph)
                            (api/vector [(api/keyword :g)
-                                        (api/map {(api/keyword :transform) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/symbol 'translate-str)])})
+                                        (api/map {(api/keyword :transform) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/symbol 'translate-graph)])})
                                         (api/symbol 'graph-nodes)
                                         (api/symbol 'graph-connections)])}))
 
@@ -2143,7 +2184,8 @@
                                                   ])})}))
 
                (defncall 'init-view '->
-                 (api/map {(api/keyword :view) (api/map {(api/keyword :x) (api/integer 150)
+                 (api/map {(api/keyword :view) (api/map {(api/keyword :zoom) (api/integer 1)
+                                                         (api/keyword :x) (api/integer 150)
                                                          (api/keyword :y) (api/integer 50)})}))
 
                ;; networks
@@ -2159,6 +2201,9 @@
                (pipe 'keyboard-filtered 'filter-menu 'editor-commands)
                (pipe 'keyboard-filtered 'log-keyboard)
                (pipe 'keyboard 'log-keyboard)
+
+               (pipe 'keyboard-filtered 'filter-view 'view-commands)
+               (pipe 'view-commands 'make-zoom 'view-events)
 
                (red 'raw-events 'input-reduce 'reduced-events)
                (pipe 'raw-events 'tag-events 'events)
@@ -2194,7 +2239,9 @@
                (pipe 'mouse-state 'filter-scroll 'scroll-state)
                (pipe 'scroll-state 'construct-view 'view-deltas)
                (red 'view-deltas 'view-delta 'view-events)
-               (red 'view-events 'view-reduce 'view-state)
+               (red 'view-events 'view-reduce 'view-raw)
+               (pipe 'view-raw 'tag-view 'view-state)
+
 
                (red 'editor-state 'state-reduce 'state)
                (red 'eval-state 'state-reduce 'state)
@@ -2202,7 +2249,7 @@
                ;; (red 'mouse-state 'state-reduce 'state)
                (red 'mode-state 'state-reduce 'state)
                (red 'events 'state-reduce 'state)
-               (pipe 'state 'log-state)
+               ;; (pipe 'view-state 'log-state)
 
                (pipe 'eval-state 'format-state 'layout)
                (pipe 'eval-state 'format-state 'log-layout)
@@ -2224,7 +2271,7 @@
                (pipe 'mode-state 'editor-actions)
                (pipe 'events 'editor-actions)
 
-               (red 'editor-actions 'handle-state 'log-command)
+               ;; (red 'editor-actions 'handle-state 'log-command)
 
                (pipe 'state 'graph 'svg-render)
                (red 'render 'elements-reduce 'reducer)
