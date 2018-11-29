@@ -40,7 +40,7 @@ Oasis roadmap
 
 *** TODO new slate
 
-* Cleanup [7%]
+* Cleanup [6%]
 ** switch caravan to datalog ops [0/5]
 *** TODO add
 *** TODO edit
@@ -50,9 +50,9 @@ Oasis roadmap
 ** TODO change caravan to be pipe based
 ** TODO nicer menu bar
 ** TODO global menu
-** configuration [1/1]
+** configuration [1/2]
 *** DONE color/syntax highlighting
-*** keyboard shortcuts
+*** TODO keyboard shortcuts
 ** TODO drag and drop
 ** animations [0/4]
 *** TODO hover source/sink

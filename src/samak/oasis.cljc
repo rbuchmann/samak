@@ -1940,11 +1940,14 @@
                               (api/symbol 'graph-exp-content)]))
 
                (defncall 'reduce-exps '->
-                 )
+                 (api/vector [(api/key-fn :state)
+                              (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :next)
+                                                                          (api/symbol 'graph-exp)])])])
+
+                 (api/fn-call (api/symbol 'into) []))
 
                (defncall 'graph-body '->
-                 (api/fn-call (api/symbol 'map) [(api/symbol 'graph-exp)])
-                 ;; (api/fn-call (api/symbol 'reduce) [(api/symbol 'reduce-exps) (api/symbol 'id)])
+                 (api/fn-call (api/symbol 'reduce) [(api/symbol 'reduce-exps) (api/vector [(api/keyword :g)])])
                  (api/vector [(api/vector [(api/keyword :g) (api/map {(api/keyword :style) (api/map {(api/keyword :font-family) (api/string "monospace")})})]) (api/symbol 'id)])
                  (api/fn-call (api/symbol 'into) []))
 

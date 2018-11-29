@@ -48,6 +48,16 @@
   (fn [x]
     (vec (mapcat (p/eval-as-fn f) x))))
 
+
+(defn wrap-samak-reducer [f]
+  (fn [state nxt]
+    (f {:next  nxt
+        :state state})))
+
+(defn reduce* [f i]
+  (fn [x]
+    (reduce (-> f p/eval-as-fn wrap-samak-reducer) i x)))
+
 (def sum (partial apply +))
 (def mult (partial apply *))
 
@@ -215,6 +225,7 @@
    '|>     (comp pipes/instrument chain)
    'id     identity
    'map    (curry1fn mapv)
+   'reduce reduce*
    'filter (curry1fn filterv)
    'only   #(if* % identity tt/ignore)
    'remove (curry1fn filterv)
