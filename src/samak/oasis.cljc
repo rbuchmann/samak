@@ -1939,15 +1939,39 @@
                                                                                                                                          (api/symbol 'get-color)])})})])
                               (api/symbol 'graph-exp-content)]))
 
-               (defncall 'reduce-exps '->
-                 (api/vector [(api/key-fn :state)
+               (defncall 'handle-exps '->
+                 (api/fn-call (api/symbol 'spy) [(api/string "handle")])
+                 (api/vector [(api/key-fn :cells)
                               (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :next)
                                                                           (api/symbol 'graph-exp)])])])
 
-                 (api/fn-call (api/symbol 'into) []))
+                 (api/fn-call (api/symbol 'into) [])
+                 (api/map {(api/keyword :cells) (api/symbol 'id)})
+                 (api/fn-call (api/symbol 'spy) [(api/string "handle2")])
+                 )
+
+               (defncall 'reduce-exps '->
+                 (api/fn-call (api/symbol 'spy) [(api/string "reduce1")])
+                 (api/map {(api/keyword :state)
+                           (api/key-fn :state)
+                           (api/keyword :next)
+                           (api/fn-call (api/symbol '->) [(api/map {(api/keyword :cells) (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :cells)])
+                                                                    (api/keyword :next) (api/key-fn :next)})
+                                                          (api/symbol 'handle-exps)])})
+
+                 (api/fn-call (api/symbol 'spy) [(api/string "reduce2")])
+                 (api/vector [(api/key-fn :state)
+                              (api/key-fn :next)])
+                 (api/fn-call (api/symbol 'spy) [(api/string "reduce3")])
+                 (api/fn-call (api/symbol 'concat) [(api/map {})])
+                 (api/fn-call (api/symbol 'spy) [(api/string "reduce4")])
+                 )
 
                (defncall 'graph-body '->
-                 (api/fn-call (api/symbol 'reduce) [(api/symbol 'reduce-exps) (api/vector [(api/keyword :g)])])
+                 (api/fn-call (api/symbol 'reduce) [(api/symbol 'reduce-exps) (api/map {(api/keyword :cells)
+                                                                                        (api/vector [(api/keyword :g)])})])
+                 (api/fn-call (api/symbol 'spy) [(api/string "after")])
+                 (api/key-fn :cells)
                  (api/vector [(api/vector [(api/keyword :g) (api/map {(api/keyword :style) (api/map {(api/keyword :font-family) (api/string "monospace")})})]) (api/symbol 'id)])
                  (api/fn-call (api/symbol 'into) []))
 
