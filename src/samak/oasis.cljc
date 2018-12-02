@@ -1,5 +1,4 @@
-(ns samak.oasis
-
+(ns ^:figwheel-no-load samak.oasis
   #?@
    (:clj
     [(:require
@@ -92,7 +91,7 @@
                ;; dark theme based on base16-atelierdune-dark
                ;; (http://atelierbram.github.io/syntax-highlighting/atelier-schemes/dune)
                (defmap 'get-color
-                 {(api/keyword :cell-active) (api/string "#6e6b5e")
+                 {(api/keyword :cell-active) (api/string "#4d4a41")
                   (api/keyword :cell-edit) (api/string "#6684e1")
                   (api/keyword :cell-seclight) (api/string "#999580")
                   (api/keyword :cell-background) (api/string "#292824")

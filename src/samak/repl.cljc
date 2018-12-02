@@ -7,6 +7,7 @@
       [samak.lisparser :as p]
       [samak.oasis :as oasis]
       [samak.pipes :as pipes]
+      [samak.api :as api]
       [samak.runtime :as run]
       [samak.stdlib :as std]
       [samak.caravan :as caravan]
@@ -19,6 +20,7 @@
       [samak.lisparser :as p]
       [samak.oasis :as oasis]
       [samak.pipes :as pipes]
+      [samak.api :as api]
       [samak.runtime :as run]
       [samak.stdlib :as std]
       [samak.caravan :as caravan]
@@ -67,11 +69,14 @@
   []
   (let [exps (oasis/start)
         numbered (map-indexed vector exps)
-        state (reduce (eval-oasis (count numbered)) rt numbered)]
+        state (reduce (eval-oasis (count numbered)) rt numbered)
+        parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
     (println "oasis loaded")
     (fire-event-into-named-pipe "oasis" "1")
     (println "oasis started")
-    (run/get-defined-ids state)))
+    (doseq [expression parsed]
+        (caravan/repl-eval expression))
+    (run/get-defined-ids (reduce run/eval-expression! rt parsed)state)))
 
 (def repl-prefixes
   {\f (fn [in] (let [[pipe-name event] (str/split in #" " 2)]
