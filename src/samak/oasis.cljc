@@ -269,7 +269,7 @@
                                      (api/integer 1)
                                      (api/keyword :oasis.gui/element)
                                      (api/vector [(api/keyword :h1)
-                                                  (api/string "Oasis")])})}))
+                                                  (api/string "사막 Oasis")])})}))
 
                (defncall 'calculate-y '->
                  (api/vector [(api/integer 100) (api/key-fn :position)])
