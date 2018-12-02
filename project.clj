@@ -64,7 +64,7 @@
                     :pretty-print   true
                     :cache-analysis true
                     :infer-externs  true}}
-    {:source-paths ["ui_src"]
+    {:source-paths ["src" "dev_src"]
      :id           "frontend-release"
      :compiler     {:output-to      "resources/public/js/ui-core.js"
                     :output-dir     "resources/public/js/ui-release-out"
@@ -72,7 +72,7 @@
                     :optimizations  :advanced
                     :cache-analysis true
                     :infer-externs  true
-                    :main           "ui.core"}}]}
+                    :main           "dev.core"}}]}
   :figwheel {:http-server-root "public"
              :css-dirs         ["resources/public/css"]
              :reload-clj-files {:clj  true
