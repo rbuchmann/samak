@@ -228,6 +228,7 @@
    'reduce reduce*
    'filter (curry1fn filterv)
    'only   #(if* % identity tt/ignore)
+   'except #(if* % tt/ignore identity)
    'remove (curry1fn filterv)
    'mapcat mapcatv
    'repeat repeat*

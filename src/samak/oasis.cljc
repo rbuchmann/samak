@@ -85,6 +85,7 @@
                (defncall 'log-events 'pipes/log (api/string "events: "))
                (defncall 'log-editor 'pipes/log (api/string "editor: "))
                (defncall 'log-mouse 'pipes/log (api/string "mouse: "))
+               (defncall 'log-hover 'pipes/log (api/string "hover: "))
                (defncall 'log-keyboard 'pipes/log (api/string "keyboard: "))
                (defncall 'n 'pipes/eval-notify)
 
@@ -547,6 +548,23 @@
                  (api/map {(api/keyword :mouse) (api/map {})}))
 
                (defncall 'mouse-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+                 )
+
+               (defncall 'target-reduce 'pipes/reductions
+                 (api/fn-call (api/symbol '->)
+                              [
+                               (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :state)
+                                                                           (api/fn-call (api/symbol 'nth) [(api/integer 1)])])
+                                            (api/fn-call (api/symbol '->) [(api/key-fn :next)
+                                                                           (api/key-fn :samak.mouse/target)])])])
+                 (api/vector []))
+
+               (defncall 'only-different '->
+                 (api/fn-call (api/symbol 'except) [(api/fn-call (api/symbol '->) [(api/fn-call (api/symbol 'unique) [])
+                                                                                    (api/symbol 'count)
+                                                                                    (api/fn-call (api/symbol '=) [(api/integer 1)])])]))
+
+               (defncall 'target-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
                  )
 
                (defncall 'is-drag '->
@@ -2244,6 +2262,8 @@
                (pipe 'ui 'log)
 
                (red 'mouse 'mouse-reduce 'mouse-state)
+               (red 'mouse 'target-reduce 'target-state)
+               (pipe 'target-state 'only-different 'log-hover)
 
 
                (pipe 'keyboard 'filter-key-input 'keyboard-filtered)

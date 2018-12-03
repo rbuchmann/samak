@@ -41,13 +41,13 @@ Oasis roadmap
 *** TODO new slate
 
 * Cleanup [6%]
+** TODO change caravan to be pipe based
 ** switch caravan to datalog ops [0/5]
 *** TODO add
 *** TODO edit
 *** TODO cut
 *** TODO swap
 *** TODO indent
-** TODO change caravan to be pipe based
 ** TODO nicer menu bar
 ** TODO global menu
 ** configuration [1/2]

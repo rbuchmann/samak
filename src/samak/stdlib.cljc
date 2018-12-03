@@ -141,7 +141,8 @@
              (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
                                    {:samak.mouse/type :move
                                     :samak.mouse/page-x (.-pageX event)
-                                    :samak.mouse/page-y (.-pageY event)}))
+                                    :samak.mouse/page-y (.-pageY event)
+                                    :samak.mouse/target (.-id (.-target event))}))
                          false)))
        (pipes/source c))))
 
