@@ -417,14 +417,15 @@
   []
   (fn [{:keys [:source :sink] :as x}]
     (println "connect: " x)
-    (let [connector  (str "c/" source "-" sink)
+    (when (and sink source (not= sink source))
+        (let [connector  (str "c/" source "-" sink)
           fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol 'id) [])]))
           fn-ast (single! fn)
           pipe (api/pipe [(api/symbol source) (api/symbol connector) (api/symbol sink)])]
       (add-node connector fn-ast)
       (add-pipe pipe)
       ;; [fn-ast pipe]
-      :okay)))
+      :okay))))
 
 (defn load-node
   ""

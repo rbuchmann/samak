@@ -1054,7 +1054,9 @@
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-source)
                                                    (api/symbol 'handle-source)])
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-sink)
-                                                   (api/symbol 'handle-sink)]))
+                                                   (api/symbol 'handle-sink)])
+                (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
+                                                   (api/symbol 'ignore)]))
 
               (defncall 'is-mouse-click '->
                 (api/vector [(api/key-fn :source) (api/key-fn :target)])
@@ -1082,6 +1084,12 @@
               (defncall 'is-target-sink '->
                 (api/key-fn :target)
                 (api/symbol 'is-pipe))
+
+              (defncall 'is-different-pipe '->
+                (api/vector [(api/key-fn :target) (api/key-fn :source)])
+                (api/fn-call (api/symbol 'unique) [])
+                (api/fn-call (api/symbol 'count) [])
+                (api/fn-call (api/symbol '=) [(api/integer 2)]))
 
               (defncall 'both-pipe '->
                 (api/fn-call (api/symbol 'and) [(api/symbol 'is-source-source)
