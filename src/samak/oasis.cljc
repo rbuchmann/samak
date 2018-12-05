@@ -1894,7 +1894,7 @@
 
               (defncall 'add-nav-actions '->
                 (api/map {(api/keyword :state) (api/key-fn :state)
-                          (api/keyword :next) (api/map {(api/keyword :actions) (api/vector [(api/string "WASD navigate") (api/string "F insert") (api/string "Shift-WS Swap") (api/string "X cut")])})}))
+                          (api/keyword :next) (api/map {(api/keyword :actions) (api/vector [(api/string "WASD navigate") (api/string "F insert") (api/string "Shift-WS Swap") (api/string "X cut") (api/string "LMB select") (api/string "RMB pan")])})}))
 
               (defncall 'is-change-navigate '->
                 (api/key-fn :editor)
@@ -2448,7 +2448,7 @@
               (pipe 'mode-state 'editor-actions)
               (pipe 'events 'editor-actions)
 
-              ;; (red 'editor-actions 'handle-state 'log-command)
+              (red 'editor-actions 'handle-state 'log-command)
 
               (pipe 'state 'graph 'svg-render)
               (red 'render 'elements-reduce 'reducer)
