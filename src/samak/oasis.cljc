@@ -1027,17 +1027,32 @@
 
 
               (defncall 'handle-sink '->
-                (api/fn-call (api/symbol 'drop) [(api/integer 7)]) ;; pipes/
+                (api/key-fn :source)
+                (api/fn-call (api/symbol 'drop) [(api/integer 5)]) ;; sink/
+                (api/fn-call (api/symbol 'join) [])
+                (api/map {(api/keyword :command) (api/keyword :create-sink)
+                          (api/keyword :data) (api/map {(api/keyword :name) (api/symbol 'id)})}))
+
+              (defncall 'handle-source '->
+                (api/key-fn :source)
+                (api/fn-call (api/symbol 'drop) [(api/integer 7)]) ;; source/
                 (api/fn-call (api/symbol 'join) [])
                 (api/map {(api/keyword :command) (api/keyword :create-sink)
                           (api/keyword :data) (api/map {(api/keyword :name) (api/symbol 'id)})}))
 
               (defncall 'is-sink '->
+                (api/key-fn :source)
+                (api/fn-call (api/symbol 'index-of) [(api/string "sink/")])
+                (api/fn-call (api/symbol '=) [(api/integer 0)]))
+
+              (defncall 'is-source '->
+                (api/key-fn :source)
                 (api/fn-call (api/symbol 'index-of) [(api/string "source/")])
                 (api/fn-call (api/symbol '=) [(api/integer 0)]))
 
               (defncall 'handle-mouse-click '->
-                (api/key-fn :source)
+                (api/fn-call (api/symbol 'incase) [(api/symbol 'is-source)
+                                                   (api/symbol 'handle-source)])
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-sink)
                                                    (api/symbol 'handle-sink)]))
 

@@ -41,7 +41,7 @@ Oasis roadmap
 
 *** TODO new slate
 
-* Cleanup [6%]
+* Cleanup [13%]
 ** TODO change caravan to be pipe based
 ** switch caravan to datalog ops [0/5]
 *** TODO add
@@ -55,8 +55,8 @@ Oasis roadmap
 *** DONE color/syntax highlighting
 *** TODO keyboard shortcuts
 ** TODO drag and drop
-** animations [0/4]
-*** TODO hover source/sink
+** animations [1/4]
+*** DONE hover source/sink
 *** TODO hover cell
 *** TODO dropping/layout
 *** TODO colors
