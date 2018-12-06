@@ -1,6 +1,6 @@
 Oasis roadmap
 
-* Editing [33%]
+* Editing [34%]
 
 ** edit more types [4/6]
 *** DONE lists
@@ -16,7 +16,7 @@ Oasis roadmap
 *** DONE reductions
 *** TODO dynamic width
 
-** other edit operations [4/18]
+** other edit operations [4/17]
 *** DONE swap up/down
 *** in/out
 **** DONE indent
@@ -28,7 +28,6 @@ Oasis roadmap
 
 *** TODO mouse reorder
 
-*** TODO split source/sink
 *** TODO split pipe/edge
 *** TODO subfunction handling/blocks?
 *** DONE "delete"
@@ -49,6 +48,7 @@ Oasis roadmap
 *** TODO cut
 *** TODO swap
 *** TODO indent
+** TODO split source/sink
 ** TODO nicer menu bar
 ** TODO global menu
 ** configuration [1/2]

@@ -1915,7 +1915,8 @@
                                                                      (api/string "5 float")
                                                                      (api/string "6 table")
                                                                      (api/string "7 list")
-                                                                     (api/string "8 accessor")])})}))
+                                                                     (api/string "8 accessor")
+                                                                     (api/string "9 function")])})}))
 
               (defncall 'is-change-insert '->
                 (api/key-fn :editor)
@@ -1926,10 +1927,12 @@
                 (api/fn-call (api/symbol 'spy) [(api/string "action")])
                 (api/map {(api/keyword :state) (api/key-fn :state)
                           (api/keyword :next) (api/map {(api/keyword :actions)
-                                                        (api/vector [(api/string "WASD navigate")
+                                                        (api/vector [(api/string "AS navigate")
                                                                      (api/string "F insert")
+                                                                     (api/string "D indent")
                                                                      (api/string "Shift-WS Swap")
                                                                      (api/string "X cut")
+                                                                     (api/string "+- zoom")
                                                                      (api/string "LMB select")
                                                                      (api/string "RMB pan")])})}))
 

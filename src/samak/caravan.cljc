@@ -194,8 +194,8 @@
       (add-node (str (:samak.nodes/name exp)) loaded))))
 
 
-;; TODO: this is broken if other nodes have children
-(defn find-cell
+;; FIXME: this is broken if other nodes have children
+(defn find-cell-old
   [src cell counter parent parent-idx]
   ;; (println (str "find: " src ",  " cell ",  " counter ",  " parent))
   (if (= counter cell)
@@ -204,11 +204,37 @@
                           (fn [i child] (find-cell child cell (+ counter i 1) src counter))
                           (get-children src))))))
 
+
+(defn find-cell-internal
+  [src cell counter parent parent-idx]
+  (println (str "find: " src ",  " cell ",  " counter ",  " parent "\n\n"))
+  (if (>= counter cell)
+    (do
+      (println (str "hit: " counter))
+      {:i counter :result [src parent parent-idx]})
+    (reduce (fn [{i :i result :result} child]
+              (println (str "loop " counter " " i " - " (:samak.nodes/type child) "\n\n"))
+              (if result
+                (do
+                  (println (str "found: " counter " " i " -> " result))
+                  {:i i :result result})
+                (let [{subcount :i subresult :result}
+                      (find-cell-internal child cell (+ counter i 1) src counter)]
+                  {:i (+ subcount i 1) :result subresult})))
+            {:i 0 :result nil}
+            (get-children src))))
+
+(defn find-cell
+  ""
+  [src cell]
+  (:result (find-cell-internal src cell 0 nil 0)))
+
+
 (defn add-cell-internal
   ""
   [src cell]
   (let [root (:samak.nodes/rhs src)]
-    (find-cell root cell 0 nil 0)))
+    (find-cell root cell)))
 
 (defn content-from-type
   ""
