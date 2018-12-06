@@ -76,6 +76,20 @@
   [db id]
   (d/pull @db '[*] id))
 
+
+(defn load-defs
+  [db]
+  (d/q '[:find [(pull ?id [*]) ...]
+         :in $
+         :where [?id :samak.nodes/type :samak.nodes/def]]
+       @db))
+
+(defn load-links [db]
+  (d/q '[:find [(pull ?id [*]) ...]
+         :in $
+         :where [?id :samak.nodes/type :samak.nodes/link]]
+       @db))
+
 (defn resolve-name
   "Returns the db id for a given name"
   [db sym]
@@ -86,12 +100,7 @@
        @db
        sym))
 
-(defn retrieve-links [db]
-  (d/q '[:find [(pull ?id [*]) ...]
-         :in $
-         :where
-         [?id :samak.nodes/type :samak.nodes/link]]
-       @db))
+
 
 (defn load-dependencies [db id]
   (d/q '[:find [?x ...]
