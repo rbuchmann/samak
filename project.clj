@@ -6,9 +6,7 @@
   :dependencies [[org.clojure/clojure "1.9.0-beta2"]
                  [org.clojure/clojurescript "1.10.238"]
                  [figwheel "0.5.16"]
-                 [reagent "0.6.1" :exclusions [cljsjs/react
-                                               cljsjs/react-dom
-                                               cljsjs/react-dom-server]]
+                 [reagent "0.6.1"]
                  [garden "1.3.2"]
                  [ring/ring-core "1.6.1"]
                  [org.clojure/core.async "0.3.443"]
@@ -49,7 +47,7 @@
                     :optimizations  :simple
                     :pretty-print   true
                     :cache-analysis true}}
-    {:source-paths ["src" "ui_src" "dev_src"]
+    {:source-paths ["src" "dev_src"]
      :id           "frontend-dev"
      :compiler     {:output-to      "resources/public/js/ui-core.js"
                     :output-dir     "resources/public/js/ui-out"
@@ -66,7 +64,7 @@
                     :pretty-print   true
                     :cache-analysis true
                     :infer-externs  true}}
-    {:source-paths ["ui_src"]
+    {:source-paths ["src" "dev_src"]
      :id           "frontend-release"
      :compiler     {:output-to      "resources/public/js/ui-core.js"
                     :output-dir     "resources/public/js/ui-release-out"
@@ -74,7 +72,7 @@
                     :optimizations  :advanced
                     :cache-analysis true
                     :infer-externs  true
-                    :main           "ui.core"}}]}
+                    :main           "dev.core"}}]}
   :figwheel {:http-server-root "public"
              :css-dirs         ["resources/public/css"]
              :reload-clj-files {:clj  true

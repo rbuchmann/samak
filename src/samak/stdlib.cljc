@@ -73,15 +73,24 @@
 (defmulti convert-event #(:type (to-clj %)))
 (defmethod convert-event "change" [ev] {:target {:value (.-value (:target (to-clj ev)))}})
 (defmethod convert-event "submit" [ev] (do (.preventDefault ev) (to-clj ev)))
-(defmethod convert-event "click"  [ev] {:target {:id (.-id (:target (to-clj ev)))}})
+(defmethod convert-event "click"  [ev] (do (println (str ev)) {:target {:id (.-id (:target (to-clj ev)))}}))
 (defmethod convert-event nil [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 (defmethod convert-event :default [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 
 (defn to-handler [v ch]
   (fn
-    ([]    (put! ch {:data  v}))
-    ([evt] (put! ch {:data  v
-                     :event (convert-event evt)}))))
+    ([& args]
+     (case (count args)
+       0 (put! ch {:data  v})
+       1 (put! ch {:data  v
+                   :event (convert-event (first args))})
+       2 (put! ch {:data  v
+                   :event (convert-event (first args))})
+       (println (str "unknown event" args))))
+    ;; ([]    (put! ch {:data  v}))
+    ;; ([evt] (put! ch {:data  v
+    ;;                  :event (convert-event evt)}))
+    ))
 
 (defn transform-element [x ch]
   (if (vector? x)
@@ -132,7 +141,8 @@
              (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
                                    {:samak.mouse/type :move
                                     :samak.mouse/page-x (.-pageX event)
-                                    :samak.mouse/page-y (.-pageY event)}))
+                                    :samak.mouse/page-y (.-pageY event)
+                                    :samak.mouse/target (.-id (.-target event))}))
                          false)))
        (pipes/source c))))
 

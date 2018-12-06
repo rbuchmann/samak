@@ -5,7 +5,8 @@
             [samak.caravan            :as c]
             [clojure.string           :as s]
             [samak.tools              :as tools]
-            [samak.pipes              :as pipes]))
+            [samak.pipes              :as pipes]
+            [clojure.string :as str]))
 
 (defn if* [pred then else]
   (let [pred* (p/eval-as-fn pred)
@@ -95,6 +96,12 @@
 (defn str* [& args]
   (let [args* (map p/eval-as-fn args)]
     (fn [x] (apply str (map #(% x) args*)))))
+
+(defn split*
+  ""
+  [r]
+  (fn [x]
+    (str/split x (re-pattern r))))
 
 (defn nth*
   ""
@@ -228,6 +235,7 @@
    'reduce reduce*
    'filter (curry1fn filterv)
    'only   #(if* % identity tt/ignore)
+   'except #(if* % tt/ignore identity)
    'remove (curry1fn filterv)
    'mapcat mapcatv
    'repeat repeat*
@@ -265,6 +273,7 @@
    'unique distinct*
    'str    str*
    'index-of index-of*
+   'split  split*
    'join   join*
    'or     or*
    'and    and*
