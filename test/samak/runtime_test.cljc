@@ -1,10 +1,12 @@
 (ns samak.runtime-test
-  (:require [samak.runtime        :as sut]
-            #?(:clj [clojure.test :as t :refer [deftest is]]
+  (:require [samak.runtime         :as sut]
+            #?(:clj [clojure.test  :as t :refer [deftest is]]
 
-               :cljs [cljs.test   :as t :include-macros true])
-            [samak.code-db   :as db]
-            [datascript.core      :as d]))
+               :cljs [cljs.test    :as t :include-macros true])
+            [samak.code-db         :as db]
+            [samak.runtime.stores  :as stores]
+            [samak.runtime.servers :as servers]
+            [datascript.core       :as d]))
 
 (def r (sut/make-runtime))
 
@@ -17,12 +19,11 @@
 
 (deftest should-eval-def-node
   (let [r (sut/make-runtime)
-        [k v] (-> r
-                  (sut/eval-expression! def-node)
-                  sut/get-defined-ids
-                  first)]
-    (is (number? k))
-    (is (= "quux" v))))
+        k (-> r
+              (sut/eval-expression! def-node)
+              :store
+              (stores/resolve-name 'quux))]
+    (is (number? k))))
 
 
 (def pipe-node
@@ -31,7 +32,7 @@
                 [{:order        0,
                   :samak.nodes/node
                   #:samak.nodes {:type         :samak.nodes/fn-call,
-                                 :fn
+                                 :fn-expression
                                  #:samak.nodes {:type
                                                 :samak.nodes/builtin,
                                                 :value 'pipes/debug},
@@ -39,20 +40,17 @@
                  {:order        1,
                   :samak.nodes/node
                   #:samak.nodes {:type         :samak.nodes/fn-call,
-                                 :fn
+                                 :fn-expression
                                  #:samak.nodes {:type
                                                 :samak.nodes/builtin,
                                                 :value 'pipes/log},
                                  :arguments    []}}]})
 
 (deftest should-eval-pipe-node
-  (let [r         (sut/make-runtime)
+  (let [r         (sut/make-runtime '[pipes/debug pipes/log])
         new-state (sut/eval-expression! r pipe-node)
-        pipes     (-> new-state sut/get-defined-ids vals)
-        pipe-ids  (-> new-state sut/get-defined-ids keys)
-        link      (-> new-state sut/get-linked-pipes keys first)]
-    (is (every? samak.pipes/pipe? pipes))
-    (is (= (set pipe-ids) (set link)))))
+        defined-things (-> new-state :server servers/get-defined vals)]
+    (is (some samak.pipes/pipe? defined-things))))
 
 (def other-def-node
   #:samak.nodes{:type :samak.nodes/def
@@ -64,8 +62,7 @@
   (let [r  (-> (sut/make-runtime)
                (sut/eval-expression! def-node)
                (sut/eval-expression! other-def-node))
-        vs (-> r sut/get-defined-ids vals)
-        ]
+        vs (-> r :server servers/get-defined vals)]
     (is (= (set vs) #{"quux" "foo"}))))
 
 (def referring-node
@@ -77,7 +74,8 @@
   (let [vs (-> (sut/make-runtime)
                 (sut/eval-expression! def-node)
                 (sut/eval-expression! referring-node)
-                sut/get-defined-ids
+                :server
+                servers/get-defined
                 vals)]
     (is (= 2 (count vs)))
     (is (apply = vs))))
@@ -85,9 +83,11 @@
 (deftest should-retrieve-definitions-by-name
   (let [r (-> (sut/make-runtime)
               (sut/eval-expression! other-def-node))]
-    (is (= "foo" (sut/get-definition-by-name r 'foo)))))
+    (is (= 1 (stores/resolve-name (:store r) 'foo)))))
 
 
 (deftest should-persist-builtins
-  (is (= inc (get @(:defined-ids (sut/load-builtins! (sut/make-runtime) ['inc 'dec])) 1)))
-  )
+  (is (= inc (-> (sut/make-runtime ['inc 'dec])
+                 :server
+                 servers/get-defined
+                 (get 1)))))
