@@ -3,6 +3,7 @@
             [samak.repl                   :as repl]
             [samak.nodes                  :as nodes]
             [samak.code-db                :as db]
+            [samak.runtime.stores         :as stores]
             [samak.runtime                :as runtime]
             [samak.core                   :as c]
             #?@(:clj [[clojure.test       :as t :refer [is deftest]]
@@ -29,10 +30,18 @@
   (let [code (sut/start)]
     (is (= true (every? #(s/valid? :samak.spec/toplevel-exp %) code)))))
 
+;; (deftest should-persist
+;;   (let [db (:db rt)]
+;;     (is (some? (sut/store db)))
+;;     (let [id (db/resolve-name db 'oasis)
+;;           oasis (db/load-by-id db id)]
+;;       (is (= 'oasis (:samak.nodes/name oasis)))
+;;       (is (s/valid? :samak.spec/toplevel-exp oasis)))))
 
 (deftest should-persist
-  (let [db (:db rt)]
-    (is (some? (sut/store db)))
-    (let [oasis (db/load-ast db 'oasis)]
+  (let [store (:store rt)]
+    (is (some? (sut/store store)))
+    (let [id (.resolve-name store 'oasis)
+          oasis (.load-by-id store id)]
       (is (= 'oasis (:samak.nodes/name oasis)))
       (is (s/valid? :samak.spec/toplevel-exp oasis)))))

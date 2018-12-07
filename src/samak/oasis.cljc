@@ -1303,7 +1303,7 @@
               (defncall 'handle-load '->
                 (api/key-fn :data)
                 (api/fn-call (api/symbol 'spy) [(api/string "load")])
-                (api/symbol 'load-node)
+                ;; (api/symbol 'load-node)
                 (api/map {(api/keyword :load) (api/keyword :none)}))
 
               (defncall 'is-mode-change '->
@@ -2530,5 +2530,5 @@
 (defn start []
   (into oasis network))
 
-(defn store [db]
-  (db/parse-tree->db! db oasis))
+(defn store [stores]
+  (.persist-tree! stores oasis))

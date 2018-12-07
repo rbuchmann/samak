@@ -170,7 +170,8 @@
 (defn persist!
   ""
   [db tx-records]
-  (let [new-ids (-> (db/parse-tree->db! db tx-records)
+  (println db)
+  (let [new-ids (-> (.persist-tree! db tx-records)
                     :tempids
                     (dissoc :db/current-tx)
                     vals)]
@@ -188,35 +189,22 @@
 
 (defn repl-eval
   [exp]
-  (if (api/is-pipe? exp)
-    (add-pipe exp)
-    (let [loaded (single! exp)]
-      (add-node (str (:samak.nodes/name exp)) loaded))))
-
-
-;; FIXME: this is broken if other nodes have children
-(defn find-cell-old
-  [src cell counter parent parent-idx]
-  ;; (println (str "find: " src ",  " cell ",  " counter ",  " parent))
-  (if (= counter cell)
-    [src parent parent-idx]
-    (first (filter some? (map-indexed ;; needs to be replaced with reduce to persist count
-                          (fn [i child] (find-cell child cell (+ counter i 1) src counter))
-                          (get-children src))))))
+  ;; (if (api/is-pipe? exp)
+  ;;   (add-pipe exp)
+  ;;   (let [loaded (single! exp)]
+  ;;     (add-node (str (:samak.nodes/name exp)) loaded)))
+  )
 
 
 (defn find-cell-internal
   [src cell counter parent parent-idx]
-  (println (str "find: " src ",  " cell ",  " counter ",  " parent "\n\n"))
+  ;; (println (str "find: " src ",  " cell ",  " counter ",  " parent "\n\n"))
   (if (>= counter cell)
     (do
-      (println (str "hit: " counter))
       {:i counter :result [src parent parent-idx]})
     (reduce (fn [{i :i result :result} child]
-              (println (str "loop " counter " " i " - " (:samak.nodes/type child) "\n\n"))
               (if result
                 (do
-                  (println (str "found: " counter " " i " -> " result))
                   {:i i :result result})
                 (let [{subcount :i subresult :result}
                       (find-cell-internal child cell (+ counter i 1) src counter)]
@@ -453,14 +441,14 @@
       ;; [fn-ast pipe]
       :okay))))
 
-(defn load-node
-  ""
-  []
-  (let [oasis (db/load-ast @db-conn 'oasis)]
-    (println (str "oasis: " oasis))
-    ;; (add-node 'oasis )
-    )
-  )
+;; (defn load-node
+;;   ""
+;;   []
+;;   (let [oasis (db/load-ast @db-conn 'oasis)]
+;;     (println (str "oasis: " oasis))
+;;     ;; (add-node 'oasis )
+;;     )
+;;   )
 
 
 (defn init
@@ -469,7 +457,7 @@
 
 (def symbols
   {'create-sink create-sink
-   'load-node load-node
+   ;; 'load-node load-node
    'connect connect
    'add-cell add-cell
    'swap-cell swap-cell

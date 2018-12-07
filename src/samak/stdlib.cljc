@@ -178,20 +178,20 @@
 
 ;; DB
 
-(defn db-init [args]
-  (db/create-empty-db))
+;; (defn db-init [args]
+;;   (db/create-empty-db))
 
-(defn query-call
-  [db query]
-  (fn [input out]
-    (let [ast (or (db/load-by-id input) :not-found)]
-      (put! out ast))))
+;; (defn query-call
+;;   [db query]
+;;   (fn [input out]
+;;     (let [ast (or (db/load-by-id input) :not-found)]
+;;       (put! out ast))))
 
-(defn db-persist [db args]
-  (db/parse-tree->db! db args))
+;; (defn db-persist [db args]
+;;   (db/parse-tree->db! db args))
 
-(defn db-query [db query]
-  (pipes/async-pipe (query-call db query) nil nil))
+;; (defn db-query [db query]
+;;   (pipes/async-pipe (query-call db query) nil nil))
 
 
 ;; Runtime
