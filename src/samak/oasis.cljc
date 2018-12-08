@@ -336,7 +336,6 @@
                 (api/fn-call (api/symbol '=) [(api/string "sink")]))
 
               (defncall 'get-animation-style '->
-                (api/fn-call (api/symbol 'spy) [(api/string "anim")])
                 (api/fn-call (api/symbol 'if) [(api/symbol 'is-hovered-entry)
                                                (api/fn-call (api/symbol 'if) [(api/symbol 'is-entry-sink)
                                                                               (api/symbol 'animate-sink)
@@ -2419,8 +2418,7 @@
               (red 'mouse 'target-reduce 'target-events)
 
               (pipe 'target-events 'only-different 'hover-events)
-              (pipe 'hover-events 'tag-hover 'hover-state)
-
+              ;; (pipe 'hover-events 'tag-hover 'hover-state)
 
               (pipe 'keyboard 'filter-key-input 'keyboard-filtered)
               (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
@@ -2529,7 +2527,6 @@
 
               (pipe 'state 'render-action-menu 'svg-render)
 
-   (pipe 'oasis 'log)
               (pipe 'oasis 'header 'render)
               ;;                (pipe 'oasis 'repl 'render)
               (pipe 'oasis 'init-view 'view-events)

@@ -31,9 +31,8 @@
      [samak.runtime.servers :as servers]
      [samak.runtime.stores :as stores])]))
 
-(def rt (atom (run/make-runtime (keys core/samak-symbols))))
-
-(caravan/init (:store @rt))
+(def rt (atom (run/make-runtime core/samak-symbols)))
+(caravan/init @rt)
 
 
 (defn catch-errors [ast]
@@ -56,7 +55,6 @@
 (defn fire-event-into-named-pipe
   [pipe-name event]
   (let [pipe (run/get-definition-by-name @rt (symbol pipe-name))]
-    (println (str "pipe: " pipe))
     (if (pipes/pipe? pipe)
       (do (let [arg (edn/read-string event)]
             (pipes/fire! pipe arg))

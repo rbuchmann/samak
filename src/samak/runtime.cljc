@@ -13,8 +13,10 @@
    {:store  (stores/make-local-store)
     :server (servers/make-local-server)})
   ([builtins]
-   (let [runtime (update (make-runtime) :store stores/load-builtins! builtins)]
-     (->> builtins
+   (let [runtime (-> (make-runtime)
+                     (update :store stores/load-builtins! (keys builtins))
+                     (update :server servers/load-builtins! builtins))]
+     (->> (keys builtins)
           (map (partial stores/resolve-name (:store runtime)))
           (map (partial stores/load-by-id (:store runtime)))
           (update runtime :server eval-all)))))
@@ -54,11 +56,25 @@
       (dissoc :db/current-tx)
       vals))
 
-(defn store-and-eval! [store server tx-records]
+(defn store!
+  [store tx-records]
   (->> tx-records
        (persist-to-ids! store)
-       (map (partial stores/load-by-id store))
-       (reduce servers/eval-ast server)))
+       (map (partial stores/load-by-id store))))
+
+(defn store-and-eval!
+  ([{store :store server :server} tx-records]
+   (store-and-eval! store server tx-records))
+  ([store server tx-records]
+   (->> tx-records
+        (store! store)
+        (reduce servers/eval-ast server))))
+
+(defn load-by-id
+  ""
+  [{store :store} id]
+  (stores/load-by-id store id))
+
 
 (defn eval-expression! [{:keys [store server] :as rt} form]
   (let [new-server (store-and-eval! store server (rewrite-expression "user" form))]

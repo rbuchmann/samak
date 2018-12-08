@@ -1,10 +1,10 @@
 (ns samak.caravan
   (:require [clojure.string :as s]
             [samak.api      :as api]
-            [samak.code-db  :as db]
+            [samak.runtime  :as rt]
             [samak.stdlib   :as std]))
 
-(def db-conn (atom {}))
+(def rt-conn (atom {}))
 (def fns (atom {}))
 (def net (atom []))
 
@@ -144,7 +144,7 @@
   ""
   [sym fn]
   (swap! fns assoc sym fn)
-  (println (str "function cache: " @fns))
+  (println (str "function cache: " (keys @fns)))
   (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
         ast (make-cell-list fn)]
     (if (empty? ast)
@@ -169,31 +169,23 @@
 
 (defn persist!
   ""
-  [db tx-records]
-  (println db)
-  (let [new-ids (-> (.persist-tree! db tx-records)
-                    :tempids
-                    (dissoc :db/current-tx)
-                    vals)]
-    (into {}
-          (for [id new-ids]
-            [id (db/load-by-id db id)]))))
+  [rt tx-records]
+  (rt/store! (:store rt) tx-records))
 
 
 (defn single!
   ""
   [exp]
-  (let [loaded (persist! @db-conn [(assoc exp :db/id -1)])
-        ast (first (vals loaded))]
+  (let [loaded (persist! @rt-conn [(assoc exp :db/id -1)])
+        ast (first loaded)]
     ast))
 
 (defn repl-eval
   [exp]
-  ;; (if (api/is-pipe? exp)
-  ;;   (add-pipe exp)
-  ;;   (let [loaded (single! exp)]
-  ;;     (add-node (str (:samak.nodes/name exp)) loaded)))
-  )
+  (if (api/is-pipe? exp)
+    (add-pipe exp)
+    (let [loaded (single! exp)]
+      (add-node (str (:samak.nodes/name exp)) loaded))))
 
 
 (defn find-cell-internal
@@ -271,7 +263,7 @@
   [target content]
   (let [target-key (get-child-key target)
         target-args (get target target-key)
-        updated (update target target-key conj {:db/id -1 :order (count target-args) :samak.nodes/node content})]
+        updated (update target target-key conj {:rt/id -1 :order (count target-args) :samak.nodes/node content})]
     updated))
 
 
@@ -286,13 +278,13 @@
         (let [[cell par par-idx] (add-cell-internal src idx)
               _ (println (str "cell: " cell))
               _ (println (str "par: " par))
-              root-id (:db/id src)
+              root-id (:rt/id src)
               content (content-from-type type)
               updated (if (is-mapish cell)
                         (add-map (if (is-map-node cell) cell par) (- idx 1 par-idx) content)
                         (add-list (if (is-listy-node cell) cell par) content))]
-            (let [write (persist! @db-conn [updated])
-                  exp (db/load-by-id @db-conn root-id)]
+            (let [write (persist! @rt-conn [updated])
+                  exp (rt/load-by-id @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)
               :done))))))
@@ -315,10 +307,10 @@
           idx (dec cell)]
       (when (and sym src idx value)
           (let [[cell par] (add-cell-internal src idx)
-                root-id (:db/id src)
+                root-id (:rt/id src)
                 updated (value-from-type cell value)]
-            (let [write (persist! @db-conn [updated])
-                  exp (db/load-by-id @db-conn root-id)]
+            (let [write (persist! @rt-conn [updated])
+                  exp (rt/load-by-id @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)))))))
 
@@ -340,14 +332,14 @@
           idx (dec cell-idx)]
       (when (and sym src idx target)
           (let [[cell par par-idx] (add-cell-internal src idx)
-                root-id (:db/id src)
+                root-id (:rt/id src)
                 arg-source-idx (- idx 1 par-idx)
                 arg-target-idx (- target 2 par-idx)
                 sorted-args (vec (sort-by :order (get par (get-child-key par)))) ;; need to make a copy because sort-by is inplace sometimes
                 changed (change-order sorted-args arg-source-idx arg-target-idx)
                 node (assoc par (get-child-key par) changed)]
-            (let [write (persist! @db-conn [node])
-                  exp (db/load-by-id @db-conn root-id)]
+            (let [write (persist! @rt-conn [node])
+                  exp (rt/load-by-id @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp))
             )))))
@@ -371,14 +363,14 @@
           idx (dec cell-idx)]
       (when (and sym src idx)
           (let [[cell par par-idx] (add-cell-internal src idx)
-                root-id (:db/id src)
+                root-id (:rt/id src)
                 arg-idx (- idx 1 par-idx)
                 removed-args (remove-arg (get par (get-child-key par)) arg-idx)
                 updated (assoc par (get-child-key par) removed-args)
                 target-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:db/retract (:db/id par) (get-child-key par) (:db/id target-node)]]
-            (let [write (persist! @db-conn [updated retract])
-                  exp (db/load-by-id @db-conn root-id)]
+                retract [:rt/retract (:rt/id par) (get-child-key par) (:rt/id target-node)]]
+            (let [write (persist! @rt-conn [updated retract])
+                  exp (rt/load-by-id @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)
               :done))))))
@@ -392,7 +384,7 @@
           idx (dec cell-idx)]
       (when (and sym src idx type)
           (let [[cell par par-idx] (add-cell-internal src idx)
-                root-id (:db/id src)
+                root-id (:rt/id src)
                 arg-idx (- idx 1 par-idx)
                 removed-args (remove-arg (get par (get-child-key par)) arg-idx)
                 _ (println (str "upd: " removed-args))
@@ -400,16 +392,16 @@
                 target-node (some #(when (= (:order %) (dec arg-idx)) %) (get par (get-child-key par)))
                 target (:samak.nodes/node target-node)
                 _ (println (str "target: " target))
-                inserted (update target (get-child-key target) conj {:db/id -1 :order (count (get target (get-child-key target))) :samak.nodes/node cell})
+                inserted (update target (get-child-key target) conj {:rt/id -1 :order (count (get target (get-child-key target))) :samak.nodes/node cell})
                 _ (println (str "inserted: " inserted))
                 updated (update-in par [(get-child-key par)] #(assoc % (dec arg-idx) inserted))
                 _ (println (str "updated: " updated))
                 retract-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:db/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
+                retract [:rt/retract (:rt/id par) (get-child-key par) (:rt/id retract-node)]
                 _ (println (str "retract: " retract))
                 ]
-            (let [write (persist! @db-conn [updated retract])
-                  exp (db/load-by-id @db-conn root-id)]
+            (let [write (persist! @rt-conn [updated retract])
+                  exp (rt/load-by-id @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)
               :done))))))
@@ -444,7 +436,7 @@
 ;; (defn load-node
 ;;   ""
 ;;   []
-;;   (let [oasis (db/load-ast @db-conn 'oasis)]
+;;   (let [oasis (rt/load-ast @rt-conn 'oasis)]
 ;;     (println (str "oasis: " oasis))
 ;;     ;; (add-node 'oasis )
 ;;     )
@@ -452,8 +444,8 @@
 
 
 (defn init
-  [rt-db]
-  (reset! db-conn rt-db))
+  [rt]
+  (reset! rt-conn rt))
 
 (def symbols
   {'create-sink create-sink

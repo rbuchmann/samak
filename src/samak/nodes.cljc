@@ -5,6 +5,7 @@
             [samak.tools     :refer [fail]]))
 
 (def ^:dynamic *environment* {})
+(def ^:dynamic *builtins* {})
 
 (defmulti eval-node ::type)
 
@@ -46,7 +47,7 @@
 (defmethod eval-node ::key-fn  [{:keys [::value]}] (fn [x] (value x)))
 (defmethod eval-node ::string  [{:keys [::value]}] value)
 (defmethod eval-node ::float   [{:keys [::value]}] value)
-(defmethod eval-node ::builtin [{:keys [::value]}] (core/samak-symbols value))
+(defmethod eval-node ::builtin [{:keys [::value]}] (get *builtins* value))
 
 (defmethod eval-node ::def [{:keys [::rhs]}] (eval-node rhs))
 
@@ -54,10 +55,15 @@
 
 (defmethod eval-node ::fn-ref [{:keys [::fn]}]
   (or (get *environment* (:db/id fn))
-      (fail "Undefined reference " fn)))
+      (fail "Undefined reference " fn " in " *environment*)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
   (apply (p/eval-as-fn (eval-node fn-expression)) (eval-reordered arguments)))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]
   (pipes/link! (eval-node from) (eval-node to)))
+
+(defn eval-env [env builtins ast]
+  (binding [*environment* env
+            *builtins* builtins]
+    (eval-node ast)))

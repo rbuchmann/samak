@@ -2,7 +2,6 @@
   (:require [samak.stdlib             :as std]
             [samak.transduction-tools :as tt]
             [samak.protocols          :as p]
-            [samak.caravan            :as c]
             [clojure.string           :as s]
             [samak.tools              :as tools]
             [samak.pipes              :as pipes]
@@ -284,7 +283,11 @@
    'unless unless
    'loop   loop*
    'spy    spy
-   'create-sink c/create-sink
-   'connect c/connect
-   'add-cell c/add-cell
+   'create-sink :noop
+   'connect :noop
+   'add-cell :noop
+   'edit-cell :noop
+   'indent-cell :noop
+   'swap-cell :noop
+   'cut-cell :noop
    '!      '!})
