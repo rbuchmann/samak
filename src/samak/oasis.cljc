@@ -34,14 +34,21 @@
   [sym call in-spec out-spec & args]
   (defncall sym call args))
 
+(defn pipify
+  ""
+  [x]
+  (api/defexp (symbol (str "x-" (name x))) (api/fn-call (api/symbol '|>) [(api/symbol x)])))
+
 (defn pipe
   ""
   ([in out]
    (api/pipe [(api/symbol in) (api/symbol out)]))
   ([in x out]
-   (api/pipe [(api/symbol in)
-              (api/fn-call (api/symbol '|>) [(api/symbol x)])
-              (api/symbol out)])))
+   (let [xfer (symbol (str "x-" (name x)))]
+     [(pipify x)
+      (api/pipe [(api/symbol in)
+              (api/symbol xfer)
+              (api/symbol out)])])))
 
 (defn red
   ""
@@ -2410,6 +2417,7 @@
 
               (red 'mouse 'mouse-reduce 'mouse-state)
               (red 'mouse 'target-reduce 'target-events)
+
               (pipe 'target-events 'only-different 'hover-events)
               (pipe 'hover-events 'tag-hover 'hover-state)
 
@@ -2521,6 +2529,7 @@
 
               (pipe 'state 'render-action-menu 'svg-render)
 
+   (pipe 'oasis 'log)
               (pipe 'oasis 'header 'render)
               ;;                (pipe 'oasis 'repl 'render)
               (pipe 'oasis 'init-view 'view-events)
@@ -2528,7 +2537,7 @@
 
 
 (defn start []
-  (into oasis network))
+  (into oasis (flatten network)))
 
 (defn store [stores]
   (.persist-tree! stores oasis))
