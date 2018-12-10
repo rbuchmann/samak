@@ -75,7 +75,6 @@
   [{store :store} id]
   (stores/load-by-id store id))
 
-
 (defn eval-expression! [{:keys [store server] :as rt} form]
   (let [new-server (store-and-eval! store server (rewrite-expression "user" form))]
     (assoc rt :server new-server)))

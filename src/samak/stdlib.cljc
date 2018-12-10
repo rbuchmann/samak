@@ -104,17 +104,17 @@
     x))
 
 #?(:cljs
-   (defn ui []
+   (defn ui [n]
      (let [ui-in (chan)
            ui-out (chan)]
        (go-loop []
          (when-some [x (<! ui-in)]
-           (when-let [node (js/document.getElementById "generated-app")]
+           (when-let [node (js/document.getElementById (str "samak" n))]
              (r/render (transform-element x ui-out) node))
            (recur)))
        (pipes/pipe ui-in ui-out))))
 
-#?(:clj (defn ui []))
+#?(:clj (defn ui [n]))
 
 #?(:cljs
    (defn mouse []

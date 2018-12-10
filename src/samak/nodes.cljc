@@ -1,6 +1,5 @@
 (ns samak.nodes
-  (:require [samak.core      :as core]
-            [samak.protocols :as p]
+  (:require [samak.protocols :as p]
             [samak.pipes     :as pipes]
             [samak.tools     :refer [fail]]))
 
