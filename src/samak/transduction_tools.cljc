@@ -13,6 +13,7 @@
 
 (defn wrap-streamable [xf]
   (completing (fn [acc nxt]
+                (if (nil? nxt) (throw (str "received nil on " xf " - " acc)))
                 (if (satisfies? Streamable nxt)
                   (reduce xf acc (get-items nxt))
                   (xf acc nxt)))))

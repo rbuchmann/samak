@@ -3,6 +3,7 @@
             [clojure.walk   :as w]
             [samak.api      :as api]
             [samak.runtime  :as rt]
+            [samak.pipes    :as pipes]
             [samak.builtins :as builtins]
             [samak.stdlib   :as std]))
 
@@ -149,8 +150,12 @@
 (defn add-node
   ""
   [sym fn]
+  (println (str "new node: " sym))
   (swap! fns assoc sym fn)
   (println (str "function cache: " (keys @fns)))
+  (println (str "code: " (get @fns sym)))
+  (swap! rt-preview rt/link-storage (:store @rt-conn))
+  (swap! rt-preview rt/eval-expression! fn)
   (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
         ast (make-cell-list fn)]
     (if (empty? ast)
@@ -174,7 +179,11 @@
         func (name-of-node (second args))
         sink (name-of-node (nth args 2))]
     (swap! net conj pipe)
-    ;; (rt/eval-expression! @rt-preview pipe)
+    (swap! rt-preview rt/link-storage (:store @rt-conn))
+    (swap! rt-preview rt/eval-expression! pipe)
+    (let [p (rt/get-definition-by-name @rt-preview (symbol "start"))
+          r (when p (pipes/fire! p "1"))]
+      (println (str "fire! " p " - " r)))
     (notify-source {:caravan/type :caravan/pipe
                     :caravan/source source
                     :caravan/func func
@@ -208,7 +217,7 @@
   (if (api/is-pipe? exp)
     (add-pipe exp)
     (let [loaded (single! exp)]
-      (add-node (str (:samak.nodes/name exp)) loaded))))
+      (add-node (symbol (str (:samak.nodes/name exp))) loaded))))
 
 
 (defn find-cell-internal
@@ -309,7 +318,7 @@
             (let [write (persist! @rt-conn [updated])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp)
+              (add-node (symbol sym) exp)
               :done))))))
 
 (defn value-from-type
@@ -335,7 +344,7 @@
             (let [write (persist! @rt-conn [updated])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp)))))))
+              (add-node (symbol sym) exp)))))))
 
 
 (defn change-order
@@ -364,7 +373,7 @@
             (let [write (persist! @rt-conn [node])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp))
+              (add-node (symbol sym) exp))
             )))))
 
 (defn remove-arg
@@ -395,7 +404,7 @@
             (let [write (persist! @rt-conn [updated retract])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp)
+              (add-node (symbol sym) exp)
               :done))))))
 
 (defn indent-cell
@@ -426,7 +435,7 @@
             (let [write (persist! @rt-conn [updated retract])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp)
+              (add-node (symbol sym) exp)
               :done))))))
 
 (defn create-sink
@@ -439,7 +448,7 @@
           exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
           ast (single! exp)]
       (println (str "res: " ast))
-      (add-node sym ast)
+      (add-node (symbol sym) ast)
       :okay)))
 
 (defn connect
@@ -449,13 +458,15 @@
     (println "connect: " x)
     (when (and sink source (not= sink source))
         (let [connector  (str "c/" source "-" sink)
-          fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol 'id) [])]))
+              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '->) [(api/vector [(api/keyword :div) (api/string "Hello world")])])]))
           fn-ast (single! fn)
-          pipe (api/pipe [(api/symbol source) (api/symbol connector) (api/symbol sink)])]
-      (add-node connector fn-ast)
-      (add-pipe pipe)
-      ;; [fn-ast pipe]
-      :okay))))
+              pipe (api/pipe [(api/symbol (symbol source))
+                              (api/symbol (symbol connector))
+                              (api/symbol (symbol sink))])]
+          (add-node (symbol connector) fn-ast)
+          (add-pipe pipe)
+          ;; [fn-ast pipe]
+          :okay))))
 
 ;; (defn load-node
 ;;   ""

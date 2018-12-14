@@ -110,6 +110,7 @@
        (go-loop []
          (when-some [x (<! ui-in)]
            (when-let [node (js/document.getElementById (str "samak" n))]
+             (when (not n) (.warn js/console (str "render " n " - " x)))
              (r/render (transform-element x ui-out) node))
            (recur)))
        (pipes/pipe ui-in ui-out))))

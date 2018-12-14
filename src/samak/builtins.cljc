@@ -225,10 +225,19 @@
   (fn [x]
     (apply min x)))
 
+(defn pipify
+  ""
+  [f]
+  (if (nil? f) (throw (str "trying to connect with nil function")))
+  (pipes/instrument (chain (fn [x]
+    (if (or (nil? f) (nil? x)) (println (str "pipify " f " on " x)))
+    (f x))))
+  )
+
 
 (def samak-symbols
   {'->     chain
-   '|>     (comp pipes/instrument chain)
+   '|>     pipify
    'id     identity
    'map    (curry1fn mapv)
    'reduce reduce*
