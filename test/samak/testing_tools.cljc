@@ -6,7 +6,7 @@
   (def bar dec)
   (def baz 5)
   (def input (pipes/debug))
-  (| input (|> foo bar) baz)")
+  (def pipe (| input (|> foo bar) baz))")
 
 (def parsed-example
   (lp/parse-all example-program))

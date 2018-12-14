@@ -8,8 +8,8 @@
                :cljs [cljs.test         :as t :include-macros true :refer [is deftest]])
             [samak.code-db              :as db]))
 
-(deftest should-provide-db
-  (is (not (nil? (sut/db-init :a)))))
+;; (deftest should-provide-db
+;;   (is (not (nil? (sut/db-init :a)))))
 
 (deftest should-log
   (let [debug (sut/debug)
@@ -18,10 +18,10 @@
       (pipes/fire! debug :foo)
       (take! listener (fn [x] (is (= :foo x))))))
 
-(deftest should-call
-  (let [out (chan 1)]
-    ((sut/query-call (db/create-empty-db) :b) :foo out)
-    (take! out #(is (= :not-found %)))))
+;; (deftest should-call
+;;   (let [out (chan 1)]
+;;     ((sut/query-call (db/create-empty-db) :b) :foo out)
+;;     (take! out #(is (= :not-found %)))))
 
 
 #_(deftest should-db

@@ -1,22 +1,28 @@
 (ns samak.caravan
   (:require [clojure.string :as s]
+            [clojure.walk   :as w]
             [samak.api      :as api]
-            [samak.code-db  :as db]
+            [samak.runtime  :as rt]
+            [samak.builtins :as builtins]
             [samak.stdlib   :as std]))
 
-(def db-conn (atom {}))
+(def rt-conn (atom {}))
 (def fns (atom {}))
 (def net (atom []))
 
+(declare symbols)
+
+(def rt-preview (atom {}))
 
 (defmulti handle-node :samak.nodes/type)
 
 (defmethod handle-node
   :samak.nodes/fn-call
   [node]
+  (println (str "func: " node))
   {:type :caravan/func
    :display "func"
-   :value (str (:samak.nodes/name (:samak.nodes/fn node)))})
+   :value (str (get-in node [:samak.nodes/fn-expression :samak.nodes/fn :samak.nodes/name]))})
 
 (defmethod handle-node
   :samak.nodes/integer
@@ -130,7 +136,7 @@
 (defn is-sink?
   ""
   [exp]
-  (let [rhs-fn (:samak.nodes/fn (:samak.nodes/rhs exp))
+  (let [rhs-fn (get-in exp [:samak.nodes/rhs :samak.nodes/fn-expression :samak.nodes/fn])
         has-name (get rhs-fn :samak.nodes/name)
         fn-name (str (:samak.nodes/name rhs-fn))
         is-stdlib (s/starts-with? fn-name "pipes/")
@@ -144,7 +150,7 @@
   ""
   [sym fn]
   (swap! fns assoc sym fn)
-  (println (str "function cache: " @fns))
+  (println (str "function cache: " (keys @fns)))
   (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
         ast (make-cell-list fn)]
     (if (empty? ast)
@@ -153,37 +159,48 @@
                       :caravan/name sym
                       :caravan/ast ast}))))
 
+(defn name-of-node
+  ""
+  [node]
+  (str (second (get-in node [:samak.nodes/node :samak.nodes/fn]))))
+
+
 (defn add-pipe
   ""
   [pipe]
+  (println (str "add pipe " pipe))
   (let [args (:samak.nodes/arguments pipe)
-        source (str (second (:samak.nodes/node (first args))))
-        func (str (second (:samak.nodes/node (second args))))
-        sink (str (second (:samak.nodes/node (nth args 2))))]
+        source (name-of-node (first args))
+        func (name-of-node (second args))
+        sink (name-of-node (nth args 2))]
     (swap! net conj pipe)
+    ;; (rt/eval-expression! @rt-preview pipe)
     (notify-source {:caravan/type :caravan/pipe
                     :caravan/source source
                     :caravan/func func
                     :caravan/sink sink})))
 
+(defn load-ast
+  "loads an ast given by its entity id from the database"
+  [rt id]
+  (w/postwalk (fn [form]
+                (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
+                                  (:db/id form))]
+                 (rt/load-by-id rt sub-id)
+                 form))
+              (rt/load-by-id rt id)))
 
 (defn persist!
   ""
-  [db tx-records]
-  (let [new-ids (-> (db/parse-tree->db! db tx-records)
-                    :tempids
-                    (dissoc :db/current-tx)
-                    vals)]
-    (into {}
-          (for [id new-ids]
-            [id (db/load-by-id db id)]))))
+  [rt tx-records]
+  (rt/store! (:store rt) tx-records))
 
 
 (defn single!
   ""
   [exp]
-  (let [loaded (persist! @db-conn [(assoc exp :db/id -1)])
-        ast (first (vals loaded))]
+  (let [loaded (persist! @rt-conn [(assoc exp :db/id -1)])
+        ast (load-ast @rt-conn (:db/id (first loaded)))]
     ast))
 
 (defn repl-eval
@@ -194,29 +211,15 @@
       (add-node (str (:samak.nodes/name exp)) loaded))))
 
 
-;; FIXME: this is broken if other nodes have children
-(defn find-cell-old
-  [src cell counter parent parent-idx]
-  ;; (println (str "find: " src ",  " cell ",  " counter ",  " parent))
-  (if (= counter cell)
-    [src parent parent-idx]
-    (first (filter some? (map-indexed ;; needs to be replaced with reduce to persist count
-                          (fn [i child] (find-cell child cell (+ counter i 1) src counter))
-                          (get-children src))))))
-
-
 (defn find-cell-internal
   [src cell counter parent parent-idx]
-  (println (str "find: " src ",  " cell ",  " counter ",  " parent "\n\n"))
+  ;; (println (str "find: " src ",  " cell ",  " counter ",  " parent "\n\n"))
   (if (>= counter cell)
     (do
-      (println (str "hit: " counter))
       {:i counter :result [src parent parent-idx]})
     (reduce (fn [{i :i result :result} child]
-              (println (str "loop " counter " " i " - " (:samak.nodes/type child) "\n\n"))
               (if result
                 (do
-                  (println (str "found: " counter " " i " -> " result))
                   {:i i :result result})
                 (let [{subcount :i subresult :result}
                       (find-cell-internal child cell (+ counter i 1) src counter)]
@@ -303,8 +306,8 @@
               updated (if (is-mapish cell)
                         (add-map (if (is-map-node cell) cell par) (- idx 1 par-idx) content)
                         (add-list (if (is-listy-node cell) cell par) content))]
-            (let [write (persist! @db-conn [updated])
-                  exp (db/load-by-id @db-conn root-id)]
+            (let [write (persist! @rt-conn [updated])
+                  exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)
               :done))))))
@@ -329,8 +332,8 @@
           (let [[cell par] (add-cell-internal src idx)
                 root-id (:db/id src)
                 updated (value-from-type cell value)]
-            (let [write (persist! @db-conn [updated])
-                  exp (db/load-by-id @db-conn root-id)]
+            (let [write (persist! @rt-conn [updated])
+                  exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)))))))
 
@@ -358,8 +361,8 @@
                 sorted-args (vec (sort-by :order (get par (get-child-key par)))) ;; need to make a copy because sort-by is inplace sometimes
                 changed (change-order sorted-args arg-source-idx arg-target-idx)
                 node (assoc par (get-child-key par) changed)]
-            (let [write (persist! @db-conn [node])
-                  exp (db/load-by-id @db-conn root-id)]
+            (let [write (persist! @rt-conn [node])
+                  exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp))
             )))))
@@ -388,9 +391,9 @@
                 removed-args (remove-arg (get par (get-child-key par)) arg-idx)
                 updated (assoc par (get-child-key par) removed-args)
                 target-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:db/retract (:db/id par) (get-child-key par) (:db/id target-node)]]
-            (let [write (persist! @db-conn [updated retract])
-                  exp (db/load-by-id @db-conn root-id)]
+                retract [:rt/retract (:db/id par) (get-child-key par) (:db/id target-node)]]
+            (let [write (persist! @rt-conn [updated retract])
+                  exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)
               :done))))))
@@ -417,11 +420,11 @@
                 updated (update-in par [(get-child-key par)] #(assoc % (dec arg-idx) inserted))
                 _ (println (str "updated: " updated))
                 retract-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:db/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
+                retract [:rt/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
                 _ (println (str "retract: " retract))
                 ]
-            (let [write (persist! @db-conn [updated retract])
-                  exp (db/load-by-id @db-conn root-id)]
+            (let [write (persist! @rt-conn [updated retract])
+                  exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node sym exp)
               :done))))))
@@ -435,6 +438,7 @@
           sym (str pipe-name "-" (rand-int 1000000000))
           exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
           ast (single! exp)]
+      (println (str "res: " ast))
       (add-node sym ast)
       :okay)))
 
@@ -453,23 +457,26 @@
       ;; [fn-ast pipe]
       :okay))))
 
-(defn load-node
-  ""
-  []
-  (let [oasis (db/load-ast @db-conn 'oasis)]
-    (println (str "oasis: " oasis))
-    ;; (add-node 'oasis )
-    )
-  )
+;; (defn load-node
+;;   ""
+;;   []
+;;   (let [oasis (rt/load-ast @rt-conn 'oasis)]
+;;     (println (str "oasis: " oasis))
+;;     ;; (add-node 'oasis )
+;;     )
+;;   )
 
 
 (defn init
-  [rt-db]
-  (reset! db-conn rt-db))
+  [rt]
+  (reset! rt-conn rt)
+  (reset! rt-preview (rt/make-runtime (merge builtins/samak-symbols
+                                             symbols
+                                             std/pipe-symbols))))
 
 (def symbols
   {'create-sink create-sink
-   'load-node load-node
+   ;; 'load-node load-node
    'connect connect
    'add-cell add-cell
    'swap-cell swap-cell

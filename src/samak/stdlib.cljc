@@ -104,17 +104,17 @@
     x))
 
 #?(:cljs
-   (defn ui []
+   (defn ui [n]
      (let [ui-in (chan)
            ui-out (chan)]
        (go-loop []
          (when-some [x (<! ui-in)]
-           (when-let [node (js/document.getElementById "generated-app")]
+           (when-let [node (js/document.getElementById (str "samak" n))]
              (r/render (transform-element x ui-out) node))
            (recur)))
        (pipes/pipe ui-in ui-out))))
 
-#?(:clj (defn ui []))
+#?(:clj (defn ui [n]))
 
 #?(:cljs
    (defn mouse []
@@ -178,20 +178,20 @@
 
 ;; DB
 
-(defn db-init [args]
-  (db/create-empty-db))
+;; (defn db-init [args]
+;;   (db/create-empty-db))
 
-(defn query-call
-  [db query]
-  (fn [input out]
-    (let [ast (or (db/load-ast db input) :not-found)]
-      (put! out ast))))
+;; (defn query-call
+;;   [db query]
+;;   (fn [input out]
+;;     (let [ast (or (db/load-by-id input) :not-found)]
+;;       (put! out ast))))
 
-(defn db-persist [db args]
-  (db/parse-tree->db! db args))
+;; (defn db-persist [db args]
+;;   (db/parse-tree->db! db args))
 
-(defn db-query [db query]
-  (pipes/async-pipe (query-call db query) nil nil))
+;; (defn db-query [db query]
+;;   (pipes/async-pipe (query-call db query) nil nil))
 
 
 ;; Runtime

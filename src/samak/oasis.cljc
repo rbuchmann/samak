@@ -34,14 +34,21 @@
   [sym call in-spec out-spec & args]
   (defncall sym call args))
 
+(defn pipify
+  ""
+  [x]
+  (api/defexp (symbol (str "x-" (name x))) (api/fn-call (api/symbol '|>) [(api/symbol x)])))
+
 (defn pipe
   ""
   ([in out]
    (api/pipe [(api/symbol in) (api/symbol out)]))
   ([in x out]
-   (api/pipe [(api/symbol in)
-              (api/fn-call (api/symbol '|>) [(api/symbol x)])
-              (api/symbol out)])))
+   (let [xfer (symbol (str "x-" (name x)))]
+     [(pipify x)
+      (api/pipe [(api/symbol in)
+              (api/symbol xfer)
+              (api/symbol out)])])))
 
 (defn red
   ""
@@ -70,7 +77,7 @@
 (s/def :oasis.spec/mouse-state (s/keys :req-un [:samak.mouse/type]))
 
 (def oasis
-             [(defncall 'ui 'pipes/ui)
+             [(defncall 'ui 'pipes/ui (api/integer 2))
               (defncall 'mouse 'pipes/mouse)
               (defncall 'keyboard 'pipes/keyboard)
               (defncall 'd 'pipes/debug)
@@ -329,7 +336,6 @@
                 (api/fn-call (api/symbol '=) [(api/string "sink")]))
 
               (defncall 'get-animation-style '->
-                (api/fn-call (api/symbol 'spy) [(api/string "anim")])
                 (api/fn-call (api/symbol 'if) [(api/symbol 'is-hovered-entry)
                                                (api/fn-call (api/symbol 'if) [(api/symbol 'is-entry-sink)
                                                                               (api/symbol 'animate-sink)
@@ -1303,7 +1309,7 @@
               (defncall 'handle-load '->
                 (api/key-fn :data)
                 (api/fn-call (api/symbol 'spy) [(api/string "load")])
-                (api/symbol 'load-node)
+                ;; (api/symbol 'load-node)
                 (api/map {(api/keyword :load) (api/keyword :none)}))
 
               (defncall 'is-mode-change '->
@@ -2410,9 +2416,9 @@
 
               (red 'mouse 'mouse-reduce 'mouse-state)
               (red 'mouse 'target-reduce 'target-events)
-              (pipe 'target-events 'only-different 'hover-events)
-              (pipe 'hover-events 'tag-hover 'hover-state)
 
+              (pipe 'target-events 'only-different 'hover-events)
+              ;; (pipe 'hover-events 'tag-hover 'hover-state)
 
               (pipe 'keyboard 'filter-key-input 'keyboard-filtered)
               (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
@@ -2528,7 +2534,7 @@
 
 
 (defn start []
-  (into oasis network))
+  (into oasis (flatten network)))
 
-(defn store [db]
-  (db/parse-tree->db! db oasis))
+(defn store [stores]
+  (.persist-tree! stores oasis))

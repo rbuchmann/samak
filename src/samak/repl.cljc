@@ -1,34 +1,39 @@
 (ns samak.repl
   #?@
-   (:clj
-    [(:require
-      [clojure.edn :as edn]
-      [clojure.string :as str]
-      [samak.lisparser :as p]
-      [samak.oasis :as oasis]
-      [samak.pipes :as pipes]
-      [samak.api :as api]
-      [samak.runtime :as run]
-      [samak.stdlib :as std]
-      [samak.caravan :as caravan]
-      [samak.tools :as t]
-      [samak.core :as core])]
-    :cljs
-    [(:require
-      [cljs.reader :as edn]
-      [clojure.string :as str]
-      [samak.lisparser :as p]
-      [samak.oasis :as oasis]
-      [samak.pipes :as pipes]
-      [samak.api :as api]
-      [samak.runtime :as run]
-      [samak.stdlib :as std]
-      [samak.caravan :as caravan]
-      [samak.tools :as t]
-      [samak.core :as core])]))
+  (:clj
+   [(:require
+     [clojure.edn :as edn]
+     [clojure.string :as str]
+     [samak.lisparser :as p]
+     [samak.oasis :as oasis]
+     [samak.pipes :as pipes]
+     [samak.runtime :as run]
+     [samak.stdlib :as std]
+     [samak.caravan :as caravan]
+     [samak.api :as api]
+     [samak.tools :as t]
+     [samak.core :as core]
+     [samak.runtime.servers :as servers]
+     [samak.runtime.stores :as stores])]
+   :cljs
+   [(:require
+     [cljs.reader :as edn]
+     [clojure.string :as str]
+     [samak.lisparser :as p]
+     [samak.oasis :as oasis]
+     [samak.pipes :as pipes]
+     [samak.runtime :as run]
+     [samak.stdlib :as std]
+     [samak.caravan :as caravan]
+     [samak.api :as api]
+     [samak.tools :as t]
+     [samak.core :as core]
+     [samak.runtime.servers :as servers]
+     [samak.runtime.stores :as stores])]))
 
-(def rt (run/make-runtime (keys core/samak-symbols)))
-(caravan/init (:db rt))
+(def rt (atom (run/make-runtime core/samak-symbols)))
+(caravan/init @rt)
+
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -49,7 +54,7 @@
 
 (defn fire-event-into-named-pipe
   [pipe-name event]
-  (let [pipe (run/get-definition-by-name rt (symbol pipe-name))]
+  (let [pipe (run/get-definition-by-name @rt (symbol pipe-name))]
     (if (pipes/pipe? pipe)
       (do (let [arg (edn/read-string event)]
             (pipes/fire! pipe arg))
@@ -60,8 +65,8 @@
   ""
   [length]
   (fn [state [nr exp]]
-    (let [progress (* (/ nr length) 100)]
-      (when (= 0 (mod progress 10)) (println (str (int progress) "%")))
+    (let [progress (int (* (/ nr length) 100))]
+      (when (= 0 (mod progress 10)) (println (str progress "%")))
       (run/eval-expression! state exp))))
 
 
@@ -69,21 +74,23 @@
   []
   (let [exps (oasis/start)
         numbered (map-indexed vector exps)
-        state (reduce (eval-oasis (count numbered)) rt numbered)
+        state (reduce (eval-oasis (count numbered)) @rt numbered)
         parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
     (println "oasis loaded")
+    (reset! rt state)
     (fire-event-into-named-pipe "oasis" "1")
     (println "oasis started")
     (doseq [expression parsed]
         (caravan/repl-eval expression))
-    (run/get-defined-ids (reduce run/eval-expression! rt parsed)state)))
+    (servers/get-defined (:server @rt))))
 
 (def repl-prefixes
   {\f (fn [in] (let [[pipe-name event] (str/split in #" " 2)]
                         (fire-event-into-named-pipe pipe-name event)))
    \o (fn [_] (start-oasis))
-   \e (fn [_] (println "Defined symbols:\n" (->> rt
-                                                run/get-defined-ids
+   \e (fn [_] (println "Defined symbols:\n" (->> @rt
+                                                :server
+                                                servers/get-defined
                                                 t/pretty)))
    \p (fn [in] (println (parse-samak-string in)))})
 
@@ -100,9 +107,9 @@
     (run-repl-cmd input)
     (when-let [parsed (parse-samak-string input)]
       (println parsed)
-      (doseq [expression parsed]
-        (caravan/repl-eval expression))
-      (reduce run/eval-expression! rt parsed))))
+      #_(doseq [expression parsed]
+          (caravan/repl-eval expression))
+      (swap! rt #(reduce run/eval-expression! % parsed)))))
 
 (defn group-repl-cmds [lines]
   (->> lines
@@ -115,70 +122,63 @@
   (doseq [line (group-repl-cmds lines)]
     (eval-line line)))
 
+(def t0
+  ["(def in (|> inc inc))"])
+
 (def t
-  (str/split-lines
-   "(def in (|> inc inc))
-(def out (pipes/log))
-(| in out)
-!f in 5"))
+  ["(def in (|> inc inc))"
+   "(def out (pipes/log))"
+   "(| in out)"
+   "!f in 5"])
 
 (def tm
-  (str/split-lines
-   "(def in (|> {:foo inc}))
-(def out (pipes/log))
-(| in out)
-!f in 5"))
+  ["(def in (|> {:foo inc}))"
+   "(def out (pipes/log))"
+   "(| in out)"
+   "!f in 5"])
 
 (def tl
-  (str/split-lines
-"(def in (pipes/debug))
-(def out (pipes/log))
-(| in (|> inc inc) out)
-!f in 5"))
-
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (|> inc inc) out)"
+   "!f in 5"])
 
 (def tl2
-  (str/split-lines
-"(def in (pipes/debug))
-(def out (pipes/log))
-(| in (|> [:div id]) out)
-!f in 42"))
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (|> [:div id]) out)"
+   "!f in 42"])
 
 (def tl3
-  (str/split-lines
-"(def in (pipes/debug))
-(def out (pipes/log))
-(| in (|> (if even? id ignore)) out)
-!f in 5
-!f in 6"))
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (|> (if even? id ignore)) out)"
+   "!f in 5"
+   "!f in 6"])
 
 (def tl3b
-  (str/split-lines
-   "(def in (pipes/debug))
-(def out (pipes/log))
-(| in (|> (only even?)) out)
-!f in 5
-!f in 6"))
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (|> (only even?)) out)"
+   "!f in 5"
+   "!f in 6"])
 
 (def tl4
-  (str/split-lines
-   "(def in (pipes/debug))
-(def out (pipes/log))
-(| in (pipes/reductions (-> [:-next :-state] sum) 0) out)
-!f in 5
-!f in 6"))
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (pipes/reductions (-> [:-next :-state] sum) 0) out)"
+   "!f in 5"
+   "!f in 6"])
 
 (def tl4b
-  (str/split-lines
-   "(def in (pipes/debug))
-(def out (pipes/log))
-(| in (pipes/reductions (-> [:-state :-next] into) {}) out)
-!f in 5
-!f in 6"))
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (pipes/reductions (-> [:-state :-next] into) {}) out)"
+   "!f in 5"
+   "!f in 6"])
 
 (def tl5
-  (str/split-lines
-   "(def in (pipes/debug))
-(def out (pipes/log))
-(| in (|> (mapcat (repeat 3))) out)
-!f in [5 6]"))
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (|> (mapcat (repeat 3))) out)"
+   "!f in [5 6]"])

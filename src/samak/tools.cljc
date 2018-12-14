@@ -11,6 +11,12 @@
     #?(:cljs (.log js/console msg)
        :clj (println msg))))
 
+(defn fail [& args]
+  (let [msg (->> args (interpose " ") (apply str))]
+    (throw
+     #?(:clj  (Exception. msg)
+        :cljs (js/Error.  msg)))))
+
 (defn pretty [x]
   (with-out-str
     (pprint x)))

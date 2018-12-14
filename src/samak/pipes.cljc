@@ -29,8 +29,8 @@
 (defn pipe? [p]
   (satisfies? Pipe p))
 
-(defprotocol Disconnectable
-  (disconnect [this]))
+(defprotocol CleanupRequired
+  (clean-up [this]))
 
 (defrecord Sink [ch in-spec]
   Pipe
@@ -93,8 +93,8 @@
   (out-port [_] (out-port b))
   (in-spec [_] (in-spec a))
   (out-spec [_] (out-spec b))
-  Disconnectable
-  (disconnect [_] (a/untap (out-port a) (in-port b))))
+  CleanupRequired
+  (clean-up [_] (a/untap (out-port a) (in-port b))))
 
 (defn composite-pipe [a b]
   (CompositePipe. a b))
