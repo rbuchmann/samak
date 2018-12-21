@@ -147,21 +147,29 @@
          is-stdlib
          (not is-reductions))))
 
+(defn reset-rt
+  ""
+  [rt]
+  (reset! rt (reduce rt/eval-expression! @rt @net))
+  (let [p (rt/get-definition-by-name @rt (symbol "start"))
+        r (when p (pipes/fire! p "1"))]
+    (println (str "fire! " p " - " r))))
+
+
 (defn add-node
   ""
   [sym fn]
-  (println (str "new node: " sym))
   (swap! fns assoc sym fn)
   (println (str "function cache: " (keys @fns)))
-  (println (str "code: " (get @fns sym)))
   (swap! rt-preview rt/link-storage (:store @rt-conn))
   (swap! rt-preview rt/eval-expression! fn)
+  (reset-rt rt-preview)
   (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
         ast (make-cell-list fn)]
     (if (empty? ast)
       (println (str "ERROR: no ast for: " sym " - " fn))
       (notify-source {:caravan/type type
-                      :caravan/name sym
+                      :caravan/name (str sym)
                       :caravan/ast ast}))))
 
 (defn name-of-node
@@ -181,9 +189,7 @@
     (swap! net conj pipe)
     (swap! rt-preview rt/link-storage (:store @rt-conn))
     (swap! rt-preview rt/eval-expression! pipe)
-    (let [p (rt/get-definition-by-name @rt-preview (symbol "start"))
-          r (when p (pipes/fire! p "1"))]
-      (println (str "fire! " p " - " r)))
+    (reset-rt rt-preview)
     (notify-source {:caravan/type :caravan/pipe
                     :caravan/source source
                     :caravan/func func
@@ -304,7 +310,7 @@
   []
   (fn [{:keys [sym cell type] :as x}]
     (println (str "adding: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell)]
       (when (and sym src idx type)
         (let [[cell par par-idx] (add-cell-internal src idx)
@@ -327,6 +333,7 @@
   (println (str "type: " cell " - " value))
   (case (:samak.nodes/type cell)
     :samak.nodes/fn-call (assoc cell :samak.nodes/fn (api/symbol (symbol value)))
+    :samak.nodes/keyword (assoc cell :samak.nodes/value (keyword value))
     (assoc cell :samak.nodes/value value)))
 
 
@@ -335,7 +342,7 @@
   []
   (fn [{:keys [sym cell value] :as x}]
     (println (str "editing: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell)]
       (when (and sym src idx value)
           (let [[cell par] (add-cell-internal src idx)
@@ -360,7 +367,7 @@
   []
   (fn [{:keys [:sym :cell-idx :target] :as x}]
     (println (str "swap: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell-idx)]
       (when (and sym src idx target)
           (let [[cell par par-idx] (add-cell-internal src idx)
@@ -391,7 +398,7 @@
   []
   (fn [{:keys [sym cell-idx] :as x}]
     (println (str "cut: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell-idx)]
       (when (and sym src idx)
           (let [[cell par par-idx] (add-cell-internal src idx)
@@ -412,7 +419,7 @@
   []
   (fn [{:keys [sym cell-idx] :as x}]
     (println (str "indent: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell-idx)]
       (when (and sym src idx type)
           (let [[cell par par-idx] (add-cell-internal src idx)
@@ -458,7 +465,7 @@
     (println "connect: " x)
     (when (and sink source (not= sink source))
         (let [connector  (str "c/" source "-" sink)
-              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '->) [(api/vector [(api/keyword :div) (api/string "Hello world")])])]))
+              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '->) [(api/vector [(api/keyword :h1) (api/string "Hello world")])])]))
           fn-ast (single! fn)
               pipe (api/pipe [(api/symbol (symbol source))
                               (api/symbol (symbol connector))

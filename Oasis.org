@@ -71,7 +71,15 @@ Oasis roadmap
 ** TODO Navigation across nets
 ** TODO Search
 
-* Testing [%]
+* Testing [0%]
+** Unit Tests [0/2]
+*** TODO use spec to generate tests
+*** TODO write manual testcases as pairs of input/output?
+** Integration [/]
+*** TODO create Test source
+*** TODO make an assert sink
+*** TODO events need to contain meta data
+** Mocks?
 * Linting [0%]
 ** TODO general function setup/robustness
 ** TODO safeguard edit operations
