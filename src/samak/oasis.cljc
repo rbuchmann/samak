@@ -1933,7 +1933,7 @@
                 (api/fn-call (api/symbol 'spy) [(api/string "action")])
                 (api/map {(api/keyword :state) (api/key-fn :state)
                           (api/keyword :next) (api/map {(api/keyword :actions)
-                                                        (api/vector [(api/string "AS navigate")
+                                                        (api/vector [(api/string "WS navigate")
                                                                      (api/string "F insert")
                                                                      (api/string "D indent")
                                                                      (api/string "Shift-WS Swap")

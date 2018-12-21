@@ -2,6 +2,7 @@
   #?@
   (:clj
    [(:require
+     [clojure.spec.alpha :as s]
      [clj-http.client :as http]
      [clojure.core.async :as a :refer [<! put! chan go go-loop close!]]
      [samak.pipes :as pipes]
@@ -13,6 +14,7 @@
      [samak.protocols :as p])]
    :cljs
    [(:require
+     [clojure.spec.alpha :as s]
      [cljs-http.client :as http]
      [cljs.core.async :as a :refer [<! put! chan close!]]
      [clojure.string :as str]
@@ -24,6 +26,12 @@
      [samak.protocols :as p]
      [net.cgrand.xforms :as x])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
+
+(s/def ::hiccup
+  (s/cat :tag        keyword?
+            :attributes (s/? map?)
+            :content    (s/* (s/or :terminal string?
+                                   :element  ::hiccup))))
 
 ;; Utility helper
 
@@ -109,9 +117,11 @@
            ui-out (chan)]
        (go-loop []
          (when-some [x (<! ui-in)]
-           (when-let [node (js/document.getElementById (str "samak" n))]
-             (when (not n) (.warn js/console (str "render " n " - " x)))
-             (r/render (transform-element x ui-out) node))
+           (if (s/valid? ::hiccup x)
+             (when-let [node (js/document.getElementById (str "samak" n))]
+               (when (not n) (.warn js/console (str "render " n " - " x)))
+               (r/render (transform-element x ui-out) node))
+             (.warn js/console (str "invalid " n " - " (s/explain-str ::hiccup x))))
            (recur)))
        (pipes/pipe ui-in ui-out))))
 
