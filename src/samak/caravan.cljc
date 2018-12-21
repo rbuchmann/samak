@@ -407,7 +407,7 @@
                 removed-args (remove-arg (get par (get-child-key par)) arg-idx)
                 updated (assoc par (get-child-key par) removed-args)
                 target-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:rt/retract (:db/id par) (get-child-key par) (:db/id target-node)]]
+                retract [:db/retract (:db/id par) (get-child-key par) (:db/id target-node)]]
             (let [write (persist! @rt-conn [updated retract])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
@@ -436,7 +436,7 @@
                 updated (update-in par [(get-child-key par)] #(assoc % (dec arg-idx) inserted))
                 _ (println (str "updated: " updated))
                 retract-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:rt/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
+                retract [:db/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
                 _ (println (str "retract: " retract))
                 ]
             (let [write (persist! @rt-conn [updated retract])
@@ -465,7 +465,7 @@
     (println "connect: " x)
     (when (and sink source (not= sink source))
         (let [connector  (str "c/" source "-" sink)
-              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '->) [(api/vector [(api/keyword :h1) (api/string "Hello world")])])]))
+              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '->) [(api/vector [(api/keyword :div) (api/string "Hello world")])])]))
           fn-ast (single! fn)
               pipe (api/pipe [(api/symbol (symbol source))
                               (api/symbol (symbol connector))
