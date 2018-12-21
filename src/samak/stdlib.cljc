@@ -3,6 +3,7 @@
   (:clj
    [(:require
      [clojure.spec.alpha :as s]
+     [expound.alpha :as expound]
      [clj-http.client :as http]
      [clojure.core.async :as a :refer [<! put! chan go go-loop close!]]
      [samak.pipes :as pipes]
@@ -15,6 +16,7 @@
    :cljs
    [(:require
      [clojure.spec.alpha :as s]
+     [expound.alpha :as expound]
      [cljs-http.client :as http]
      [cljs.core.async :as a :refer [<! put! chan close!]]
      [clojure.string :as str]
@@ -121,7 +123,7 @@
              (when-let [node (js/document.getElementById (str "samak" n))]
                (when (not n) (.warn js/console (str "render " n " - " x)))
                (r/render (transform-element x ui-out) node))
-             (.warn js/console (str "invalid " n " - " (s/explain-str ::hiccup x))))
+             (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x))))
            (recur)))
        (pipes/pipe ui-in ui-out))))
 

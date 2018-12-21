@@ -3,8 +3,8 @@
             :url  "https://opensource.org/licenses/MIT"}
   :source-paths ["src" "ui_src"]
   :description "A hello world application for electron"
-  :dependencies [[org.clojure/clojure "1.9.0-beta2"]
-                 [org.clojure/clojurescript "1.10.238"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
+                 [org.clojure/clojurescript "1.10.439"]
                  [figwheel "0.5.16"]
                  [reagent "0.6.1"]
                  [garden "1.3.2"]
@@ -22,6 +22,7 @@
                  ;; [org.eclipse.elk/parent "0.3.0" :extension "pom"]
                  [camel-snake-kebab "0.4.0"]
                  [keybind "2.1.0"]
+                 [expound "0.7.2"]
                  [org.clojure/test.check "0.9.0"]]
   :plugins [[lein-cljsbuild "1.1.7"]
             [lein-figwheel "0.5.16"]
