@@ -1933,7 +1933,7 @@
                 (api/fn-call (api/symbol 'spy) [(api/string "action")])
                 (api/map {(api/keyword :state) (api/key-fn :state)
                           (api/keyword :next) (api/map {(api/keyword :actions)
-                                                        (api/vector [(api/string "AS navigate")
+                                                        (api/vector [(api/string "WS navigate")
                                                                      (api/string "F insert")
                                                                      (api/string "D indent")
                                                                      (api/string "Shift-WS Swap")
@@ -2135,7 +2135,7 @@
 
               (defncall 'graph-body '->
                 (api/fn-call (api/symbol 'reduce) [(api/symbol 'reduce-exps) (api/map {(api/keyword :cells)
-                                                                                       (api/vector [(api/keyword :g)])})])
+                                                                                       (api/vector [])})])
                 (api/key-fn :cells)
                 (api/vector [(api/vector [(api/keyword :g) (api/map {(api/keyword :style) (api/map {(api/keyword :font-family) (api/string "monospace")})})]) (api/symbol 'id)])
                 (api/fn-call (api/symbol 'into) []))
@@ -2327,7 +2327,10 @@
                 (api/fn-call (api/symbol '->)
                              [(api/vector [(api/key-fn :state) (api/key-fn :next)])
                               (api/fn-call (api/symbol 'concat) [(api/map {})]) ])
-                (api/map {}))
+                (api/map {(api/keyword :graph) (api/vector [(api/keyword :g)])
+                          (api/keyword :sink-menu) (api/vector [(api/keyword :g)])
+                          (api/keyword :source-menu) (api/vector [(api/keyword :g)])
+                          (api/keyword :action-menu) (api/vector [(api/keyword :g)])}))
 
               (defncall 'reducer 'pipes/debug (api/keyword :oasis.spec/gui))
               (defncall 'render 'pipes/debug (api/keyword :oasis.spec/render))
@@ -2405,8 +2408,7 @@
                                                         (api/keyword :y) (api/integer 50)})}))
 
 
-              ]
-  )
+              ])
 
 (def network
   [              ;; networks

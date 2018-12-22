@@ -3,6 +3,7 @@
             [clojure.walk   :as w]
             [samak.api      :as api]
             [samak.runtime  :as rt]
+            [samak.pipes    :as pipes]
             [samak.builtins :as builtins]
             [samak.stdlib   :as std]))
 
@@ -146,17 +147,29 @@
          is-stdlib
          (not is-reductions))))
 
+(defn reset-rt
+  ""
+  [rt]
+  (reset! rt (reduce rt/eval-expression! @rt @net))
+  (let [p (rt/get-definition-by-name @rt (symbol "start"))
+        r (when p (pipes/fire! p "1"))]
+    (println (str "fire! " p " - " r))))
+
+
 (defn add-node
   ""
   [sym fn]
   (swap! fns assoc sym fn)
   (println (str "function cache: " (keys @fns)))
+  (swap! rt-preview rt/link-storage (:store @rt-conn))
+  (swap! rt-preview rt/eval-expression! fn)
+  (reset-rt rt-preview)
   (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
         ast (make-cell-list fn)]
     (if (empty? ast)
       (println (str "ERROR: no ast for: " sym " - " fn))
       (notify-source {:caravan/type type
-                      :caravan/name sym
+                      :caravan/name (str sym)
                       :caravan/ast ast}))))
 
 (defn name-of-node
@@ -174,7 +187,9 @@
         func (name-of-node (second args))
         sink (name-of-node (nth args 2))]
     (swap! net conj pipe)
-    ;; (rt/eval-expression! @rt-preview pipe)
+    (swap! rt-preview rt/link-storage (:store @rt-conn))
+    (swap! rt-preview rt/eval-expression! pipe)
+    (reset-rt rt-preview)
     (notify-source {:caravan/type :caravan/pipe
                     :caravan/source source
                     :caravan/func func
@@ -208,7 +223,7 @@
   (if (api/is-pipe? exp)
     (add-pipe exp)
     (let [loaded (single! exp)]
-      (add-node (str (:samak.nodes/name exp)) loaded))))
+      (add-node (symbol (str (:samak.nodes/name exp))) loaded))))
 
 
 (defn find-cell-internal
@@ -295,7 +310,7 @@
   []
   (fn [{:keys [sym cell type] :as x}]
     (println (str "adding: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell)]
       (when (and sym src idx type)
         (let [[cell par par-idx] (add-cell-internal src idx)
@@ -309,7 +324,7 @@
             (let [write (persist! @rt-conn [updated])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp)
+              (add-node (symbol sym) exp)
               :done))))))
 
 (defn value-from-type
@@ -318,6 +333,7 @@
   (println (str "type: " cell " - " value))
   (case (:samak.nodes/type cell)
     :samak.nodes/fn-call (assoc cell :samak.nodes/fn (api/symbol (symbol value)))
+    :samak.nodes/keyword (assoc cell :samak.nodes/value (keyword value))
     (assoc cell :samak.nodes/value value)))
 
 
@@ -326,7 +342,7 @@
   []
   (fn [{:keys [sym cell value] :as x}]
     (println (str "editing: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell)]
       (when (and sym src idx value)
           (let [[cell par] (add-cell-internal src idx)
@@ -335,7 +351,7 @@
             (let [write (persist! @rt-conn [updated])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp)))))))
+              (add-node (symbol sym) exp)))))))
 
 
 (defn change-order
@@ -351,7 +367,7 @@
   []
   (fn [{:keys [:sym :cell-idx :target] :as x}]
     (println (str "swap: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell-idx)]
       (when (and sym src idx target)
           (let [[cell par par-idx] (add-cell-internal src idx)
@@ -364,7 +380,7 @@
             (let [write (persist! @rt-conn [node])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp))
+              (add-node (symbol sym) exp))
             )))))
 
 (defn remove-arg
@@ -382,7 +398,7 @@
   []
   (fn [{:keys [sym cell-idx] :as x}]
     (println (str "cut: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell-idx)]
       (when (and sym src idx)
           (let [[cell par par-idx] (add-cell-internal src idx)
@@ -391,11 +407,11 @@
                 removed-args (remove-arg (get par (get-child-key par)) arg-idx)
                 updated (assoc par (get-child-key par) removed-args)
                 target-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:rt/retract (:db/id par) (get-child-key par) (:db/id target-node)]]
+                retract [:db/retract (:db/id par) (get-child-key par) (:db/id target-node)]]
             (let [write (persist! @rt-conn [updated retract])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp)
+              (add-node (symbol sym) exp)
               :done))))))
 
 (defn indent-cell
@@ -403,7 +419,7 @@
   []
   (fn [{:keys [sym cell-idx] :as x}]
     (println (str "indent: " x))
-    (let [src (get @fns sym)
+    (let [src (get @fns (symbol sym))
           idx (dec cell-idx)]
       (when (and sym src idx type)
           (let [[cell par par-idx] (add-cell-internal src idx)
@@ -420,13 +436,13 @@
                 updated (update-in par [(get-child-key par)] #(assoc % (dec arg-idx) inserted))
                 _ (println (str "updated: " updated))
                 retract-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:rt/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
+                retract [:db/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
                 _ (println (str "retract: " retract))
                 ]
             (let [write (persist! @rt-conn [updated retract])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node sym exp)
+              (add-node (symbol sym) exp)
               :done))))))
 
 (defn create-sink
@@ -439,7 +455,7 @@
           exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
           ast (single! exp)]
       (println (str "res: " ast))
-      (add-node sym ast)
+      (add-node (symbol sym) ast)
       :okay)))
 
 (defn connect
@@ -449,13 +465,15 @@
     (println "connect: " x)
     (when (and sink source (not= sink source))
         (let [connector  (str "c/" source "-" sink)
-          fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol 'id) [])]))
+              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '->) [(api/vector [(api/keyword :div) (api/string "Hello world")])])]))
           fn-ast (single! fn)
-          pipe (api/pipe [(api/symbol source) (api/symbol connector) (api/symbol sink)])]
-      (add-node connector fn-ast)
-      (add-pipe pipe)
-      ;; [fn-ast pipe]
-      :okay))))
+              pipe (api/pipe [(api/symbol (symbol source))
+                              (api/symbol (symbol connector))
+                              (api/symbol (symbol sink))])]
+          (add-node (symbol connector) fn-ast)
+          (add-pipe pipe)
+          ;; [fn-ast pipe]
+          :okay))))
 
 ;; (defn load-node
 ;;   ""

@@ -21,6 +21,12 @@
           (map (partial stores/load-by-id (:store runtime)))
           (update runtime :server eval-all)))))
 
+(defn link-storage
+  ""
+  [rt storage]
+  (assoc rt :store storage))
+
+
 ;; Toplevel code transformation
 
 (defmulti transform-expression ::n/type)
