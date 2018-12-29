@@ -467,9 +467,9 @@
         (let [connector  (str "c/" source "-" sink)
               fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '->) [(api/vector [(api/keyword :div) (api/string "Hello world")])])]))
           fn-ast (single! fn)
-              pipe (api/pipe [(api/symbol (symbol source))
-                              (api/symbol (symbol connector))
-                              (api/symbol (symbol sink))])]
+              pipe (api/pipe (api/symbol (symbol source))
+                             (api/symbol (symbol connector))
+                             (api/symbol (symbol sink)))]
           (add-node (symbol connector) fn-ast)
           (add-pipe pipe)
           ;; [fn-ast pipe]

@@ -20,9 +20,16 @@
   #:samak.nodes{:type :samak.nodes/fn-ref
                 :fn   [:samak.nodes/name identifier]})
 
-(defn pipe [args]
-  #:samak.nodes {:type      :samak.nodes/pipe
-                 :arguments (tools/ordered args)})
+(defn pipe
+  ([from to]
+   #:samak.nodes {:type :samak.nodes/pipe
+                  :from from
+                  :to   to})
+  ([from xf to]
+   #:samak.nodes {:type :samak.nodes/pipe
+                  :from from
+                  :to   to
+                  :xf   xf}))
 
 (defn map-entry
   ""

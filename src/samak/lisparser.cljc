@@ -10,7 +10,7 @@
   (when-let [[f & args] (not-empty l)]
     (case f
       def (let [[name-sym rhs] args] (api/defexp name-sym (form->ast rhs)))
-      |   (api/pipe (map form->ast args))
+      |   (apply api/pipe (map form->ast args))
       (api/fn-call (form->ast f) (map form->ast args)))))
 
 (defn key-fn-or-keyword [k]

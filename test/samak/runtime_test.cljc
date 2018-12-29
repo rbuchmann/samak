@@ -4,6 +4,7 @@
 
                :cljs [cljs.test    :as t :include-macros true])
             [samak.code-db         :as db]
+            [samak.stdlib          :as std]
             [samak.runtime.stores  :as stores]
             [samak.runtime.servers :as servers]
             [datascript.core       :as d]))
@@ -27,28 +28,24 @@
 
 
 (def pipe-node
-  #:samak.nodes{:type :samak.nodes/pipe,
-                :arguments
-                [{:order        0,
-                  :samak.nodes/node
-                  #:samak.nodes {:type         :samak.nodes/fn-call,
-                                 :fn-expression
-                                 #:samak.nodes {:type
-                                                :samak.nodes/builtin,
-                                                :value 'pipes/debug},
-                                 :arguments    []}}
-                 {:order        1,
-                  :samak.nodes/node
-                  #:samak.nodes {:type         :samak.nodes/fn-call,
-                                 :fn-expression
-                                 #:samak.nodes {:type
-                                                :samak.nodes/builtin,
-                                                :value 'pipes/log},
-                                 :arguments    []}}]})
+  #:samak.nodes {:type :samak.nodes/pipe
+                 :from #:samak.nodes {:type         :samak.nodes/fn-call,
+                                      :fn-expression
+                                      #:samak.nodes {:type
+                                                     :samak.nodes/builtin,
+                                                     :value 'pipes/debug},
+                                      :arguments    []}
+                 :to   #:samak.nodes {:type         :samak.nodes/fn-call,
+                                      :fn-expression
+                                      #:samak.nodes {:type
+                                                     :samak.nodes/builtin,
+                                                     :value 'pipes/log},
+                                      :arguments    []}})
 
 (deftest should-eval-pipe-node
-  (let [r         (sut/make-runtime '[pipes/debug pipes/log])
-        new-state (sut/eval-expression! r pipe-node)
+  (let [r              (sut/make-runtime {'pipes/debug std/debug
+                                          'pipes/log   std/log})
+        new-state      (sut/eval-expression! r pipe-node)
         defined-things (-> new-state :server servers/get-defined vals)]
     (is (some samak.pipes/pipe? defined-things))))
 
@@ -87,7 +84,7 @@
 
 
 (deftest should-persist-builtins
-  (is (= inc (-> (sut/make-runtime ['inc 'dec])
+  (is (= inc (-> (sut/make-runtime {'inc inc 'dec dec})
                  :server
                  servers/get-defined
                  (get 1)))))

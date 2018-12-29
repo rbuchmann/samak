@@ -29,5 +29,5 @@
   (is (= {:test 1} (n/eval-node (api/map {(api/keyword :test) (api/integer 1)})))))
 
 (deftest should-eval-builtins
-  (is (= 2 ((n/eval-node (api/defexp 'inc (api/builtin 'inc))) 1)))
-  )
+  (binding [n/*builtins* {'inc inc}]
+    (is (= 2 ((n/eval-node (api/defexp 'inc (api/builtin 'inc))) 1)))))

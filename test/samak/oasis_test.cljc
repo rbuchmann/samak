@@ -11,7 +11,7 @@
                 :cljs [[cljs.test         :as t :refer [is deftest] :include-macros true]
                        [cljs.spec.alpha   :as s] :include-macros true])))
 
-(def rt (runtime/make-runtime (keys c/samak-symbols)))
+(def rt (runtime/make-runtime c/samak-symbols))
 
 #_(deftest should-be-oasis
   (is (some #(and (= (:samak.nodes/type %) :samak.nodes/def)
@@ -38,10 +38,10 @@
 ;;       (is (= 'oasis (:samak.nodes/name oasis)))
 ;;       (is (s/valid? :samak.spec/toplevel-exp oasis)))))
 
-(deftest should-persist
+#_(deftest should-persist
   (let [store (:store rt)]
     (is (some? (sut/store store)))
-    (let [id (.resolve-name store 'oasis)
-          oasis (.load-by-id store id)]
+    (let [id    (stores/resolve-name store 'oasis)
+          oasis (stores/load-by-id store id)]
       (is (= 'oasis (:samak.nodes/name oasis)))
       (is (s/valid? :samak.spec/toplevel-exp oasis)))))

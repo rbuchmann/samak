@@ -1,6 +1,6 @@
 (ns samak.spec
   (:require #?(:clj  [clojure.spec.alpha :as s]
-               :cljs [cljs.spec.alpha :as s])))
+               :cljs [cljs.spec.alpha    :as s])))
 
 
 (defmulti nested-exp :samak.nodes/type)
@@ -29,7 +29,8 @@
                                            :samak.nodes/rhs]))
 
 (s/def :samak.spec/pipe (s/keys :req [:samak.nodes/type
-                                      :samak.nodes/arguments]))
+                                      :samak.nodes/from
+                                      :samak.nodes/to]))
 
 (defmulti toplevel-exp :samak.nodes/type)
 (defmethod toplevel-exp :samak.nodes/def [_] :samak.spec/eval-node)

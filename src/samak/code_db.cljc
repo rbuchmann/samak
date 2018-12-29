@@ -15,6 +15,8 @@
                                            :db/isComponent false}
                            :fn-expression {:db/valueType   :db.type/ref
                                            :db/isComponent true}
+                           :xf            {:db/valueType   :db.type/ref
+                                           :db/isComponent true}
                            :rhs           {:db/valueType   :db.type/ref
                                            :db/isComponent true}
                            :mapkv-pairs   {:db/cardinality :db.cardinality/many

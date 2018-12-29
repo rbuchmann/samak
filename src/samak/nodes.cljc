@@ -50,7 +50,13 @@
 
 (defmethod eval-node ::def [{:keys [::rhs]}] (eval-node rhs))
 
-(defmethod eval-node ::pipe [ast] ast)
+(defmethod eval-node ::pipe [{:keys [::from ::to ::xf]}]
+  (let [a (eval-node from)
+        b (when xf (eval-node xf))
+        c (eval-node to)]
+    (if b
+      (pipes/link! (pipes/link! a b) c)
+      (pipes/link! a c))))
 
 (defmethod eval-node ::fn-ref [{:keys [::fn]}]
   (or (get *environment* (:db/id fn))

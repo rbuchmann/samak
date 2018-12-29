@@ -29,19 +29,8 @@
 
 ;; Toplevel code transformation
 
-(defmulti transform-expression ::n/type)
-
-(defmethod transform-expression ::n/pipe [ast]
-  (->> ast ::n/arguments (sort-by :order) (map ::n/node)
-       (partition 2 1)
-       (map-indexed (fn [i [a b]]
-                      {::n/type ::n/link
-                       ::n/from a
-                       ::n/to   b
-                       :db/id   (- (inc i))}))))
-
 ;; This covers the ::n/def case as well
-(defmethod transform-expression :default [ast]
+(defn ast->tx-records [ast]
   [(assoc ast :db/id -1)])
 
 ;; Applying the transformation and wrap network
@@ -51,7 +40,7 @@
 
 (defn rewrite-expression [network-name form]
   (->> form
-       transform-expression
+       ast->tx-records
        #_(wrap-network network-name)))
 
 ;; Evaluation - Dumb and without dependency resolution for now

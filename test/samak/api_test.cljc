@@ -5,10 +5,13 @@
             [clojure.spec.alpha   :as s]
             [samak.api            :as api]))
 
-(def valid-pipe #:samak.nodes{:type :samak.nodes/pipe,
-                              :arguments
-                              '[{:order 0, :samak.nodes/node [:samak.nodes/name a]}
-                                {:order 1, :samak.nodes/node [:samak.nodes/name b]}]})
+(def valid-pipe #:samak.nodes{:type         :samak.nodes/pipe,
+                              :from
+                              #:samak.nodes {:type :samak.nodes/fn-ref,
+                                             :fn   [:samak.nodes/name 'a]},
+                              :to
+                              #:samak.nodes {:type :samak.nodes/fn-ref,
+                                             :fn   [:samak.nodes/name 'b]}})
 
 
 (deftest should-detect-symbol-ast
@@ -16,7 +19,7 @@
                                       :value 'foo})))
 
 (deftest should-generate-pipe-ast
-  (is (= valid-pipe (sut/pipe [(sut/symbol 'a) (sut/symbol 'b)]))))
+  (is (= valid-pipe (sut/pipe (sut/symbol 'a) (sut/symbol 'b)))))
 
 ;; (deftest should-generate-compose-ast
 ;;   (is (= valid-pipe (sut/compose [(sut/symbol 'a) (sut/symbol 'b)]))))

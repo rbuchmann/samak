@@ -42,20 +42,20 @@
 (defn pipe
   ""
   ([in out]
-   (api/pipe [(api/symbol in) (api/symbol out)]))
+   (api/pipe (api/symbol in) (api/symbol out)))
   ([in x out]
    (let [xfer (symbol (str "x-" (name x)))]
      [(pipify x)
-      (api/pipe [(api/symbol in)
-              (api/symbol xfer)
-              (api/symbol out)])])))
+      (api/pipe (api/symbol in)
+                (api/symbol xfer)
+                (api/symbol out))])))
 
 (defn red
   ""
   ([in x out]
-   (api/pipe [(api/symbol in)
-              (api/symbol x)
-              (api/symbol out)])))
+   (api/pipe (api/symbol in)
+             (api/symbol x)
+             (api/symbol out))))
 
 (s/def ::hiccup
   (s/cat :tag        keyword?
@@ -76,8 +76,8 @@
 (s/def :oasis.spec/mouse-event (s/keys :req-un [:samak.mouse/type]))
 (s/def :oasis.spec/mouse-state (s/keys :req-un [:samak.mouse/type]))
 
-(def oasis
-             [(defncall 'ui 'pipes/ui (api/integer 2))
+(def oasis []
+             #_[(defncall 'ui 'pipes/ui (api/integer 2))
               (defncall 'mouse 'pipes/mouse)
               (defncall 'keyboard 'pipes/keyboard)
               (defncall 'd 'pipes/debug)

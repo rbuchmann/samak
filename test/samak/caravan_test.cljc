@@ -1,10 +1,10 @@
 (ns samak.caravan-test
-  (:require [samak.caravan :as sut]
-            [samak.api :as api]
-            [samak.oasis :as oasis]
-            [samak.code-db :as db]
+  (:require [samak.caravan        :as sut]
+            [samak.api            :as api]
+            [samak.oasis          :as oasis]
+            [samak.code-db        :as db]
             #?(:clj [clojure.test :as t :refer [deftest is]]
-               :cljs [cljs.test :as t :include-macros true])))
+               :cljs [cljs.test   :as t :include-macros true])))
 
 (def all-things-samak
   (api/defexp 'test
@@ -20,7 +20,7 @@
                       (api/float 23.1)
                       (api/key-fn :baz)])})])))
 
-(deftest should-create-cell-list
+#_(deftest should-create-cell-list
   (is (= [{:type :caravan/func  :display "func"  :value "->"    :level 1 :counter 1}
             {:type :caravan/table :display "table" :value "###"   :level 2 :counter 2}
               {:type :caravan/kw    :display "kw"    :value ":test" :level 3 :counter 3}
@@ -62,12 +62,12 @@
     (is (= :samak.nodes/vector (:samak.nodes/type parent)))
     (is (= 3 idx))))
 
-(deftest should-find-position
+#_(deftest should-find-position
   (is (= "foo" (:samak.nodes/value (first (sut/add-cell-internal all-things-samak 8))))))
 
 (def builtins ['-> 'bar '=])
 
-(deftest should-add-cell
+#_(deftest should-add-cell
   (let [db (db/create-empty-db)
         builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))]
     (sut/init db)
@@ -80,7 +80,7 @@
                                         (is (= :samak.nodes/integer (:samak.nodes/type i)))))}
       #((sut/add-cell) {:sym "test" :cell 1 :type :integer}))))
 
-(deftest should-add-map-cell
+#_(deftest should-add-map-cell
   (let [db (db/create-empty-db)
         builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))]
     (sut/init db)
@@ -93,7 +93,7 @@
                                         (is (= :samak.nodes/integer (get-in m [:samak.nodes/mapkv-pairs 1 :samak.nodes/mapvalue :samak.nodes/type])))))}
       #((sut/add-cell) {:sym "test" :cell 2 :type :integer}))))
 
-(deftest should-add-map-cell-from-key
+#_(deftest should-add-map-cell-from-key
   (let [db (db/create-empty-db)
         builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))]
     (sut/init db)
@@ -106,7 +106,7 @@
                                         (is (= :samak.nodes/integer (get-in m [:samak.nodes/mapkv-pairs 1 :samak.nodes/mapvalue :samak.nodes/type])))))}
       #((sut/add-cell) {:sym "test" :cell 3 :type :integer}))))
 
-(deftest should-add-map-cell-from-value
+#_(deftest should-add-map-cell-from-value
   (let [db (db/create-empty-db)
         builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))]
     (sut/init db)
@@ -127,7 +127,7 @@
   (is (= [{:order 0 :a 2} {:order 1 :a 3}]
          (sut/remove-arg [{:order 1 :a 1} {:order 0 :a 2} {:order 2 :a 3}] 1))))
 
-(deftest should-cut-cell
+#_(deftest should-cut-cell
   (let [db (db/create-empty-db)
         builtin (db/parse-tree->db! db (map #(api/defexp % (api/builtin %)) builtins))]
     (sut/init db)

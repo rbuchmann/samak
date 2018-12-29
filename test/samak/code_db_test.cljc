@@ -94,4 +94,4 @@
 
 (deftest should-calculate-dep-edges
   (let [db (make-example-db true)]
-    (is (= #{'[foo inc]} (load-named-dependency-edges db (db/resolve-name db 'pipe))))))
+    (is (= '[(bar dec) (input pipes/debug) (foo inc)] (load-named-dependency-edges db (db/resolve-name db 'pipe))))))

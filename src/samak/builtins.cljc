@@ -5,7 +5,7 @@
             [clojure.string           :as s]
             [samak.tools              :as tools]
             [samak.pipes              :as pipes]
-            [clojure.string :as str]))
+            [clojure.string           :as str]))
 
 (defn if* [pred then else]
   (let [pred* (p/eval-as-fn pred)
@@ -225,19 +225,28 @@
   (fn [x]
     (apply min x)))
 
-(defn pipify
+
+;; TODO: This happens before evaling-as-samak-fn, so it breaks a ton
+;; of stuff, commented it out for now
+#_(defn pipify
   ""
-  [f]
-  (if (nil? f) (throw (str "trying to connect with nil function")))
-  (pipes/instrument (chain (fn [x]
-    (if (or (nil? f) (nil? x)) (println (str "pipify " f " on " x)))
-    (f x))))
-  )
+  [& args]
+  (when (some nil? args)
+    (throw (str "trying to connect with nil function")))
+  (->> args
+       (map (fn [f]
+              (fn [x]
+                (if (or (nil? f) (nil? x))
+                  (println (str "Trying to call nil function or value:" f " on " x))
+                  (f x)))))
+       (apply chain)
+       pipes/instrument
+       ))
 
 
 (def samak-symbols
   {'->     chain
-   '|>     pipify
+   '|>     (comp pipes/instrument chain)
    'id     identity
    'map    (curry1fn mapv)
    'reduce reduce*
