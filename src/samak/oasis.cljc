@@ -76,8 +76,7 @@
 (s/def :oasis.spec/mouse-event (s/keys :req-un [:samak.mouse/type]))
 (s/def :oasis.spec/mouse-state (s/keys :req-un [:samak.mouse/type]))
 
-(def oasis []
-             #_[(defncall 'ui 'pipes/ui (api/integer 2))
+(def oasis   [(defncall 'ui 'pipes/ui (api/integer 2))
               (defncall 'mouse 'pipes/mouse)
               (defncall 'keyboard 'pipes/keyboard)
               (defncall 'd 'pipes/debug)
