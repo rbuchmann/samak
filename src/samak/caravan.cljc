@@ -23,7 +23,8 @@
   (println (str "func: " node))
   {:type :caravan/func
    :display "func"
-   :value (str (get-in node [:samak.nodes/fn-expression :samak.nodes/fn :samak.nodes/name]))})
+   :value (str (or (get-in node [:samak.nodes/fn-expression :samak.nodes/fn :samak.nodes/name])
+                   (get-in node [:samak.nodes/fn-expression :samak.nodes/fn 1])))})
 
 (defmethod handle-node
   :samak.nodes/integer
@@ -175,25 +176,26 @@
 (defn name-of-node
   ""
   [node]
-  (str (second (get-in node [:samak.nodes/node :samak.nodes/fn]))))
+  (str (second (get-in node [:samak.nodes/fn]))))
 
 
 (defn add-pipe
   ""
   [pipe]
   (println (str "add pipe " pipe))
-  (let [args (:samak.nodes/arguments pipe)
-        source (name-of-node (first args))
-        func (name-of-node (second args))
-        sink (name-of-node (nth args 2))]
-    (swap! net conj pipe)
-    (swap! rt-preview rt/link-storage (:store @rt-conn))
-    (swap! rt-preview rt/eval-expression! pipe)
-    (reset-rt rt-preview)
-    (notify-source {:caravan/type :caravan/pipe
-                    :caravan/source source
-                    :caravan/func func
-                    :caravan/sink sink})))
+  (let [source (name-of-node (:samak.nodes/from pipe))
+        func (name-of-node (:samak.nodes/xf pipe))
+        sink (name-of-node (:samak.nodes/to pipe))]
+    (println (str "adding pipe from " source " with " func " to " sink))
+    (when (and source func sink)
+      (swap! net conj pipe)
+      (swap! rt-preview rt/link-storage (:store @rt-conn))
+      (swap! rt-preview rt/eval-expression! pipe)
+      (reset-rt rt-preview)
+      (notify-source {:caravan/type :caravan/pipe
+                      :caravan/source source
+                      :caravan/func func
+                      :caravan/sink sink}))))
 
 (defn load-ast
   "loads an ast given by its entity id from the database"
@@ -465,8 +467,8 @@
     (println "connect: " x)
     (when (and sink source (not= sink source))
         (let [connector  (str "c/" source "-" sink)
-              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '->) [(api/vector [(api/keyword :div) (api/string "Hello world")])])]))
-          fn-ast (single! fn)
+              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/vector [(api/keyword :div) (api/string "Hello world")])]))
+              fn-ast (single! fn)
               pipe (api/pipe (api/symbol (symbol source))
                              (api/symbol (symbol connector))
                              (api/symbol (symbol sink)))]
