@@ -10,11 +10,9 @@
   (re-matches #"f[0-9]*" (name s)))
 
 (defmacro samakify
-  "Turns a function or special form into a samak higher order
-  function. Some parameters have a special meaning:
-  - ? can be ommitted and will be replaced by identity
-  - All parameters called f<number?> will be taken to be function
-    arguments and not applied to the input in the returned closure."
+  "Turns a function or special form into a samak higher order function.
+  All parameters called f<number?> will be taken to be function
+  arguments and not applied to the input in the returned closure."
   [f argvec]
   (let [[p-args [_ v-arg]] (split-with #(not= '& %) argvec) ; positional + variadic args
         sym-map            (into {} (for [arg (cons v-arg p-args)]
