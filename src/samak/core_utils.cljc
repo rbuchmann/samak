@@ -26,11 +26,8 @@
                                        (sym-map arg)
                                        (list (sym-map arg) input-sym)))
                                    (when v-arg
-                                     [`(map (fn [f#] (f# ~input-sym)) ~v-arg)]))]
+                                     [`(map (fn [f#] (f# ~input-sym)) ~(sym-map v-arg))]))]
     `(fn ~fn-name
-       ~@(when (some #{'?} argvec)
-           [`(~(->> argvec (remove #{'?}) vec)
-              (~fn-name ~@(replace {'? 'identity} argvec)))])
        (~argvec
         (let [~@(apply concat (for [arg p-args]
                                 [(sym-map arg) `(p/eval-as-fn ~arg)]))
@@ -50,4 +47,4 @@
             (let [[f argvec] dfn]
               `['~f (samakify ~f ~argvec)])))))
 
-;; (samakify-all (if [pred then else]) [foo (inc [?])])
+;; (samakify-all (if [pred then else]) [foo (inc [?])] (map [f col]) (concat [& args]))
