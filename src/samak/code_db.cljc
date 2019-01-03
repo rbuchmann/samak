@@ -1,12 +1,6 @@
 (ns samak.code-db
-  #?@
-   (:clj
-    [(:require [datascript.core :as d]
-               [clojure.walk    :as w])]
-    :cljs
-    [(:require [datascript.core :as d]
-               [reagent.core :as r]
-               [clojure.walk    :as w])]))
+  (:require [datascript.core :as d]
+            [clojure.walk    :as w]))
 
 (def schema #:samak.nodes {:arguments     {:db/isComponent true
                                            :db/valueType   :db.type/ref
@@ -63,8 +57,9 @@
       (depends ?p ?a)
       (depends ?a ?b)]]))
 
-#?(:cljs (defn create-ratom-db [schema]
-           (r/atom (d/empty-db schema) :meta {:listeners (atom {}) })))
+;; TODO: Not actually needed, (re)move?
+;; #?(:cljs (defn create-ratom-db [schema]
+;;            (r/atom (d/empty-db schema) :meta {:listeners (atom {}) })))
 
 (defn create-empty-db []
   (d/create-conn schema))

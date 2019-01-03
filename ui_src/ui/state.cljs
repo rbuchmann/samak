@@ -14,7 +14,7 @@
    :defined-symbols core/samak-symbols})
 
 (defonce app-state (r/atom (make-initial-state)))
-(defonce db (db/create-ratom-db db/schema))
+(defonce db (db/create-empty-db))
 (defonce keybinds-needed? (atom true))
 
 (defn reset-state! [state]

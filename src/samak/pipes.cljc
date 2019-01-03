@@ -1,24 +1,23 @@
 (ns samak.pipes
-  #?@
+  #?
   (:clj
-   [(:require
-     [clojure.core.async :as a :refer [chan put!]]
-     [clojure.spec.alpha :as s]
-     [com.stuartsierra.dependency :as dep]
-     [samak.tools :refer [log]]
-     [samak.protocols :as p]
-     [samak.transduction-tools :as tt])]
+   (:require
+    [clojure.core.async :as a :refer [chan put!]]
+    [clojure.spec.alpha :as s]
+    [com.stuartsierra.dependency :as dep]
+    [samak.tools :as t]
+    [samak.protocols :as p]
+    [samak.transduction-tools :as tt])
    :cljs
-   [(:require
-     [cljs.core.async :as a :refer [chan put!]]
-     [cljs.spec.alpha :as s]
-     [com.stuartsierra.dependency :as dep]
-     [samak.protocols :as p]
-     [samak.tools :refer [log]]
-     [samak.transduction-tools :as tt])]))
+   (:require
+    [cljs.core.async :as a :refer [chan put!]]
+    [cljs.spec.alpha :as s]
+    [com.stuartsierra.dependency :as dep]
+    [samak.protocols :as p]
+    [samak.tools :as t]
+    [samak.transduction-tools :as tt])))
 
 ;; Pipes and flow control
-
 
 (defprotocol Pipe
   (in-port [this])
@@ -83,7 +82,7 @@
 (def ports (juxt in-port out-port))
 
 (defn fire! [pipe event]
-  (log (str "Fired event: " event))
+  (t/log (str "Fired event: " event))
   (let [intake (in-port pipe)]
     (put! intake event)))
 

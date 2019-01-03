@@ -6,6 +6,10 @@
 
 (def vconj (fnil conj []))
 
+(defn eval-all-lines [state lines]
+  (repl/eval-lines lines)
+  (reduce state #(update %1 :repl-lines vconj %2) lines))
+
 (defn eval-line-with-state [state line]
   (repl/eval-line line)
   (update state :repl-lines vconj line))

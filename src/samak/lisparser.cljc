@@ -38,6 +38,6 @@
     (let [sexps (edn/read-string (str "[" s "]"))]
       {:value (mapv form->ast sexps)})
     #?(:cljs (catch js/Error e
-               {:error (.-message e)})
+               {:error (str "Error parsing: " s ", error was:" (.-message e))})
        :clj  (catch Exception e
-               {:error (.getMessage e)}))))
+               {:error (str "Error parsing: " s ", error was:" (.-getMessage e))}))))
