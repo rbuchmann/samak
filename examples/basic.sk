@@ -1,0 +1,4 @@
+(def in (pipes/debug))
+(def out (pipes/log))
+(| in inc out)
+!f in 5

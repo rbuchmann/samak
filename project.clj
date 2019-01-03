@@ -48,7 +48,7 @@
                     :optimizations  :simple
                     :pretty-print   true
                     :cache-analysis true}}
-    {:source-paths ["src" "dev_src"]
+    {:source-paths ["src" "ui_src"]
      :id           "frontend-dev"
      :compiler     {:output-to      "resources/public/js/ui-core.js"
                     :output-dir     "resources/public/js/ui-out"
@@ -56,7 +56,18 @@
                     :asset-path     "js/ui-out"
                     :optimizations  :none
                     :cache-analysis true
-                    :main           "dev.core"}}
+                    :main           "ui.core"}}
+    {:source-paths ["src" "cli_src"]
+     :id           "cli-dev"
+     :compiler     {:output-to      "cli/samak-cli.js"
+                    :output-dir     "cli"
+                    ;; :source-map     true
+                    :asset-path     "cli"
+                    :optimizations  :advanced
+                    :cache-analysis true
+                    :target         :nodejs
+                    :infer-externs  true
+                    :main           "cli.node-core"}}
     {:source-paths ["electron_src"]
      :id           "electron-release"
      :compiler     {:output-to      "resources/main.js"

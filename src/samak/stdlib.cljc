@@ -241,9 +241,9 @@
 
 ;; Graph Layouting
 
- (defn layout-call [request res]
-   (let [handler (fn [result] (put! res result) (close! res))]
-     (layout/compute-layout request [] handler handler)))
+(defn layout-call [request res]
+  (let [handler (fn [result] (put! res result) (close! res))]
+    (layout/compute-layout request [] handler handler)))
 
 (defn layout []
   (pipes/async-pipe layout-call nil nil))

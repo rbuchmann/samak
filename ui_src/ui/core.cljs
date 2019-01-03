@@ -20,7 +20,7 @@
 (defn load-samak-file [state filename]
   (->> (.readFileSync fs filename)
        str/split-lines
-       (reduce repl/eval-line-with-state state)))
+       (repl/eval-all-lines state)))
 
 (defonce file-loaded? (atom false))
 
