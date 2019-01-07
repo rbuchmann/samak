@@ -106,7 +106,7 @@
   (if (str/starts-with? input "!")
     (run-repl-cmd input)
     (when-let [parsed (parse-samak-string input)]
-      (println parsed)
+      #_(println parsed)
       #_(doseq [expression parsed]
           (caravan/repl-eval expression))
       (swap! rt #(reduce run/eval-expression! % parsed)))))

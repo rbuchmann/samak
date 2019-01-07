@@ -8,7 +8,7 @@
      [clojure.core.async :as a :refer [<! put! chan go go-loop close!]]
      [samak.pipes :as pipes]
      [samak.code-db :as db]
-     [samak.layout :as layout]
+     #_[samak.layout :as layout]
      [samak.tools :as tools]
      [clojure.string :as str]
      [net.cgrand.xforms :as x]
@@ -20,10 +20,10 @@
      [cljs-http.client :as http]
      [cljs.core.async :as a :refer [<! put! chan close!]]
      [clojure.string :as str]
-     [reagent.core :as r]
+     #_[reagent.core :as r]
      [samak.pipes :as pipes]
      [samak.code-db :as db]
-     [samak.layout :as layout]
+     #_[samak.layout :as layout]
      [samak.tools :as tools]
      [samak.protocols :as p]
      [net.cgrand.xforms :as x])
@@ -122,7 +122,7 @@
            (if (s/valid? ::hiccup x)
              (when-let [node (js/document.getElementById (str "samak" n))]
                (when (not n) (.warn js/console (str "render " n " - " x)))
-               (r/render (transform-element x ui-out) node))
+               #_(r/render (transform-element x ui-out) node))
              (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x))))
            (recur)))
        (pipes/pipe ui-in ui-out))))
@@ -241,12 +241,12 @@
 
 ;; Graph Layouting
 
-(defn layout-call [request res]
-  (let [handler (fn [result] (put! res result) (close! res))]
-    (layout/compute-layout request [] handler handler)))
+;; (defn layout-call [request res]
+;;   (let [handler (fn [result] (put! res result) (close! res))]
+;;     (layout/compute-layout request [] handler handler)))
 
-(defn layout []
-  (pipes/async-pipe layout-call nil nil))
+;; (defn layout []
+;;   (pipes/async-pipe layout-call nil nil))
 
 
 ;; General purpose
@@ -272,5 +272,5 @@
     ;; 'pipes/eval-line   eval-line
     'pipes/mouse       mouse
     'pipes/keyboard    keyboard
-    'pipes/layout      layout
+    ;; 'pipes/layout      layout
     'pipes/reductions  reductions*}))

@@ -17,3 +17,4 @@ figwheel_server.log
 node_modules/
 /resources/public/css/main.css
 /resources/main.js
+/cli
