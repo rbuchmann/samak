@@ -44,6 +44,10 @@
     (fn [y]
       (f x y))))
 
+(defn remove* [f]
+  (fn [x]
+    (filterv (comp not (p/eval-as-fn f)) x)))
+
 (defn mapcatv [f]
   (fn [x]
     (vec (mapcat (p/eval-as-fn f) x))))
@@ -253,7 +257,7 @@
    'filter (curry1fn filterv)
    'only   #(if* % identity tt/ignore)
    'except #(if* % tt/ignore identity)
-   'remove (curry1fn filterv)
+   'remove remove*
    'mapcat mapcatv
    'repeat repeat*
    'zip    interleave*
