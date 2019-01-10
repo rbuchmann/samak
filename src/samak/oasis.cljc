@@ -1928,18 +1928,61 @@
                 (api/key-fn :mode)
                 (api/fn-call (api/symbol '=) [(api/keyword :insert)]))
 
+
+              (defncall 'is-hover-func '->
+                (api/key-fn :type)
+                (api/fn-call (api/symbol '=) [(api/string "func")]))
+
+              (defncall 'is-hover-sink '->
+                (api/key-fn :type)
+                (api/fn-call (api/symbol '=) [(api/string "sink")]))
+
+              (defncall 'is-hover-source '->
+                (api/key-fn :type)
+                (api/fn-call (api/symbol '=) [(api/string "source")]))
+
+              (defncall 'construct-lmb-action '->
+                (api/key-fn :next)
+                (api/key-fn :editor)
+                (api/key-fn :hover)
+                (api/fn-call (api/symbol 'nth) [(api/integer 1)])
+                (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-sink)
+                                                    (api/vector [(api/string "LMB construct")])])
+                (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-source)
+                                                    (api/vector [(api/string "LMB construct")])])
+                (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-func)
+                                                    (api/vector [(api/string "LMB select")])]))
+
+              (defncall 'construct-mouse-actions '->
+                (api/vector [(api/symbol 'construct-lmb-action)
+                             (api/string "RMB pan")])
+                (api/fn-call (api/symbol 'remove) [(api/key-fn :type)]))
+
+
+              (defncall 'is-func-selected '->
+                (api/key-fn :editor)
+                (api/key-fn :selected))
+
+              (defncall 'construct-selected-action '->
+                (api/key-fn :next)
+                (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-func-selected)
+                                                    (api/vector [(api/string "WS navigate")
+                                                                 (api/string "F insert")
+                                                                 (api/string "D indent")
+                                                                 (api/string "Shift-WS Swap")
+                                                                 (api/string "X cut")])]))
+              (defncall 'construct-key-actions '->
+                (api/vector [(api/symbol 'construct-selected-action)
+                             (api/string "+- zoom")])
+                (api/fn-call (api/symbol 'remove) [(api/key-fn :editor)]))
+
               (defncall 'add-nav-actions '->
-                (api/fn-call (api/symbol 'spy) [(api/string "action")])
                 (api/map {(api/keyword :state) (api/key-fn :state)
                           (api/keyword :next) (api/map {(api/keyword :actions)
-                                                        (api/vector [(api/string "WS navigate")
-                                                                     (api/string "F insert")
-                                                                     (api/string "D indent")
-                                                                     (api/string "Shift-WS Swap")
-                                                                     (api/string "X cut")
-                                                                     (api/string "+- zoom")
-                                                                     (api/string "LMB select")
-                                                                     (api/string "RMB pan")])})}))
+                                                        (api/fn-call (api/symbol '->)
+                                                                     [(api/vector [(api/symbol 'construct-key-actions)
+                                                                                   (api/symbol 'construct-mouse-actions)])
+                                                                      (api/symbol 'flatten)])})}))
 
               (defncall 'is-change-navigate '->
                 (api/key-fn :editor)
@@ -2419,7 +2462,7 @@
               (red 'mouse 'target-reduce 'target-events)
 
               (pipe 'target-events 'only-different 'hover-events)
-              ;; (pipe 'hover-events 'tag-hover 'hover-state)
+              (pipe 'hover-events 'tag-hover 'hover-state)
 
               (pipe 'keyboard 'filter-key-input 'keyboard-filtered)
               (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
@@ -2476,7 +2519,7 @@
               (red 'hover-state 'state-reduce 'state)
               (red 'mode-state 'state-reduce 'state)
               (red 'events 'state-reduce 'state)
-              (pipe 'state 'log-state)
+              ;; (pipe 'state 'log-state)
 
               (pipe 'eval-state 'format-state 'layout)
               (pipe 'eval-state 'format-state 'log-layout)
@@ -2498,7 +2541,7 @@
               (pipe 'mode-state 'editor-actions)
               (pipe 'events 'editor-actions)
 
-              (red 'editor-actions 'handle-state 'log-command)
+              ;; (red 'editor-actions 'handle-state 'log-command)
 
               (pipe 'state 'graph 'svg-render)
               (red 'render 'elements-reduce 'reducer)
