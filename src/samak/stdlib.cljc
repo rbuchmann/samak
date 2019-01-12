@@ -80,10 +80,21 @@
      [x]
      (into {} (for [k (.keys js/Object x)] [(keyword k) (aget x k)]))))
 
+(defn mouse-button-to-keyword
+  ""
+  [e]
+  (get {0 :primary
+        1 :middle
+        2 :secondary}
+       e
+       :unknown))
+
+
 (defmulti convert-event #(:type (to-clj %)))
 (defmethod convert-event "change" [ev] {:target {:value (.-value (:target (to-clj ev)))}})
 (defmethod convert-event "submit" [ev] (do (.preventDefault ev) (to-clj ev)))
-(defmethod convert-event "click"  [ev] (do (println (str ev)) {:target {:id (.-id (:target (to-clj ev)))}}))
+(defmethod convert-event "click"  [ev] (let [e (to-clj ev)] (println e) {:target {:id (.-id (:target e))}
+                                                                         :button (mouse-button-to-keyword (:button e))}))
 (defmethod convert-event nil [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 (defmethod convert-event :default [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 
@@ -135,7 +146,7 @@
        (set! (.-onmousedown (.-body js/document))
              (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
                                    {:samak.mouse/type :down
-                                    :samak.mouse/button (.-button event)
+                                    :samak.mouse/button (mouse-button-to-keyword (.-button event))
                                     :samak.mouse/page-x (.-pageX event)
                                     :samak.mouse/page-y (.-pageY event)
                                     :samak.mouse/target (.-id (.-target event))}
@@ -144,7 +155,7 @@
        (set! (.-onmouseup (.-body js/document))
              (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
                                    {:samak.mouse/type :up
-                                    :samak.mouse/button (.-button event)
+                                    :samak.mouse/button (mouse-button-to-keyword (.-button event))
                                     :samak.mouse/page-x (.-pageX event)
                                     :samak.mouse/page-y (.-pageY event)
                                     :samak.mouse/target (.-id (.-target event))

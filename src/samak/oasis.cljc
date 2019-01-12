@@ -186,16 +186,19 @@
                               (api/symbol 'handle-submit)
                               (api/symbol 'ignore)]))
 
-              (defncall 'is-click-event '->
-                (api/key-fn :data)
-                (api/fn-call (api/symbol '=) [(api/keyword :click)]))
+              (defncall 'is-lmb-click-event '->
+                (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '->) [(api/key-fn :data)
+                                                                               (api/fn-call (api/symbol '=) [(api/keyword :click)])])
+                                                (api/fn-call (api/symbol '->) [(api/key-fn :event)
+                                                                               (api/key-fn :button)
+                                                                               (api/fn-call (api/symbol '=) [(api/keyword :primary)])])]))
 
               (defncall 'construct-select '->
                 (api/map {(api/keyword :command) (api/keyword :select)
                           (api/keyword :data) (api/key-fn :event)}))
 
               (defncall 'filter-select 'if
-                (api/symbol 'is-click-event)
+                (api/symbol 'is-lmb-click-event)
                 (api/symbol 'construct-select)
                 (api/symbol 'ignore))
 
@@ -634,6 +637,7 @@
                           (api/keyword :next) (api/map {(api/keyword :drag)
                                                         (api/map {(api/keyword :active) (api/keyword :false)
                                                                   (api/keyword :end) (api/keyword :end)
+                                                                  (api/keyword :button) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/button)])
                                                                   (api/keyword :target) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/target)])
                                                                   (api/keyword :source) (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :source)])})})}))
 
@@ -1058,7 +1062,6 @@
                 (api/fn-call (api/symbol '=) [(api/string "source")]))
 
               (defncall 'handle-mouse-click '->
-                (api/fn-call (api/symbol 'spy) [(api/string "click")])
                 (api/key-fn :source)
                 (api/symbol 'make-target)
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-source)
@@ -1068,11 +1071,19 @@
                 (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
                                                    (api/symbol 'ignore)]))
 
+              (defncall 'is-lmb-event '->
+                (api/key-fn :button)
+                (api/fn-call (api/symbol '=) [(api/keyword :primary)]))
+
               (defncall 'is-mouse-click '->
                 (api/vector [(api/key-fn :source) (api/key-fn :target)])
                 (api/fn-call (api/symbol 'unique) [])
                 (api/symbol 'count)
                 (api/fn-call (api/symbol '=) [(api/integer 1)]))
+
+              (defncall 'is-lmb-click '->
+                (api/fn-call (api/symbol 'and) [(api/symbol 'is-lmb-event)
+                                                (api/symbol 'is-mouse-click)]))
 
               (defncall 'get-pipe-name '->
                 (api/fn-call (api/symbol 'drop) [(api/integer 5)]) ;; pipe/
@@ -1108,7 +1119,7 @@
               (defncall 'interpret-drag '->
                 (api/key-fn :mouse)
                 (api/key-fn :drag)
-                (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mouse-click)
+                (api/fn-call (api/symbol 'incase) [(api/symbol 'is-lmb-click)
                                                    (api/symbol 'handle-mouse-click)])
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'both-pipe)
                                                    (api/symbol 'handle-mouse-connect)])
@@ -1119,9 +1130,10 @@
                 (api/key-fn :mouse)
                 (api/key-fn :drag)
                 (api/key-fn :button)
-                (api/fn-call (api/symbol '=) [(api/integer 2)]))
+                (api/fn-call (api/symbol '=) [(api/keyword :secondary)]))
 
-              (defncall 'filter-scroll 'only (api/symbol 'is-scroll))
+              (defncall 'filter-scroll 'only (api/fn-call (api/symbol 'and) [(api/symbol 'is-scroll)
+                                                                             (api/symbol 'is-drag)]))
 
               (defncall 'scroll-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
                 )
