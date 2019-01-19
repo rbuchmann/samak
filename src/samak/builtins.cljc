@@ -312,4 +312,5 @@
    'indent-cell :noop
    'swap-cell :noop
    'cut-cell :noop
+   'pipes/caravan :noop
    '!      '!})

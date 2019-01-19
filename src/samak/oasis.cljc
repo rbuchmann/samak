@@ -1248,6 +1248,11 @@
               (defncall 'editor-state 'pipes/debug)
               (defncall 'select-events 'pipes/debug)
 
+              (defncall 'be-commands 'pipes/debug)
+              (defncall 'caravan 'pipes/caravan)
+
+              (defncall 'filter-call 'only (api/key-fn :call))
+
               (defncall 'mode-state 'pipes/debug)
               (defncall 'mode-raw 'pipes/debug)
 
@@ -1767,18 +1772,15 @@
                           (api/keyword :cell) (api/symbol 'get-mark)
                           (api/keyword :type) (api/fn-call (api/symbol '->) [(api/key-fn :next)
                                                                              (api/key-fn :data)
-                                                                             (api/symbol 'map-choice-to-type)])})
-                (api/fn-call (api/symbol 'add-cell) []))
+                                                                             (api/symbol 'map-choice-to-type)])}))
 
               (defncall 'insert-at-pos '->
                 (api/map {(api/keyword :state) (api/key-fn :state)
-                          (api/keyword :next) (api/map {(api/keyword :editor)
-                                                        (api/fn-call (api/symbol '->)
-                                                                     [(api/key-fn :state)
-                                                                      (api/key-fn :editor)
-                                                                      (api/fn-call (api/symbol 'dissoc) [(api/vector [(api/keyword :inserted)])])])
-                                                        (api/keyword :result)
-                                                        (api/symbol 'insert-call)})}))
+                          (api/keyword :next) (api/map {(api/keyword :call)
+                                                        (api/map {(api/keyword :action)
+                                                                  (api/keyword :insert)
+                                                                  (api/keyword :arguments)
+                                                                  (api/symbol 'insert-call)})})}))
 
               (defncall 'edit-call '->
                 (api/map {(api/keyword :sym) (api/symbol 'get-selected-fn-name)
@@ -1900,9 +1902,13 @@
                 (api/key-fn :data)
                 (api/fn-call (api/symbol '=) [(api/keyword :dedent)]))
 
+              (defncall 'reset-call '->
+                (api/fn-call (api/symbol 'dissoc) [(api/vector [(api/keyword :state) (api/keyword :call)])]))
+
               (defncall 'handle-state 'pipes/reductions
                 (api/fn-call (api/symbol '->)
-                             [(api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-insert)
+                             [(api/symbol 'reset-call)
+                              (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-insert)
                                                                                                  (api/symbol 'is-editor-mode-insert)])
                                                                  (api/symbol 'insert-at-pos)])
                               (api/fn-call (api/symbol 'incase) [(api/symbol 'should-fall)
@@ -2553,7 +2559,9 @@
               (pipe 'mode-state 'editor-actions)
               (pipe 'events 'editor-actions)
 
-              ;; (red 'editor-actions 'handle-state 'log-command)
+              (red 'editor-actions 'handle-state 'be-commands)
+              (pipe 'be-commands 'log-command)
+              (pipe 'be-commands 'filter-call 'caravan)
 
               (pipe 'state 'graph 'svg-render)
               (red 'render 'elements-reduce 'reducer)

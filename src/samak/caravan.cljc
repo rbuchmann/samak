@@ -1,11 +1,26 @@
 (ns samak.caravan
-  (:require [clojure.string :as s]
-            [clojure.walk   :as w]
-            [samak.api      :as api]
-            [samak.runtime  :as rt]
-            [samak.pipes    :as pipes]
-            [samak.builtins :as builtins]
-            [samak.stdlib   :as std]))
+  #?@
+  (:clj
+   [(:require [clojure.string :as s]
+              [clojure.walk   :as w]
+              [clojure.core.async :as a :refer [<! put! chan go-loop close!]]
+              [samak.api      :as api]
+              [samak.runtime  :as rt]
+              [samak.pipes    :as pipes]
+              [samak.builtins :as builtins]
+              [samak.stdlib   :as std]
+              [samak.tools :as tools])]
+   :cljs
+   [(:require [clojure.string :as s]
+              [clojure.walk   :as w]
+              [clojure.core.async :as a :refer [<! put! chan close!]]
+              [samak.api      :as api]
+              [samak.runtime  :as rt]
+              [samak.pipes    :as pipes]
+              [samak.builtins :as builtins]
+              [samak.stdlib   :as std]
+              [samak.tools :as tools])
+    (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 (def rt-conn (atom {}))
 (def fns (atom {}))
@@ -309,8 +324,7 @@
 
 (defn add-cell
   ""
-  []
-  (fn [{:keys [sym cell type] :as x}]
+  [{:keys [sym cell type] :as x}]
     (println (str "adding: " x))
     (let [src (get @fns (symbol sym))
           idx (dec cell)]
@@ -327,7 +341,7 @@
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
               (add-node (symbol sym) exp)
-              :done))))))
+              :done)))))
 
 (defn value-from-type
   ""
@@ -467,7 +481,8 @@
     (println "connect: " x)
     (when (and sink source (not= sink source))
         (let [connector  (str "c/" source "-" sink)
-              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/vector [(api/keyword :div) (api/string "Hello world")])]))
+              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol 'id) [])]))
+              ;; fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/vector [(api/keyword :div) (api/string "Hello world")])]))
               fn-ast (single! fn)
               pipe (api/pipe (api/symbol (symbol source))
                              (api/symbol (symbol connector))
@@ -494,9 +509,26 @@
                                              symbols
                                              std/pipe-symbols))))
 
+(defn caravan-pipe
+  ""
+  []
+  (let [caravan-chan (chan)]
+    (go-loop []
+      (when-let [x (<! caravan-chan)]
+        (when-let [call (:call x)]
+          (do
+            (tools/log "foo" call)
+            (case (:action call)
+              :insert (add-cell (:arguments call))
+              (tools/log "actions unknown: " call))))
+        (recur)))
+    (pipes/sink caravan-chan)))
+
+
 (def symbols
   {'create-sink create-sink
    ;; 'load-node load-node
+   'pipes/caravan caravan-pipe
    'connect connect
    'add-cell add-cell
    'swap-cell swap-cell
