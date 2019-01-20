@@ -325,23 +325,23 @@
 (defn add-cell
   ""
   [{:keys [sym cell type] :as x}]
-    (println (str "adding: " x))
-    (let [src (get @fns (symbol sym))
-          idx (dec cell)]
-      (when (and sym src idx type)
-        (let [[cell par par-idx] (add-cell-internal src idx)
-              _ (println (str "cell: " cell))
-              _ (println (str "par: " par))
-              root-id (:db/id src)
-              content (content-from-type type)
-              updated (if (is-mapish cell)
-                        (add-map (if (is-map-node cell) cell par) (- idx 1 par-idx) content)
-                        (add-list (if (is-listy-node cell) cell par) content))]
-            (let [write (persist! @rt-conn [updated])
-                  exp (load-ast @rt-conn root-id)]
-              (println (str "res: " exp))
-              (add-node (symbol sym) exp)
-              :done)))))
+  (println (str "adding: " x))
+  (let [src (get @fns (symbol sym))
+        idx (dec cell)]
+    (when (and sym src idx type)
+      (let [[cell par par-idx] (add-cell-internal src idx)
+            _ (println (str "cell: " cell))
+            _ (println (str "par: " par))
+            root-id (:db/id src)
+            content (content-from-type type)
+            updated (if (is-mapish cell)
+                      (add-map (if (is-map-node cell) cell par) (- idx 1 par-idx) content)
+                      (add-list (if (is-listy-node cell) cell par) content))]
+        (let [write (persist! @rt-conn [updated])
+              exp (load-ast @rt-conn root-id)]
+          (println (str "res: " exp))
+          (add-node (symbol sym) exp)
+          :done)))))
 
 (defn value-from-type
   ""
@@ -355,19 +355,18 @@
 
 (defn edit-cell
   ""
-  []
-  (fn [{:keys [sym cell value] :as x}]
-    (println (str "editing: " x))
-    (let [src (get @fns (symbol sym))
-          idx (dec cell)]
-      (when (and sym src idx value)
-          (let [[cell par] (add-cell-internal src idx)
-                root-id (:db/id src)
-                updated (value-from-type cell value)]
-            (let [write (persist! @rt-conn [updated])
-                  exp (load-ast @rt-conn root-id)]
-              (println (str "res: " exp))
-              (add-node (symbol sym) exp)))))))
+  [{:keys [sym cell value] :as x}]
+  (println (str "editing: " x))
+  (let [src (get @fns (symbol sym))
+        idx (dec cell)]
+    (when (and sym src idx value)
+      (let [[cell par] (add-cell-internal src idx)
+            root-id (:db/id src)
+            updated (value-from-type cell value)]
+        (let [write (persist! @rt-conn [updated])
+              exp (load-ast @rt-conn root-id)]
+          (println (str "res: " exp))
+          (add-node (symbol sym) exp))))))
 
 
 (defn change-order
@@ -380,24 +379,23 @@
 
 (defn swap-cell
   ""
-  []
-  (fn [{:keys [:sym :cell-idx :target] :as x}]
-    (println (str "swap: " x))
-    (let [src (get @fns (symbol sym))
-          idx (dec cell-idx)]
-      (when (and sym src idx target)
-          (let [[cell par par-idx] (add-cell-internal src idx)
-                root-id (:db/id src)
-                arg-source-idx (- idx 1 par-idx)
-                arg-target-idx (- target 2 par-idx)
-                sorted-args (vec (sort-by :order (get par (get-child-key par)))) ;; need to make a copy because sort-by is inplace sometimes
-                changed (change-order sorted-args arg-source-idx arg-target-idx)
-                node (assoc par (get-child-key par) changed)]
-            (let [write (persist! @rt-conn [node])
-                  exp (load-ast @rt-conn root-id)]
-              (println (str "res: " exp))
-              (add-node (symbol sym) exp))
-            )))))
+  [{:keys [:sym :cell-idx :target] :as x}]
+  (println (str "swap: " x))
+  (let [src (get @fns (symbol sym))
+        idx (dec cell-idx)]
+    (when (and sym src idx target)
+      (let [[cell par par-idx] (add-cell-internal src idx)
+            root-id (:db/id src)
+            arg-source-idx (- idx 1 par-idx)
+            arg-target-idx (- target 2 par-idx)
+            sorted-args (vec (sort-by :order (get par (get-child-key par)))) ;; need to make a copy because sort-by is inplace sometimes
+            changed (change-order sorted-args arg-source-idx arg-target-idx)
+            node (assoc par (get-child-key par) changed)]
+        (let [write (persist! @rt-conn [node])
+              exp (load-ast @rt-conn root-id)]
+          (println (str "res: " exp))
+          (add-node (symbol sym) exp))
+        ))))
 
 (defn remove-arg
   ""
@@ -411,55 +409,53 @@
 
 (defn cut-cell
   ""
-  []
-  (fn [{:keys [sym cell-idx] :as x}]
-    (println (str "cut: " x))
-    (let [src (get @fns (symbol sym))
-          idx (dec cell-idx)]
-      (when (and sym src idx)
-          (let [[cell par par-idx] (add-cell-internal src idx)
-                root-id (:db/id src)
-                arg-idx (- idx 1 par-idx)
-                removed-args (remove-arg (get par (get-child-key par)) arg-idx)
-                updated (assoc par (get-child-key par) removed-args)
-                target-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:db/retract (:db/id par) (get-child-key par) (:db/id target-node)]]
-            (let [write (persist! @rt-conn [updated retract])
-                  exp (load-ast @rt-conn root-id)]
-              (println (str "res: " exp))
-              (add-node (symbol sym) exp)
-              :done))))))
+  [{:keys [sym cell-idx] :as x}]
+  (println (str "cut: " x))
+  (let [src (get @fns (symbol sym))
+        idx (dec cell-idx)]
+    (when (and sym src idx)
+      (let [[cell par par-idx] (add-cell-internal src idx)
+            root-id (:db/id src)
+            arg-idx (- idx 1 par-idx)
+            removed-args (remove-arg (get par (get-child-key par)) arg-idx)
+            updated (assoc par (get-child-key par) removed-args)
+            target-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
+            retract [:db/retract (:db/id par) (get-child-key par) (:db/id target-node)]]
+        (let [write (persist! @rt-conn [updated retract])
+              exp (load-ast @rt-conn root-id)]
+          (println (str "res: " exp))
+          (add-node (symbol sym) exp)
+          :done)))))
 
 (defn indent-cell
   ""
-  []
-  (fn [{:keys [sym cell-idx] :as x}]
-    (println (str "indent: " x))
-    (let [src (get @fns (symbol sym))
-          idx (dec cell-idx)]
-      (when (and sym src idx type)
-          (let [[cell par par-idx] (add-cell-internal src idx)
-                root-id (:db/id src)
-                arg-idx (- idx 1 par-idx)
-                removed-args (remove-arg (get par (get-child-key par)) arg-idx)
-                _ (println (str "upd: " removed-args))
-                removed (assoc par (get-child-key par) removed-args)
-                target-node (some #(when (= (:order %) (dec arg-idx)) %) (get par (get-child-key par)))
-                target (:samak.nodes/node target-node)
-                _ (println (str "target: " target))
-                inserted (update target (get-child-key target) conj {:db/id -1 :order (count (get target (get-child-key target))) :samak.nodes/node cell})
-                _ (println (str "inserted: " inserted))
-                updated (update-in par [(get-child-key par)] #(assoc % (dec arg-idx) inserted))
-                _ (println (str "updated: " updated))
-                retract-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-                retract [:db/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
-                _ (println (str "retract: " retract))
-                ]
-            (let [write (persist! @rt-conn [updated retract])
-                  exp (load-ast @rt-conn root-id)]
-              (println (str "res: " exp))
-              (add-node (symbol sym) exp)
-              :done))))))
+  [{:keys [sym cell-idx] :as x}]
+  (println (str "indent: " x))
+  (let [src (get @fns (symbol sym))
+        idx (dec cell-idx)]
+    (when (and sym src idx type)
+      (let [[cell par par-idx] (add-cell-internal src idx)
+            root-id (:db/id src)
+            arg-idx (- idx 1 par-idx)
+            removed-args (remove-arg (get par (get-child-key par)) arg-idx)
+            _ (println (str "upd: " removed-args))
+            removed (assoc par (get-child-key par) removed-args)
+            target-node (some #(when (= (:order %) (dec arg-idx)) %) (get par (get-child-key par)))
+            target (get-in target-node [:samak.nodes/node :samak.nodes/fn-expression])
+            _ (println (str "target: " target))
+            inserted (update target (get-child-key target) conj {:db/id -1 :order (count (get target (get-child-key target))) :samak.nodes/node cell})
+            _ (println (str "inserted: " inserted))
+            updated (update-in par [(get-child-key par)] #(assoc % (dec arg-idx) inserted))
+            _ (println (str "updated: " updated))
+            retract-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
+            retract [:db/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
+            _ (println (str "retract: " retract))
+            ]
+        (let [write (persist! @rt-conn [updated retract])
+              exp (load-ast @rt-conn root-id)]
+          (println (str "res: " exp))
+          (add-node (symbol sym) exp)
+          :done)))))
 
 (defn create-sink
   ""
@@ -517,9 +513,13 @@
       (when-let [x (<! caravan-chan)]
         (when-let [call (:call x)]
           (do
-            (tools/log "foo" call)
+            (tools/log "caravan: " call)
             (case (:action call)
               :insert (add-cell (:arguments call))
+              :edit (edit-cell (:arguments call))
+              :cut (cut-cell (:arguments call))
+              :swap (swap-cell (:arguments call))
+              :indent (indent-cell (:arguments call))
               (tools/log "actions unknown: " call))))
         (recur)))
     (pipes/sink caravan-chan)))
@@ -529,9 +529,4 @@
   {'create-sink create-sink
    ;; 'load-node load-node
    'pipes/caravan caravan-pipe
-   'connect connect
-   'add-cell add-cell
-   'swap-cell swap-cell
-   'cut-cell cut-cell
-   'indent-cell indent-cell
-   'edit-cell edit-cell})
+   'connect connect})

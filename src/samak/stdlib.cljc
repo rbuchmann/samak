@@ -93,8 +93,8 @@
 (defmulti convert-event #(:type (to-clj %)))
 (defmethod convert-event "change" [ev] {:target {:value (.-value (:target (to-clj ev)))}})
 (defmethod convert-event "submit" [ev] (do (.preventDefault ev) (to-clj ev)))
-(defmethod convert-event "click"  [ev] (let [e (to-clj ev)] (println e) {:target {:id (.-id (:target e))}
-                                                                         :button (mouse-button-to-keyword (:button e))}))
+(defmethod convert-event "click"  [ev] (let [e (to-clj ev)] {:target {:id (.-id (:target e))}
+                                                             :button (mouse-button-to-keyword (:button e))}))
 (defmethod convert-event nil [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 (defmethod convert-event :default [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 
@@ -145,8 +145,8 @@
      (let [c (chan)]
        (set! (.-onmousedown (.-body js/document))
              (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
-                                   {:samak.mouse/type :down
                                     :samak.mouse/button (mouse-button-to-keyword (.-button event))
+                                   {:samak.mouse/type :down
                                     :samak.mouse/page-x (.-pageX event)
                                     :samak.mouse/page-y (.-pageY event)
                                     :samak.mouse/target (.-id (.-target event))}

@@ -1787,36 +1787,42 @@
                           (api/keyword :cell) (api/symbol 'get-mark)
                           (api/keyword :value) (api/fn-call (api/symbol '->) [(api/key-fn :state)
                                                                               (api/key-fn :events)
-                                                                              (api/key-fn :input)])})
-                (api/fn-call (api/symbol 'edit-cell) []))
+                                                                              (api/key-fn :input)])}))
 
 
 
               (defncall 'edit-at-pos '->
                 (api/map {(api/keyword :state) (api/key-fn :state)
-                          (api/keyword :next) (api/map {(api/keyword :result)
-                                                        (api/symbol 'edit-call)})}))
+                          (api/keyword :next) (api/map {(api/keyword :call)
+                                                        (api/map {(api/keyword :action)
+                                                                  (api/keyword :edit)
+                                                                  (api/keyword :arguments)
+                                                                  (api/symbol 'edit-call)})})}))
 
               (defncall 'swap-call '->
                 (api/map {(api/keyword :sym) (api/symbol 'get-selected-fn-name)
                           (api/keyword :cell-idx) (api/symbol 'get-mark)
-                          (api/keyword :target) (api/key-fn :target)})
-                (api/fn-call (api/symbol 'swap-cell) []))
+                          (api/keyword :target) (api/key-fn :target)}))
 
               (defncall 'swap-at-pos '->
                 (api/map {(api/keyword :state) (api/key-fn :state)
-                          (api/keyword :next) (api/map {(api/keyword :result)
-                                                        (api/symbol 'swap-call)})}))
+                          (api/keyword :next) (api/map {(api/keyword :call)
+                                                        (api/map {(api/keyword :action)
+                                                                  (api/keyword :swap)
+                                                                  (api/keyword :arguments)
+                                                                  (api/symbol 'swap-call)})})}))
 
               (defncall 'cut-call '->
                 (api/map {(api/keyword :sym) (api/symbol 'get-selected-fn-name)
-                          (api/keyword :cell-idx) (api/symbol 'get-mark)})
-                (api/fn-call (api/symbol 'cut-cell) []))
+                          (api/keyword :cell-idx) (api/symbol 'get-mark)}))
 
               (defncall 'cut-at-pos '->
                 (api/map {(api/keyword :state) (api/key-fn :state)
-                          (api/keyword :next) (api/map {(api/keyword :result)
-                                                        (api/symbol 'cut-call)})}))
+                          (api/keyword :next) (api/map {(api/keyword :call)
+                                                        (api/map {(api/keyword :action)
+                                                                  (api/keyword :cut)
+                                                                  (api/keyword :arguments)
+                                                                  (api/symbol 'cut-call)})})}))
 
               (defncall 'fall-at-pos '->
                 (api/map {(api/keyword :state) (api/key-fn :state)
@@ -1834,13 +1840,15 @@
 
               (defncall 'indent-call '->
                 (api/map {(api/keyword :sym) (api/symbol 'get-selected-fn-name)
-                          (api/keyword :cell-idx) (api/symbol 'get-mark)})
-                (api/fn-call (api/symbol 'indent-cell) []))
+                          (api/keyword :cell-idx) (api/symbol 'get-mark)}))
 
               (defncall 'indent-at-pos '->
                 (api/map {(api/keyword :state) (api/key-fn :state)
-                          (api/keyword :next) (api/map {(api/keyword :result)
-                                                        (api/symbol 'indent-call)})}))
+                          (api/keyword :next) (api/map {(api/keyword :call)
+                                                        (api/map {(api/keyword :action)
+                                                                  (api/keyword :indent)
+                                                                  (api/keyword :arguments)
+                                                                  (api/symbol 'indent-call)})})}))
 
               (defncall 'is-insert-state '->
                 (api/key-fn :data)
@@ -2485,8 +2493,8 @@
               (pipe 'keyboard 'filter-key-input 'keyboard-filtered)
               (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
               (pipe 'keyboard-filtered 'filter-menu 'editor-commands)
-              (pipe 'keyboard-filtered 'log-keyboard)
-              (pipe 'keyboard 'log-keyboard)
+              ;; (pipe 'keyboard-filtered 'log-keyboard)
+              ;; (pipe 'keyboard 'log-keyboard)
 
               (pipe 'keyboard-filtered 'filter-view 'view-commands)
               (pipe 'view-commands 'make-zoom 'view-events)
@@ -2518,10 +2526,10 @@
               (pipe 'hover-state 'editor-events)
               (red 'editor-events 'editor-state-reduce 'editor-cooked)
               (pipe 'editor-cooked 'tag-editor 'editor-state)
-              (pipe 'editor-state 'log-editor)
+              ;; (pipe 'editor-state 'log-editor)
 
               (pipe 'editor-commands 'filter-immediate 'editor-immediate)
-              (pipe 'editor-immediate 'log-command)
+              ;; (pipe 'editor-immediate 'log-command)
 
               (pipe 'mouse-state 'filter-scroll 'scroll-state)
               (pipe 'scroll-state 'construct-view 'view-deltas)
@@ -2560,7 +2568,7 @@
               (pipe 'events 'editor-actions)
 
               (red 'editor-actions 'handle-state 'be-commands)
-              (pipe 'be-commands 'log-command)
+              ;; (pipe 'be-commands 'log-command)
               (pipe 'be-commands 'filter-call 'caravan)
 
               (pipe 'state 'graph 'svg-render)
