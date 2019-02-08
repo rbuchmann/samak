@@ -436,26 +436,29 @@
     (when (and sym src idx type)
       (let [[cell par par-idx] (add-cell-internal src idx)
             root-id (:db/id src)
-            arg-idx (- idx 1 par-idx)
-            removed-args (remove-arg (get par (get-child-key par)) arg-idx)
-            _ (println (str "upd: " removed-args))
-            removed (assoc par (get-child-key par) removed-args)
-            target-node (some #(when (= (:order %) (dec arg-idx)) %) (get par (get-child-key par)))
-            target (get-in target-node [:samak.nodes/node :samak.nodes/fn-expression])
-            _ (println (str "target: " target))
-            inserted (update target (get-child-key target) conj {:db/id -1 :order (count (get target (get-child-key target))) :samak.nodes/node cell})
-            _ (println (str "inserted: " inserted))
-            updated (update-in par [(get-child-key par)] #(assoc % (dec arg-idx) inserted))
-            _ (println (str "updated: " updated))
-            retract-node (some #(when (= (:order %) arg-idx) %) (get par (get-child-key par)))
-            retract [:db/retract (:db/id par) (get-child-key par) (:db/id retract-node)]
-            _ (println (str "retract: " retract))
+            own-arg (some #(when (= (:db/id (:samak.nodes/node %)) (:db/id cell)) %) (get par (get-child-key par)))
+            own-order (:order own-arg)
+            ;; _ (println (str "own-order: " own-order))
+            target-node (some #(when (= (:order %) (dec own-order)) %) (get par (get-child-key par)))
+            ;; _ (println (str "target-node: " target-node))
+            target (:samak.nodes/node target-node)
+            ;; _ (println (str "target: " target))
             ]
-        (let [write (persist! @rt-conn [updated retract])
-              exp (load-ast @rt-conn root-id)]
-          (println (str "res: " exp))
-          (add-node (symbol sym) exp)
-          :done)))))
+        (when (and target (get-child-key target))
+          (let [insertion {:db/id (:db/id target) (get-child-key target) [{:db/id -1 :order (count (get target (get-child-key target))) :samak.nodes/node cell}]}
+                ;; _ (println (str "insertion: " insertion))
+                later-sibs (filterv #(> (:order %) own-order) (get par (get-child-key par)))
+                ;; _ (println (str "later-sibs: " later-sibs))
+                fixup {:db/id (:db/id par) (get-child-key par) (map #(update % :order dec) later-sibs)}
+                ;; _ (println (str "fixup: " fixup))
+                retract [:db/retract (:db/id par) (get-child-key par) (:db/id own-arg)]
+                ;; _ (println (str "retract: " retract))
+                ]
+            (let [write (persist! @rt-conn [insertion fixup retract])
+                  exp (load-ast @rt-conn root-id)]
+              (println (str "res: " exp))
+              (add-node (symbol sym) exp)
+              :done)))))))
 
 (defn create-sink
   ""
