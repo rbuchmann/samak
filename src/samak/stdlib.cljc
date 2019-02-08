@@ -145,8 +145,8 @@
      (let [c (chan)]
        (set! (.-onmousedown (.-body js/document))
              (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
-                                    :samak.mouse/button (mouse-button-to-keyword (.-button event))
                                    {:samak.mouse/type :down
+                                    :samak.mouse/button (mouse-button-to-keyword (.-button event))
                                     :samak.mouse/page-x (.-pageX event)
                                     :samak.mouse/page-y (.-pageY event)
                                     :samak.mouse/target (.-id (.-target event))}

@@ -1963,6 +1963,10 @@
                 (api/key-fn :type)
                 (api/fn-call (api/symbol '=) [(api/string "sink")]))
 
+              (defncall 'is-hover-node '->
+                (api/key-fn :type)
+                (api/fn-call (api/symbol '=) [(api/string "pipe")]))
+
               (defncall 'is-hover-source '->
                 (api/key-fn :type)
                 (api/fn-call (api/symbol '=) [(api/string "source")]))
@@ -1974,8 +1978,10 @@
                 (api/fn-call (api/symbol 'nth) [(api/integer 1)])
                 (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-sink)
                                                     (api/vector [(api/string "LMB construct")])])
-                (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-source)
+                (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-sink)
                                                     (api/vector [(api/string "LMB construct")])])
+                (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-node)
+                                                    (api/vector [(api/string "LMB connect")])])
                 (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-func)
                                                     (api/vector [(api/string "LMB select")])]))
 
@@ -2372,6 +2378,18 @@
                 (api/key-fn :zoom)
                 (api/string ")"))
 
+              (defncall 'graph-background '->
+                (api/vector [(api/keyword :rect)
+                             (api/map {(api/keyword :id) (api/string "back/ground")
+                                       (api/keyword :width) (api/integer 1200)
+                                       (api/keyword :height) (api/integer 800)
+                                       (api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/key-fn :x) (api/fn-call (api/symbol 'negate) [])])
+                                       (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/key-fn :y) (api/fn-call (api/symbol 'negate) [])])
+                                       (api/keyword :fill) (api/string "url(#grid)")
+                                       ;; (api/fn-call (api/symbol '->) [(api/keyword :graph-background)
+                                       ;;   (api/symbol 'get-color)])
+                                       (api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "all")})})]))
+
               (defncall 'graph '->
                 (api/map {(api/keyword :layout) (api/key-fn :layout)
                           (api/keyword :view) (api/key-fn :view)
@@ -2379,6 +2397,7 @@
                 (api/map {(api/keyword :graph)
                           (api/vector [(api/keyword :g)
                                        (api/map {(api/keyword :transform) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/symbol 'translate-graph)])})
+                                       (api/symbol 'graph-background)
                                        (api/symbol 'graph-nodes)
                                        (api/symbol 'graph-connections)])}))
 
@@ -2418,6 +2437,16 @@
 
               (defncall 'svg-defs '->
                 (api/vector [(api/keyword :defs)
+                             (api/vector [(api/keyword :pattern)
+                                          (api/map {(api/keyword :id) (api/string "grid")
+                                                    (api/keyword :width) (api/integer 50)
+                                                    (api/keyword :height) (api/integer 50)
+                                                    (api/keyword :patternUnits) (api/string "userSpaceOnUse")})
+                                          (api/vector [(api/keyword :path)
+                                                       (api/map {(api/keyword :d) (api/string "M 50 0 L 0 0 0 50")
+                                                                 (api/keyword :fill) (api/string "none")
+                                                                 (api/keyword :stroke) (api/string "silver")
+                                                                 (api/keyword :stroke-width) (api/string "0.5")})])])
                              (api/vector [(api/keyword :filter)
                                           (api/map {(api/keyword :id) (api/string "shadow")})
                                           (api/vector [(api/keyword :feDropShadow)
@@ -2457,13 +2486,6 @@
                                                  (api/map {(api/keyword :width) (api/integer 1200)
                                                            (api/keyword :height) (api/integer 800)})
                                                  (api/symbol 'svg-defs)
-                                                 (api/vector [(api/keyword :rect)
-                                                              (api/map {(api/keyword :id) (api/string "back/ground")
-                                                                        (api/keyword :width) (api/integer 1200)
-                                                                        (api/keyword :height) (api/integer 800)
-                                                                        (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :graph-background)
-                                                                                                                           (api/symbol 'get-color)])
-                                                                        (api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "all")})})])
                                                  (api/key-fn :graph)
                                                  (api/key-fn :source-menu)
                                                  (api/key-fn :sink-menu)
