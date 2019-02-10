@@ -348,7 +348,7 @@
   [cell value]
   (println (str "type: " cell " - " value))
   (case (:samak.nodes/type cell)
-    :samak.nodes/fn-call (assoc cell :samak.nodes/fn (api/symbol (symbol value)))
+    :samak.nodes/fn-call (assoc cell :samak.nodes/fn-expression (api/symbol (symbol value)))
     :samak.nodes/keyword (assoc cell :samak.nodes/value (keyword value))
     (assoc cell :samak.nodes/value value)))
 
