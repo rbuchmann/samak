@@ -1,13 +1,19 @@
 (ns samak.core-utils
   #?@
-   (:clj
-    [(:require [samak.protocols :as p])]
-    :cljs
-    [(:require [samak.protocols :as p])
-     (:require-macros [samak.core-utils :refer [samakify samakify-all]])]))
+  (:clj
+   [(:require [samak.protocols :as p]
+              [clojure.string  :as str])]
+   :cljs
+   [(:require [samak.protocols :as p]
+              [clojure.string  :as str])
+    (:require-macros [samak.core-utils :refer [samakify samakify-all]])]))
 
-(defn fn-sym? [s]
-  (re-matches #"f[0-9]*" (name s)))
+
+;; Args marked as fixed aren't applied to the input,
+;; just passed to the underlying function unchanged.
+;; This is needed mostly for higher order functions.
+(defn fixed-sym? [s]
+  (str/starts-with? (name s) "!"))
 
 (defmacro samakify
   "Turns a function or special form into a samak higher order function.
@@ -20,7 +26,7 @@
         input-sym          (gensym 'input)
         fn-name            (gensym 'fn-name)
         arg-list           (concat (for [arg p-args]
-                                     (if (fn-sym? arg)
+                                     (if (fixed-sym? arg)
                                        (sym-map arg)
                                        (list (sym-map arg) input-sym)))
                                    (when v-arg
