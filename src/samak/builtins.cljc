@@ -6,7 +6,7 @@
             [samak.tools              :as tools]
             [samak.pipes              :as pipes]
             [clojure.string           :as str]
-            [samak.core-utils         :refer [samakify-all]]))
+            [samak.core-utils         :refer [samakify samakify-all]]))
 
 (defn or* [& args]
   (fn [x]
@@ -27,6 +27,8 @@
 (defn reduce* [f i]
   (fn [x]
     (reduce (-> f p/eval-as-fn wrap-samak-reducer) i x)))
+
+(def if* (samakify if [pred then else]))
 
 (defn incase
   [pred then]
