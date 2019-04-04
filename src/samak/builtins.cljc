@@ -71,7 +71,7 @@
    (string? [x])
    (zero?   [num])
    (every?  [!pred col])
-   (some?   [!pred col])
+   (some    [!pred col])
 
    ;; Sequence functions
    (first      [col])
@@ -105,7 +105,7 @@
    (assoc     [m !k v])
    (dissoc    [m !k])
    (update-in [m !ks !f & args])
-   (assoc-in  [m !ks !k v])
+   (assoc-in  [m !ks v])
    (zipmap    [!ks vs])
 
    ;; String functions
