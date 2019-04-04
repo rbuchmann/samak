@@ -5,7 +5,7 @@
   :description "A hello world application for electron"
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.439"]
-                 [figwheel "0.5.16"]
+                 [lein-figwheel "0.5.18"]
                  [reagent "0.6.1"]
                  [garden "1.3.2"]
                  [ring/ring-core "1.6.1"]
