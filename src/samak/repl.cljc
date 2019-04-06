@@ -34,7 +34,6 @@
 (def rt (atom (run/make-runtime core/samak-symbols)))
 (caravan/init @rt)
 
-
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
     (println "There was a parse error: " error)

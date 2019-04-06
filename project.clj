@@ -62,11 +62,11 @@
                     :cache-analysis true
                     :main           "ui.core"}}
     {:source-paths ["src" "dev_src"]
-     :id           "frontend-release"
+     :id           "oasis-dev"
      :compiler     {:output-to      "resources/public/js/ui-core.js"
                     :output-dir     "resources/public/js/ui-release-out"
-                    :source-map     "resources/public/js/ui-core.js.map"
-                    :optimizations  :advanced
+                    :source-map     true #_"resources/public/js/ui-core.js.map"
+                    :optimizations  :none
                     :cache-analysis true
                     :infer-externs  true
                     :main           "dev.core"}}

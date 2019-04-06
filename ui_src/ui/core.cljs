@@ -2,7 +2,8 @@
   (:require [reagent.core       :as r]
             [ui.state           :as s]
             [ui.components.repl :as repl]
-            [clojure.string     :as str]))
+            [clojure.string     :as str]
+            [figwheel.client    :as fw :include-macros true]))
 
 (set! *warn-on-infer* true)
 
@@ -14,8 +15,6 @@
 ;;   (s/register-keybindings s/app-state)
 ;;   (reset! s/keybinds-needed? false))
 (def args (->  ^js/electron (js/require "electron") .-remote .-process .-argv))
-
-(println args)
 
 (defn load-samak-file [state filename]
   (->> (.readFileSync fs filename)
@@ -34,3 +33,7 @@
    (js/document.getElementById "app-container")))
 
 (setup)
+
+(fw/watch-and-reload
+ :websocket-url   "ws://localhost:3449/figwheel-ws"
+ :jsload-callback (fn [] (print "reloaded")))
