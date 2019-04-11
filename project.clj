@@ -61,10 +61,11 @@
                     :optimizations  :none
                     :cache-analysis true
                     :main           "ui.core"}}
-    {:source-paths ["src" "dev_src"]
+    {:source-paths ["src" "ui_src" "dev_src"]
      :id           "oasis-dev"
-     :compiler     {:output-to      "resources/public/js/ui-core.js"
-                    :output-dir     "resources/public/js/ui-release-out"
+     :compiler     {:output-to      "resources/public/js/oasis-core.js"
+                    :output-dir     "resources/public/js/oasis-out"
+                    :asset-path     "js/oasis-out"
                     :source-map     true #_"resources/public/js/ui-core.js.map"
                     :optimizations  :none
                     :cache-analysis true
