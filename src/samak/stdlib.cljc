@@ -24,11 +24,6 @@
      [net.cgrand.xforms :as x])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
-(s/def ::hiccup
-  (s/cat :tag        keyword?
-            :attributes (s/? map?)
-            :content    (s/* (s/or :terminal string?
-                                   :element  ::hiccup))))
 
 ;; Utility helper
 

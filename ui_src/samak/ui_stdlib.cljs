@@ -8,6 +8,14 @@
             [cljs.core.async    :as a :refer [<! put! chan close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
+;; Validation
+
+(s/def ::hiccup
+  (s/cat :tag        keyword?
+         :attributes (s/? map?)
+         :content    (s/* (s/or :terminal string?
+                                :element  ::hiccup))))
+
 ;; GUI & Event handling
 
 (defn destructure-element [x]
