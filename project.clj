@@ -74,6 +74,7 @@
                     :output-dir     "resources/public/js/oasis-out"
                     :asset-path     "js/oasis-out"
                     :source-map     true #_"resources/public/js/ui-core.js.map"
+                    :figwheel       true
                     :optimizations  :none
                     :cache-analysis true
                     :infer-externs  true
