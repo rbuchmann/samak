@@ -1,0 +1,44 @@
+(def start (pipes/debug))
+
+(def ui (pipes/ui))
+(def http (pipes/http))
+
+(def render-joke [:li (str :-id ": " :-joke)])
+
+(def render-ui [:div
+                [:h1 "The grand Chuck Norris Joke fetcher!"]
+                [:h2 "Enter any joke id and press enter"]
+                [:form {:on-submit :submit}
+                 [:input {:on-change :change}]]
+                (into [:ul] (map render-joke _))])
+
+
+(def joke-input-state (pipes/reductions
+                       (if (= (-> :-next :-data) :change)
+                         {:event :change
+                          :value (-> :-next :-event :-target :-value)}
+                         {:event :submit
+                          :value (-> :-state :-value)})
+                       {:event :change
+                        :value ""}))
+
+(| ui joke-input-state)
+(| joke-input-state
+   (|> (if (= :submit :-event)
+         {:url (str "http://api.icndb.com/jokes/" :-value)}
+         ignore))
+   http)
+
+
+(def joke-list (pipes/reductions (conj :-state :-next) []))
+
+(| http (|> (if (= "success" :-type)
+              :-value
+              {:id -1 :joke "Failed fetching joke"})) joke-list)
+
+
+(| start joke-list)
+
+(| joke-list (|> render-ui) ui)
+
+!f start {:id 1 :joke "Test joke"}

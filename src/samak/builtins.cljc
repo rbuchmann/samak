@@ -78,6 +78,7 @@
    (second     [col])
    (next       [col])
    (rest       [col])
+   (conj       [col x])
    (remove     [!f col])
    (filter     [!f col])
    (map        [!f col])

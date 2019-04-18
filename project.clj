@@ -29,6 +29,12 @@
             [lein-cooper "1.2.2"]
             [lein-garden "0.3.0"]]
 
+  :aliases {"build-all" ["do"
+                         ["cljsbuild" "once" "cli-dev"]
+                         ["cljsbuild" "once" "frontend-dev"]
+                         ["cljsbuild" "once" "electron-dev"]
+                         ["cljsbuild" "once" "oasis-dev"]]}
+
   :main samak.main
 
   :clean-targets ^{:protect false} ["resources/main.js"

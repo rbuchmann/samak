@@ -1,0 +1,3 @@
+#!/bin/bash
+
+node cli/samak-cli.js "$1"
