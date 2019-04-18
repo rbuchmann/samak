@@ -2,8 +2,7 @@
   (:require [reagent.core       :as r]
             [ui.state           :as s]
             [ui.components.repl :as repl]
-            [clojure.string     :as str]
-            [figwheel.client    :as fw :include-macros true]))
+            [clojure.string     :as str]))
 
 (set! *warn-on-infer* true)
 
@@ -24,16 +23,12 @@
 (defonce file-loaded? (atom false))
 
 (defn setup []
-  (when-let [filename (->> args (drop 2) first)]
+  (if-let [filename (->> args (drop 2) first)]
     (when-not @file-loaded?
       (reset! file-loaded? true)
-      (swap! s/app-state load-samak-file filename)))
-  (r/render
-   [repl/make s/app-state s/db]
-   (js/document.getElementById "app-container")))
+      (swap! s/app-state load-samak-file filename))
+    (r/render
+     [repl/make s/app-state s/db]
+     (js/document.getElementById "app-container"))))
 
 (setup)
-
-(fw/watch-and-reload
- :websocket-url   "ws://localhost:3449/figwheel-ws"
- :jsload-callback (fn [] (print "reloaded")))

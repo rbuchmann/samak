@@ -60,6 +60,7 @@
                     :asset-path     "js/ui-out"
                     :optimizations  :none
                     :cache-analysis true
+                    :figwheel       true
                     :main           "ui.core"}}
     {:source-paths ["src" "ui_src" "dev_src"]
      :id           "oasis-dev"
