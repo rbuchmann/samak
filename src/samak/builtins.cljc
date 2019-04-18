@@ -80,18 +80,19 @@
    (rest       [col])
    (remove     [!f col])
    (filter     [!f col])
+   (map        [!f col])
    (mapcat     [!f col])
    (concat     [& args])
    (flatten    [col])
-   (nth        [col !index])
-   (drop       [!n col])
-   (take       [!n col])
+   (nth        [col index])
+   (drop       [n col])
+   (take       [n col])
    (interleave [& args])
-   (interpose  [!sep col])
-   (into       [!target source])
-   (partition  [!n col])
-   [part-step  (partition [!n !step col])]
-   (repeat     [!n x])
+   (interpose  [sep col])
+   (into       [target source])
+   (partition  [n col])
+   [part-step  (partition [n step col])]
+   (repeat     [n x])
    (cycle      [col])
    (distinct   [col])
    (zip        [& args])
@@ -102,17 +103,17 @@
    ;; Map functions
    (vals      [m])
    (keys      [m])
-   (assoc     [m !k v])
-   (dissoc    [m !k])
-   (update-in [m !ks !f & args])
-   (assoc-in  [m !ks v])
-   (zipmap    [!ks vs])
+   (assoc     [m k v])
+   (dissoc    [m k])
+   (update-in [m ks !f & args])
+   (assoc-in  [m ks v])
+   (zipmap    [ks vs])
 
    ;; String functions
    (str [& args])
-   [str-join  (str/join  [!sep col])]
-   [str-split (str/split [s !re])]
-   [str-index (index-of* [s !x])]
+   [str-join  (str/join  [sep col])]
+   [str-split (str/split [s re])]
+   [str-index (index-of* [s x])]
 
    ;; Boolean functions
    (=  [& args])
