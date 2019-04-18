@@ -1,0 +1,9 @@
+(def in (pipes/debug))
+(def ui (pipes/ui))
+
+(| in
+   (|> [:div
+        [:h1 (str "Hello " _)]])
+   ui)
+
+!f in "World"
