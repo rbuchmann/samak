@@ -23,12 +23,11 @@
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 (def rt-conn (atom {}))
+;; (def rt-preview (atom {}))
 (def fns (atom {}))
-(def net (atom []))
+(def net (atom {}))
 
 (declare symbols)
-
-(def rt-preview (atom {}))
 
 (defmulti handle-node :samak.nodes/type)
 
@@ -166,10 +165,13 @@
 (defn reset-rt
   ""
   [rt]
-  (reset! rt (reduce rt/eval-expression! @rt @net))
+  (reset! rt (rt/make-runtime (merge builtins/samak-symbols
+                                             symbols
+                                             std/pipe-symbols)))
+  (reset! rt (reduce rt/eval-expression! @rt (vals @net)))
   (let [p (rt/get-definition-by-name @rt (symbol "start"))
-        r (when p (pipes/fire! p "1"))]
-    (println (str "fire! " p " - " r))))
+        r (when p (pipes/fire! p 1))]
+    (println (str "fire2! " p " - " r))))
 
 
 (defn add-node
@@ -177,9 +179,9 @@
   [sym fn]
   (swap! fns assoc sym fn)
   (println (str "function cache: " (keys @fns)))
-  (swap! rt-preview rt/link-storage (:store @rt-conn))
-  (swap! rt-preview rt/eval-expression! fn)
-  (reset-rt rt-preview)
+  (swap! rt-conn rt/eval-expression! fn)
+  ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
+  ;; (reset-rt rt-preview)
   (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
         ast (make-cell-list fn)]
     (if (empty? ast)
@@ -193,6 +195,10 @@
   [node]
   (str (second (get-in node [:samak.nodes/fn]))))
 
+(defn make-pipe-key
+  [source func sink]
+  (str source "-" func "-" sink))
+
 
 (defn add-pipe
   ""
@@ -203,10 +209,11 @@
         sink (name-of-node (:samak.nodes/to pipe))]
     (println (str "adding pipe from " source " with " func " to " sink))
     (when (and source func sink)
-      (swap! net conj pipe)
-      (swap! rt-preview rt/link-storage (:store @rt-conn))
-      (swap! rt-preview rt/eval-expression! pipe)
-      (reset-rt rt-preview)
+      (swap! net assoc key pipe)
+      ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
+      (println (str "def: " source " - " (rt/get-definition-by-name @rt-conn source)))
+      ;; (swap! rt-preview rt/eval-expression! pipe)
+      ;; (reset-rt rt-preview)
       (notify-source {:caravan/type :caravan/pipe
                       :caravan/source source
                       :caravan/func func
@@ -473,23 +480,37 @@
       (add-node (symbol sym) ast)
       :okay)))
 
+(defn disconnect
+  ""
+  []
+  (println "disconnect"))
+
 (defn connect
+  ""
+  [source connector sink]
+  (let [fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '_) [])]))
+        fn-ast (single! fn)
+        pipe (api/pipe (api/symbol (symbol source))
+                       (api/symbol (symbol connector))
+                       (api/symbol (symbol sink)))]
+    (add-node (symbol connector) fn-ast)
+    (add-pipe pipe)
+    ;; [fn-ast pipe]
+    :okay))
+
+
+(defn link
   ""
   []
   (fn [{:keys [:source :sink] :as x}]
     (println "connect: " x)
-    (when (and sink source (not= sink source))
-        (let [connector  (str "c/" source "-" sink)
-              fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol 'id) [])]))
-              ;; fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/vector [(api/keyword :div) (api/string "Hello world")])]))
-              fn-ast (single! fn)
-              pipe (api/pipe (api/symbol (symbol source))
-                             (api/symbol (symbol connector))
-                             (api/symbol (symbol sink)))]
-          (add-node (symbol connector) fn-ast)
-          (add-pipe pipe)
-          ;; [fn-ast pipe]
-          :okay))))
+    (let [connector  (str "c/" source "-" sink)
+          pipe-key (make-pipe-key source connector sink)
+          existing (contains? @net pipe-key)]
+      (when (and sink source (not= sink source) )
+        (if existing
+          (disconnect)
+          (connect source connector sink))))))
 
 ;; (defn load-node
 ;;   ""
@@ -504,9 +525,10 @@
 (defn init
   [rt]
   (reset! rt-conn rt)
-  (reset! rt-preview (rt/make-runtime (merge builtins/samak-symbols
-                                             symbols
-                                             std/pipe-symbols))))
+  ;; (reset! rt-preview (rt/make-runtime (merge builtins/samak-symbols
+  ;;                                            symbols
+  ;;                                            std/pipe-symbols)))
+  )
 
 (defn caravan-pipe
   ""
@@ -532,4 +554,4 @@
   {'create-sink create-sink
    ;; 'load-node load-node
    'pipes/caravan caravan-pipe
-   'connect connect})
+   'connect link})

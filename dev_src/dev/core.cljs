@@ -1,5 +1,6 @@
 (ns dev.core
-  (:require [samak.repl :as repl]))
+  (:require [cljsjs.react]
+            [samak.repl :as repl]))
 
 (defn init
   ""

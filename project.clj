@@ -25,7 +25,7 @@
                  [expound "0.7.2"]
                  [org.clojure/test.check "0.9.0"]]
   :plugins [[lein-cljsbuild "1.1.7"]
-            [lein-figwheel "0.5.16"]
+            [lein-figwheel "0.5.18"]
             [lein-cooper "1.2.2"]
             [lein-garden "0.3.0"]]
 
@@ -39,12 +39,14 @@
 
   :clean-targets ^{:protect false} ["resources/main.js"
                                     "resources/public/js/ui-core.js"
+                                    "resources/public/js/oasis-core.js"
                                     "resources/public/js/ui-core.js.map"
                                     "resources/public/js/ui-out"]
   :garden
   {:builds [{:source-paths ["ui_src"]
              :stylesheet   ui.styles/style
              :compiler     {:output-to "resources/public/css/main.css"}}]}
+
   :cljsbuild
   {:builds
    [{:source-paths ["src" "cli_src"]
@@ -60,21 +62,21 @@
                     :main           "cli.node-core"}}
     {:source-paths ["src" "ui_src"]
      :id           "frontend-dev"
+     :figwheel       true
      :compiler     {:output-to      "resources/public/js/ui-core.js"
                     :output-dir     "resources/public/js/ui-out"
                     :source-map     true
                     :asset-path     "js/ui-out"
                     :optimizations  :none
                     :cache-analysis true
-                    :figwheel       true
                     :main           "ui.core"}}
     {:source-paths ["src" "ui_src" "dev_src"]
      :id           "oasis-dev"
+     :figwheel       true
      :compiler     {:output-to      "resources/public/js/oasis-core.js"
                     :output-dir     "resources/public/js/oasis-out"
                     :asset-path     "js/oasis-out"
                     :source-map     true #_"resources/public/js/ui-core.js.map"
-                    :figwheel       true
                     :optimizations  :none
                     :cache-analysis true
                     :infer-externs  true
@@ -94,9 +96,9 @@
                     :pretty-print   true
                     :cache-analysis true
                     :infer-externs  true}}]}
+
   :figwheel {:http-server-root "public"
              :css-dirs         ["resources/public/css"]
              :reload-clj-files {:clj  true
                                 :cljc true}
-             :ring-handler     tools.figwheel-middleware/app
              :server-port      3449})
