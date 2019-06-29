@@ -70,6 +70,27 @@
   [{store :store} id]
   (stores/load-by-id store id))
 
+(defn load-by-sym
+  ""
+  [{store :store} sym]
+  (when-let [ref (stores/resolve-name store sym)]
+    (stores/load-by-id store ref)))
+
+(defn load-network
+  "loads the given network from storage"
+  [{store :store :as rt} id]
+  (stores/load-network store id))
+
+(defn load-bundle
+  "loads the definition of a bundle"
+  [{store :store :as rt} sym]
+  (let [defns (load-by-sym rt sym)
+        kv (get-in defns [:samak.nodes/rhs :samak.nodes/mapkv-pairs])
+        sources (:samak.nodes/mapkv-pairs (:samak.nodes/mapvalue (first kv))) ;; FIXME, move to db?
+        value (map #(get-in %1 [:samak.nodes/mapvalue :samak.nodes/fn :db/id]) sources)]
+    value))
+
+
 (defn eval-expression! [{:keys [store server] :as rt} form]
   (let [new-server (store-and-eval! store server (rewrite-expression "user" form))]
     (assoc rt :server new-server)))

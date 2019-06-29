@@ -1,7 +1,8 @@
 (ns samak.nodes
   (:require [samak.protocols :as p]
             [samak.pipes     :as pipes]
-            [samak.tools     :refer [fail]]))
+            [samak.tools     :refer [fail]]
+            [samak.code-db :as db]))
 
 (def ^:dynamic *environment* {})
 (def ^:dynamic *builtins* {})
@@ -63,6 +64,7 @@
       (fail "Undefined reference " fn " in " *environment*)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
+  ;; (println (str "call: "  fn-expression))
   (apply (p/eval-as-fn (eval-node fn-expression)) (eval-reordered arguments)))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]

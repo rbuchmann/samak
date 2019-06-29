@@ -75,7 +75,7 @@
         numbered (map-indexed vector exps)
         state (reduce (eval-oasis (count numbered)) @rt numbered)
         parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
-    (println "oasis loaded")
+    ;; (println "oasis loaded: " (str net))
     (reset! rt state)
     (fire-event-into-named-pipe "oasis" "1")
     (println "oasis started")

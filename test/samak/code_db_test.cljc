@@ -32,6 +32,12 @@
                            'foo)]
     (is (= 'foo (:samak.nodes/name (first result))))))
 
+(deftest should-resolve-name
+  (let [base   (make-example-db true)
+        id     (db/resolve-name base 'foo)
+        result (db/load-by-id base id)]
+    (is (= 'foo (get-in result [:samak.nodes/name])))))
+
 (deftest should-load-ast
   (let [base   (make-example-db true)
         id     (db/resolve-name base 'foo)
@@ -44,6 +50,53 @@
         result (db/load-by-id base 9)]
     (is (= 'foo (get-in result [:samak.nodes/name])))
     (is (= 10 (get-in result [:samak.nodes/rhs :db/id])))))
+
+(deftest should-name-id
+  (let [base  (make-example-db true)
+        id    1
+        names (db/name-node base id)]
+    (is (= ['foo] names))
+    (is (= id (:db/id (:samak.nodes/fn (:samak.nodes/rhs (db/load-by-id base (db/resolve-name base (first names))))))))
+    ))
+
+
+(deftest should-find-pipes-for-source
+  (let [base   (make-example-db true)
+        multi-net [(api/defexp 'second-node (api/fn-call (api/symbol 'pipes/debug) []))
+                   (api/pipe (api/symbol 'baz) (api/symbol 'second-node))]
+        _ (db/parse-tree->db! base multi-net)
+        input-id (db/resolve-name base 'input)]
+    (is (= 1 (count (db/find-links-from base input-id))))
+    (is (= input-id (get-in (first (db/find-links-from base input-id))
+                            [:samak.nodes/from :samak.nodes/fn :db/id])))
+    ))
+
+
+(deftest should-load-one-link-network
+  (let [base   (make-example-db true)
+        named-id (db/resolve-name base 'input)
+        loaded (first (vals (db/load-network base named-id)))]
+    (is (= 1 (count (:ends loaded))))
+    (is (= 1 (count (:pipes loaded))))
+    (is (= :samak.nodes/def (:samak.nodes/type (db/load-by-id base (first (:ends loaded))))))))
+
+
+(deftest should-load-multi-link-network
+  (let [db (make-example-db true)
+        multi-net [(api/defexp 'second-node (api/fn-call (api/symbol 'pipes/debug) []))
+                   (api/pipe (api/symbol 'baz) (api/symbol 'second-node))
+                   (api/defexp 'third-node (api/fn-call (api/symbol 'pipes/debug) []))
+                   (api/pipe (api/symbol 'baz) (api/symbol 'third-node))
+                   (api/defexp 'fourth-node (api/fn-call (api/symbol 'pipes/debug) []))
+                   (api/pipe (api/symbol 'third-node) (api/symbol 'fourth-node))
+                   ]
+        _ (db/parse-tree->db! db multi-net)
+        named-id (db/resolve-name db 'input)
+        net (:db/id (:samak.nodes/rhs (db/load-by-id db named-id)))
+        network (first (vals (db/load-network db named-id)))]
+    (is (= 4 (count (:ends network))))
+    (is (= 4 (count (:pipes network))))
+    ))
 
 (deftest should-walk-maps-on-load-by-id
   (let [db      (make-example-db false)

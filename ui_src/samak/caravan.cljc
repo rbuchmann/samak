@@ -5,16 +5,20 @@
               [clojure.walk   :as w]
               [clojure.core.async :as a :refer [<! put! chan go-loop close!]]
               [samak.api      :as api]
+              [samak.lisparser :as p]
               [samak.runtime  :as rt]
               [samak.pipes    :as pipes]
               [samak.builtins :as builtins]
               [samak.stdlib   :as std]
-              [samak.tools :as tools])]
+              [samak.tools :as tools]
+              [clojure.string :as str])]
    :cljs
    [(:require [clojure.string :as s]
               [clojure.walk   :as w]
               [clojure.core.async :as a :refer [<! put! chan close!]]
+              [samak.oasis :as oasis]
               [samak.api      :as api]
+              [samak.lisparser :as p]
               [samak.runtime  :as rt]
               [samak.pipes    :as pipes]
               [samak.builtins :as builtins]
@@ -101,6 +105,14 @@
    :value (str ":-" (name (:samak.nodes/value node)))})
 
 (defmethod handle-node
+  :samak.nodes/builtin
+  [node]
+  (println (str "builtin?: " node))
+  {:type :caravan/func
+   :display "lib"
+   :value (str (get-in node [:samak.nodes/value]))})
+
+(defmethod handle-node
   :default
   [node]
   (if (and (vector? node) (= (count node) 2) (= :samak.nodes/name (first node)))
@@ -146,7 +158,7 @@
 (defn notify-source
   ""
   [src]
-  (std/notify-source src))
+  (std/notify-source {(:caravan/name src) src}))
 
 
 (defn is-sink?
@@ -193,7 +205,12 @@
 (defn name-of-node
   ""
   [node]
-  (str (second (get-in node [:samak.nodes/fn]))))
+  (let [fun (or (get-in node [:samak.nodes/fn])
+                (get-in node [:samak.nodes/fn-expression :samak.nodes/fn]))]
+    (or (if (= (:samak.nodes/type node) :samak.nodes/def) (:samak.nodes/name node))
+        (if (= (:samak.nodes/type fun) :samak.nodes/def) (:samak.nodes/name fun))
+        (when-let [named (second fun)] (str ))
+        (str "anon-" (rand-int 100000)))))
 
 (defn make-pipe-key
   [source func sink]
@@ -206,7 +223,8 @@
   (println (str "add pipe " pipe))
   (let [source (name-of-node (:samak.nodes/from pipe))
         func (name-of-node (:samak.nodes/xf pipe))
-        sink (name-of-node (:samak.nodes/to pipe))]
+        sink (name-of-node (:samak.nodes/to pipe))
+        pipe-name (str source "-" func "-" sink)]
     (println (str "adding pipe from " source " with " func " to " sink))
     (when (and source func sink)
       (swap! net assoc key pipe)
@@ -215,9 +233,11 @@
       ;; (swap! rt-preview rt/eval-expression! pipe)
       ;; (reset-rt rt-preview)
       (notify-source {:caravan/type :caravan/pipe
+                      :caravan/name pipe-name
                       :caravan/source source
                       :caravan/func func
                       :caravan/sink sink}))))
+
 
 (defn load-ast
   "loads an ast given by its entity id from the database"
@@ -228,6 +248,7 @@
                  (rt/load-by-id rt sub-id)
                  form))
               (rt/load-by-id rt id)))
+
 
 (defn persist!
   ""
@@ -512,14 +533,125 @@
           (disconnect)
           (connect source connector sink))))))
 
-;; (defn load-node
-;;   ""
-;;   []
-;;   (let [oasis (rt/load-ast @rt-conn 'oasis)]
-;;     (println (str "oasis: " oasis))
-;;     ;; (add-node 'oasis )
-;;     )
-;;   )
+(defn load-source
+  ""
+  [sym]
+  (let [source (rt/load-network @rt-conn sym)
+        nodes (take 10000 (distinct (flatten (concat [sym]
+                                                     (map :ends (vals source))
+                                                     (map :xf (vals source))))))
+        asts (map #(load-ast @rt-conn %1) nodes)
+        _ (doall (map #(add-node (symbol (name-of-node %)) %) asts))
+        pipes (map :db/id (flatten (map :pipes (vals source))))
+        pipe-asts (map #(load-ast @rt-conn %1) pipes)
+        _ (doall (map add-pipe pipe-asts))
+        ]
+    source))
+
+(defn load-bundle
+  ""
+  [sym]
+  (map #(load-source %1) (take 100 (rt/load-bundle @rt-conn sym))))
+
+(defn load-oasis
+   ""
+   []
+  (load-bundle 'oasis-ns))
+
+(defn load-chuck
+  ""
+  []
+  (persist! @rt-conn [(api/defexp 'chuck (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'in)
+                                                                        (api/keyword :ui) (api/symbol 'ui-in)
+                                                                        (api/keyword :http) (api/symbol 'http-in)
+                                                                         })}))])
+  (load-bundle 'chuck))
+
+
+(def tl4
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (pipes/reductions (-> (+ :-next :-state)) 0) out)"
+   ])
+
+(def tl
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(def incinc (|> (inc) (inc)))"
+   "(| in incinc out)"])
+
+
+(def tl3
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (|> (inc) (inc)) out)"])
+
+
+(def chuck
+  ["(def in (pipes/debug))"
+   "(def ui-in (pipes/ui))"
+   "(def ui-out (pipes/ui))"
+   "(def http-in (pipes/http))"
+   "(def http-out (pipes/http))"
+   "(def render-joke [:li (str :-id \": \" :-joke)])"
+   "(def render-ui (|> [:div
+                [:h1 \"The grand Chuck Norris Joke fetcher!\"]
+                [:h2 \"Enter any joke id and press enter\"]
+                [:form {:on-submit :submit}
+                 [:input {:on-change :change}]]
+                (into [:ul] (map inc _))]))"
+   "(def joke-input-state (pipes/reductions
+                       (if (= (-> :-next :-data) :change)
+                         {:event :change
+                          :value (-> :-next :-event :-target :-value)}
+                         {:event :submit
+                          :value (-> :-state :-value)})
+                       {:event :change
+                        :value \"\"}))"
+
+   "(def handle-ev-in (|> _))"
+   "(| ui-in handle-ev-in joke-input-state)"
+   "(def handle-input (|> (if (= :submit :-event)
+         {:url (str \"http://api.icndb.com/jokes/\" :-value)}
+         ignore)))"
+   "(| joke-input-state handle-input http-out)"
+
+
+   "(def joke-list (pipes/reductions (conj :-state :-next) []))"
+
+   "(def handle-http (|> (if (= \"success\" :-type)
+              :-value
+              {:id -1 :joke \"Failed fetching joke\"})))"
+   "(| http-in handle-http joke-list)"
+
+   "(def handle-in (|> _))"
+   "(| in handle-in joke-list)"
+
+   "(| joke-list render-ui ui-out)"
+   ])
+
+
+(defn load-trivial
+  ""
+  []
+  (let [ id (rt/load-by-sym @rt-conn 'in)
+        _ (println "in: " id)
+        loaded (load-source (:db/id id))
+        _ (println "loaded: " loaded)]
+    :done))
+
+
+(defn load-net
+  ""
+  []
+  (let [parsed (p/parse-all (s/join " " chuck))
+        _ (println "parsed: " parsed)
+        _ (rt/persist-to-ids! (:store @rt-conn) (:value parsed))
+        _ (println "rt: " @rt-conn)
+        _ (load-chuck)
+        ;; (load-trivial)
+         ]
+    :done))
 
 
 (defn init
@@ -552,6 +684,6 @@
 
 (def symbols
   {'create-sink create-sink
-   ;; 'load-node load-node
+   'load-node load-net
    'pipes/caravan caravan-pipe
    'connect link})

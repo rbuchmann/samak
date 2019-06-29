@@ -3,6 +3,11 @@
                :cljs [cljs.spec.alpha    :as s])))
 
 
+(s/def :samak.spec/pipe (s/keys :req [:samak.nodes/type
+                                      :samak.nodes/from
+                                      :samak.nodes/to]))
+
+
 (defmulti nested-exp :samak.nodes/type)
 
 (s/def :samak.nodes/mapkv (s/keys :req [:samak.nodes/mapkey :samak.nodes/mapvalue]))
@@ -20,17 +25,13 @@
 (defmethod nested-exp :samak.nodes/float [_] any?)
 (defmethod nested-exp :samak.nodes/string [_] any?)
 (defmethod nested-exp :samak.nodes/key-fn [_] any?)
-
+(defmethod nested-exp :samak.nodes/pipe [_] :samak.spec/pipe)
 
 (s/def :samak.nodes/rhs nested-exp)
 
 (s/def :samak.spec/eval-node (s/keys :req [:samak.nodes/type
                                            :samak.nodes/name
                                            :samak.nodes/rhs]))
-
-(s/def :samak.spec/pipe (s/keys :req [:samak.nodes/type
-                                      :samak.nodes/from
-                                      :samak.nodes/to]))
 
 (defmulti toplevel-exp :samak.nodes/type)
 (defmethod toplevel-exp :samak.nodes/def [_] :samak.spec/eval-node)

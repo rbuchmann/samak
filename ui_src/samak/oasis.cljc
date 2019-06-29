@@ -76,12 +76,14 @@
 (s/def :oasis.spec/mouse-event (s/keys :req-un [:samak.mouse/type]))
 (s/def :oasis.spec/mouse-state (s/keys :req-un [:samak.mouse/type]))
 
-(def oasis   [(defncall 'ui 'pipes/ui (api/integer 2))
-              (defncall 'mouse 'pipes/mouse)
-              (defncall 'keyboard 'pipes/keyboard)
+(def oasis   [(defncall 'oasis-ui 'pipes/ui (api/integer 2))
+              (defncall 'oasis-ev 'pipes/ui (api/integer 3))
+              (defncall 'oasis-mouse 'pipes/mouse)
+              (defncall 'oasis-kb 'pipes/keyboard)
+              (defncall 'oasis-layout 'pipes/layout)
+
               (defncall 'd 'pipes/debug)
               (defncall 'log 'pipes/log)
-              (defncall 'layout 'pipes/layout)
 
               (defncall 'log-state 'pipes/log (api/string "state: "))
               (defncall 'log-command 'pipes/log (api/string "cmd: "))
@@ -1324,7 +1326,7 @@
               (defncall 'handle-load '->
                 (api/key-fn :data)
                 (api/fn-call (api/symbol 'spy) [(api/string "load")])
-                ;; (api/symbol 'load-node)
+                (api/symbol 'load-node)
                 (api/map {(api/keyword :load) (api/keyword :none)}))
 
               (defncall 'is-mode-change '->
@@ -1411,7 +1413,7 @@
                                                                             (api/symbol 'fn-name-from-select)])
                           (api/keyword :map) (api/fn-call (api/symbol '->) [(api/key-fn :state)
                                                                             (api/key-fn :eval)])})
-                (api/fn-call (api/symbol 'get) [(api/key-fn :map) (api/key-fn :key)]))
+                (api/fn-call (api/symbol 'lookup) [(api/key-fn :map) (api/key-fn :key) (api/keyword :none)]))
 
 
               (defncall 'process-select '->
@@ -1423,11 +1425,12 @@
                                                         (api/keyword :ast) (api/symbol 'selected-source)})}))
 
                (defncall 'selected-source-change '->
-                 (api/fn-call (api/symbol 'get) [(api/fn-call (api/symbol '->) [(api/key-fn :next)
+                 (api/fn-call (api/symbol 'lookup) [(api/fn-call (api/symbol '->) [(api/key-fn :next)
                                                                                    (api/key-fn :eval)])
                                                     (api/fn-call (api/symbol '->) [(api/key-fn :state)
                                                                                 (api/key-fn :selected)
-                                                                                (api/symbol 'fn-name-from-select)])]))
+                                                                                   (api/symbol 'fn-name-from-select)])
+                                                    (api/keyword :none)]))
 
 
                (defncall 'process-eval '->
@@ -1463,10 +1466,11 @@
 
               (defncall 'is-cell-editable '->
                 (api/key-fn :state)
-                (api/fn-call (api/symbol 'get)  [(api/fn-call (api/symbol '->) [(api/key-fn :ast)
+                (api/fn-call (api/symbol 'lookup)  [(api/fn-call (api/symbol '->) [(api/key-fn :ast)
                                                                                 (api/key-fn :caravan/ast)])
                                                  (api/fn-call (api/symbol '->) [(api/key-fn :mark)
-                                                                                (api/symbol 'dec)])])
+                                                                                (api/symbol 'dec)])
+                                                    (api/keyword :none)])
                 (api/key-fn :type)
                 (api/fn-call (api/symbol 'or) [(api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :caravan/str)])
                                                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :caravan/kw)])
@@ -2479,26 +2483,25 @@
                                                         (api/keyword :x) (api/integer 150)
                                                         (api/keyword :y) (api/integer 50)})}))
 
-
               ])
 
 (def network
   [              ;; networks
 
               (pipe 'd 'log)
-              (pipe 'ui 'log)
+              (pipe 'oasis-ev 'log)
 
-              (red 'mouse 'mouse-reduce 'mouse-state)
-              (red 'mouse 'target-reduce 'target-events)
+              (red 'oasis-mouse 'mouse-reduce 'mouse-state)
+              (red 'oasis-mouse 'target-reduce 'target-events)
 
               (pipe 'target-events 'only-different 'hover-events)
               (pipe 'hover-events 'tag-hover 'hover-state)
 
-              (pipe 'keyboard 'filter-key-input 'keyboard-filtered)
+              (pipe 'oasis-kb 'filter-key-input 'keyboard-filtered)
               (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
               (pipe 'keyboard-filtered 'filter-menu 'editor-commands)
               ;; (pipe 'keyboard-filtered 'log-keyboard)
-              (pipe 'keyboard 'log-keyboard)
+              (pipe 'oasis-kb 'log-keyboard)
 
               (pipe 'keyboard-filtered 'filter-view 'view-commands)
               (pipe 'view-commands 'make-zoom 'view-events)
@@ -2508,13 +2511,13 @@
 
               (pipe 'events 'log-events)
 
-              (pipe 'ui 'filter-input 'raw-events)
-              (pipe 'ui 'filter-submit 'raw-events)
+              (pipe 'oasis-ev 'filter-input 'raw-events)
+              (pipe 'oasis-ev 'filter-submit 'raw-events)
 
-              (pipe 'ui 'filter-select 'editor-commands)
+              (pipe 'oasis-ev 'filter-select 'editor-commands)
               ;; (pipe 'select-events 'editor-commands)
 
-              (pipe 'n 'index-eval 'eval-events)
+              (pipe 'n 'eval-events)
               (red 'eval-events 'eval-reduce 'eval-raw)
               (pipe 'eval-raw 'tag-eval 'eval-state)
 
@@ -2551,12 +2554,12 @@
               (red 'events 'state-reduce 'state)
               (pipe 'state 'log-state)
 
-              (pipe 'eval-state 'format-state 'layout)
+              (pipe 'eval-state 'format-state 'oasis-layout)
               ;; (pipe 'eval-state 'format-state 'log-layout)
 
               (pipe 'eval-state 'edit-information 'editor-events)
 
-              (pipe 'layout 'tag-layout 'layout-state)
+              (pipe 'oasis-layout 'tag-layout 'layout-state)
               (pipe 'layout-state 'log-layout)
               (red 'layout-state 'state-reduce 'state)
 
@@ -2580,7 +2583,7 @@
               ;; (red 'render 'elements-reduce 'log-render)
 
               ;; (pipe 'reducer 'render-elements 'log-render)
-              (pipe 'reducer 'render-elements 'ui)
+              (pipe 'reducer 'render-elements 'oasis-ui)
 
               (red 'svg-render 'svg-elements-reduce 'svg-reduced)
               (pipe 'svg-reduced 'render-svg 'render)
@@ -2603,8 +2606,18 @@
 
               (pipe 'init 'header 'render)
               ;;                (pipe 'init 'repl 'render)
-              (pipe 'init 'init-view 'view-events)
-              (pipe 'oasis 'init)
+   (pipe 'init 'init-view 'view-events)
+   (api/defexp 'oasis-main (api/pipe (api/symbol 'oasis)
+                                     (api/symbol 'init)))
+   (api/defexp 'oasis-ns (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'init)
+                                                                   (api/keyword :ui) (api/symbol 'oasis-ev)
+                                                     ;; (api/keyword :mouse) (api/symbol 'oasis-mouse)
+                                                     ;; (api/keyword :kb) (api/symbol 'oasis-kb)
+                                                     ;; (api/keyword :layout) (api/symbol 'oasis-layout)
+                                                     })
+                     ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
+                     ;; (api/keyword :network) (api/)
+                     }))
    ])
 
 

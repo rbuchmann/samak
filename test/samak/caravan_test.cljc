@@ -1,7 +1,10 @@
 (ns samak.caravan-test
   (:require [samak.caravan        :as sut]
             [samak.api            :as api]
+            [samak.stdlib         :as pipes]
             [samak.oasis          :as oasis]
+            [samak.core           :as core]
+            [samak.runtime        :as rt]
             [samak.code-db        :as db]
             #?(:clj [clojure.test :as t :refer [deftest is]]
                :cljs [cljs.test   :as t :include-macros true])))
@@ -140,3 +143,20 @@
                                             assert-list (is (= :samak.nodes/vector (:samak.nodes/type l)))]
                                         (is (= 5 (count (:samak.nodes/children l))))))}
       #(is (= :done ((sut/cut-cell) {:sym "test" :cell-idx 5}))))))
+
+(deftest should-load-network
+  (let [syms (merge {'pipes/ui       pipes/debug
+                     'pipes/mouse    pipes/debug
+                     'pipes/keyboard pipes/debug
+                     'pipes/layout   pipes/debug}
+                    core/samak-symbols)
+        rt (rt/make-runtime syms)
+        oasis-rt (reduce rt/eval-expression! rt (oasis/start))]
+    ;; (println (str "db: " oasis-rt))
+    (sut/init oasis-rt)
+    (with-redefs-fn {#'sut/add-pipe (fn [p] ;; (println (str "pipe: " p))
+                                      )
+                     #'sut/add-node (fn [sym ast] ;; (println (str "pipe: " p))
+                                      )}
+      #(is (= 2 (count (keys (sut/load-oasis)))))))
+  )

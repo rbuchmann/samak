@@ -5,6 +5,7 @@
 (defprotocol SamakStore
   (persist-tree! [this tree])
   (load-by-id [this id])
+  (load-network [this id])
   (resolve-name [this db-name]))
 
 (defrecord LocalSamakStore [db]
@@ -13,6 +14,8 @@
     (db/parse-tree->db! db tree))
   (load-by-id [_ id]
     (db/load-by-id db id))
+  (load-network [_ id]
+    (db/load-network db id))
   (resolve-name [_ db-name]
     (db/resolve-name db db-name)))
 
