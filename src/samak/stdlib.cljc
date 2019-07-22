@@ -35,10 +35,10 @@
   ([]
    (log-through nil))
   ([prefix]
-   (pipes/transduction-pipe
-    (map (if prefix
-           (fn [x] (tools/log prefix x) x)
-           (fn [x] (tools/log x) x))))))
+   (pipes/map-pipe
+    #(if prefix
+       (fn [x] (tools/log prefix x) x)
+       (fn [x] (tools/log x) x)))))
 
 (defn log
   ([] (log nil))

@@ -2478,6 +2478,10 @@
                                                  (api/key-fn :action-menu)
                                                  ])})}))
 
+              (defncall 'test-spy '->
+                (api/fn-call (api/symbol 'spy) [(api/string "test")])
+                (api/symbol '_))
+
               (defncall 'init-view '->
                 (api/map {(api/keyword :view) (api/map {(api/keyword :zoom) (api/integer 1)
                                                         (api/keyword :x) (api/integer 150)
@@ -2604,7 +2608,8 @@
 
               (pipe 'state 'render-action-menu 'svg-render)
 
-              (pipe 'init 'header 'render)
+              (pipe 'init 'header 'log)
+              (pipe 'oasis 'test-spy 'log-render)
               ;;                (pipe 'init 'repl 'render)
    (pipe 'init 'init-view 'view-events)
    (api/defexp 'oasis-main (api/pipe (api/symbol 'oasis)

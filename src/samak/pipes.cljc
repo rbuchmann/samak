@@ -6,6 +6,7 @@
     [clojure.spec.alpha :as s]
     [com.stuartsierra.dependency :as dep]
     [samak.tools :as t]
+    [samak.helpers :as help]
     [samak.protocols :as p]
     [samak.transduction-tools :as tt])
    :cljs
@@ -15,6 +16,7 @@
     [com.stuartsierra.dependency :as dep]
     [samak.protocols :as p]
     [samak.tools :as t]
+    [samak.helpers :as help]
     [samak.transduction-tools :as tt])))
 
 ;; Pipes and flow control
@@ -70,8 +72,36 @@
   ([in out in-spec out-spec]
    (Pipethrough. in (a/mult out) in-spec out-spec)))
 
+;; (defn wrap-xf
+;;   ""
+;;   [fun]
+;;   (fn [xf]
+;;     (fn
+;;       ([] (xf))
+;;       ([result] (xf result))
+;;       ([result input]
+;;        (println "res: " result)
+;;        (println "inp: " input)
+;;        (let [inner (map ::content input)
+;;              step (map fun)
+;;              wrap (map #(into {::baz %}))
+;;              appl (xf result (comp inner))]
+;;          (println "step: "  res)
+;;          res)))))
+
+
 (defn transduction-pipe [xf]
   (pipe (chan 1 xf)))
+
+(defn map-pipe
+  ([f] (map-pipe f "fn"))
+  ([f dbg]
+   (let [wrap-f (fn [x]
+                  (println dbg " x: " x " cont: " (::content x))
+                  (let [res (assoc x ::content (f (::content x)))]
+                    (println dbg " res: " res " cont: " (::content res))
+                    res))]
+     (pipe (chan 1 (map wrap-f))))))
 
 (defn async-pipe [xf in-spec out-spec]
   (let [in-chan  (chan)
@@ -81,10 +111,29 @@
 
 (def ports (juxt in-port out-port))
 
+(defn make-meta
+  ""
+  [specific]
+  (merge {::created (help/now)
+          ::uuid (help/uuid)} specific))
+
+(defn make-paket
+  ""
+  [event source]
+  {::meta (make-meta {::source source})
+   ::content event})
+
+
+(defn fire-raw!
+  "put a raw event into the given pipe. should be used for testing only."
+  [pipe event]
+  (put! (in-port pipe) event))
+
+
 (defn fire! [pipe event]
-  (t/log (str "Fired event: " event))
-  (let [intake (in-port pipe)]
-    (put! intake event)))
+  (let [paket (make-paket event ::fire)]
+    (t/log (str "Fired event: " event))
+    (fire-raw! pipe paket)))
 
 (defrecord CompositePipe [a b]
   Pipe
@@ -126,15 +175,17 @@
   [state spec x]
   (when (not (s/valid? spec x))
     (println "spec error in state " state)
-    (s/explain spec x))
+    (let [reason (s/explain spec x)]
+      (println reason)
+      reason))
   x)
 
 
 (defn checked-pipe
   ""
   [pipe in-spec out-spec]
-  (let [in-checked (transduction-pipe (map #(check-values "in" in-spec %)))
-        out-checked (transduction-pipe (map #(check-values "out" out-spec %)))]
+  (let [in-checked (map-pipe #(check-values "in" in-spec %) "in")
+        out-checked (map-pipe #(check-values "out" out-spec %) "out")]
     (link! in-checked pipe)
     (link! pipe out-checked)
     (Pipethrough. (in-port in-checked) (out-port out-checked) in-spec out-spec)))

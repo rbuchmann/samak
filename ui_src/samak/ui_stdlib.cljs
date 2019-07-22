@@ -76,12 +76,13 @@
   (let [ui-in (chan)
         ui-out (chan)]
     (go-loop []
-      (when-some [x (<! ui-in)]
-        (if (s/valid? ::hiccup x)
-          (when-let [node (js/document.getElementById (str "samak" n))]
-            (when (not n) (.warn js/console (str "render " n " - " x)))
-            (r/render (transform-element x ui-out) node))
-          (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x))))
+      (when-some [i (<! ui-in)]
+        (let [x (or (:samak.pipes/content i) i)]
+          (if (s/valid? ::hiccup x)
+            (when-let [node (js/document.getElementById (str "samak" n))]
+              (when (not n) (.warn js/console (str "render " n " - " x)))
+              (r/render (transform-element x ui-out) node))
+            (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x)))))
         (recur)))
     (pipes/pipe ui-in ui-out)))
 

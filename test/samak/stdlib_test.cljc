@@ -16,7 +16,7 @@
         listener (chan 1)]
       (a/tap (.out-port debug) listener)
       (pipes/fire! debug :foo)
-      (take! listener (fn [x] (is (= :foo x))))))
+      (take! listener (fn [x] (is (= :foo (:samak.pipes/content x)))))))
 
 ;; (deftest should-call
 ;;   (let [out (chan 1)]

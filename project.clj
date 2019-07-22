@@ -15,6 +15,8 @@
                  [com.stuartsierra/dependency "0.2.0"]
                  [net.cgrand/xforms "0.9.2"]
                  [cljs-http "0.1.43"]
+                 [clj-time "0.15.0"]
+                 [com.andrewmcveigh/cljs-time "0.5.2"]
                  [clj-http "3.7.0"]
                  [automat "0.2.2"]
                  [cljsjs/klayjs "0.3.2-0"]
