@@ -39,7 +39,7 @@
 
 
 (defn map [kvs]
-  #:samak.nodes {:type     :samak.nodes/map
+  #:samak.nodes {:type        :samak.nodes/map
                  :mapkv-pairs (vec (clojure.core/map map-entry kvs))})
 
 (defn network [network-name forms]

@@ -163,8 +163,6 @@
           :xf (sort (distinct (remove nil? (:xf loaded))))
           :pipes (:pipes loaded)}}))
 
-
-
 (defn load-dependencies [db id]
   (d/q '[:find [?x ...]
          :in $ % ?id
@@ -186,7 +184,6 @@
    (do
      (defn write-to-disk [db filename]
        (->> db d/db pr-str (spit filename)))
-
 
      (def read-db (partial clojure.edn/read-string {:readers d/data-readers}))
 

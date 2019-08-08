@@ -12,7 +12,6 @@
                  [:input {:on-change :change}]]
                 (into [:ul] (map render-joke _))])
 
-
 (def joke-input-state (pipes/reductions
                        (if (= (-> :-next :-data) :change)
                          {:event :change
@@ -28,7 +27,6 @@
          {:url (str "http://api.icndb.com/jokes/" :-value)}
          ignore))
    http)
-
 
 (def joke-list (pipes/reductions (conj :-state :-next) []))
 
