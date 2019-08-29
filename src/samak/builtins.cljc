@@ -244,7 +244,7 @@
   (merge
    samakified-builtins
    {'->            chain
-    '|>            (comp pipes/instrument chain)
+    '|>            (comp pipes/transduction-pipe pipes/instrument chain)
     '_             identity
     'reduce        reduce*
     'only          #(if* % identity tt/ignore)
