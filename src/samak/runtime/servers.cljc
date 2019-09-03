@@ -10,7 +10,7 @@
 (defrecord LocalSamakServer [defined-ids builtins]
   SamakServer
   (eval-ast [this {:keys [db/id] :as ast}]
-    (update this :defined-ids assoc id (n/eval-env defined-ids builtins ast)))
+    (update this :defined-ids assoc id (n/eval-env defined-ids builtins ast id)))
   (get-defined [_]
     defined-ids)
   (load-builtins [this builtins]

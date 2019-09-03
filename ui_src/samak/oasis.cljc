@@ -2407,8 +2407,10 @@
                           (api/keyword :source-menu) (api/vector [(api/keyword :g)])
                           (api/keyword :action-menu) (api/vector [(api/keyword :g)])}))
 
-              (defncall 'reducer 'pipes/debug (api/keyword :oasis.spec/gui))
-              (defncall 'render 'pipes/debug (api/keyword :oasis.spec/render))
+              (defncall 'reducer 'pipes/debug ;; (api/keyword :oasis.spec/gui)
+                )
+              (defncall 'render 'pipes/debug ;; (api/keyword :oasis.spec/render)
+                )
 
               ;; render elements to hiccup
               (defncall 'render-elements '->
@@ -2472,10 +2474,10 @@
                                                  (api/map {(api/keyword :width) (api/integer 1200)
                                                            (api/keyword :height) (api/integer 800)})
                                                  (api/symbol 'svg-defs)
-                                                 (api/key-fn :graph)
-                                                 (api/key-fn :source-menu)
-                                                 (api/key-fn :sink-menu)
-                                                 (api/key-fn :action-menu)
+                                                 ;; (api/key-fn :graph)
+                                                 ;; (api/key-fn :source-menu)
+                                                 ;; (api/key-fn :sink-menu)
+                                                 ;; (api/key-fn :action-menu)
                                                  ])})}))
 
               (defncall 'test-spy '->
@@ -2592,14 +2594,14 @@
               (red 'svg-render 'svg-elements-reduce 'svg-reduced)
               (pipe 'svg-reduced 'render-svg 'render)
 
-              (pipe 'init 'source-menu-const 'source-menu-items)
+              ;; (pipe 'init 'source-menu-const 'source-menu-items)
               (red 'source-menu-items 'source-menu-map 'source-menu)
               (pipe 'source-menu 'tag-items 'source-menu-events)
               (pipe 'hover-state 'source-menu-events)
               (red 'source-menu-events 'reduce-menu-source 'source-menu-state)
               (pipe 'source-menu-state 'render-source-menu 'svg-render)
 
-              (pipe 'init 'sink-menu-const 'sink-menu-items)
+              ;; (pipe 'init 'sink-menu-const 'sink-menu-items)
               (red 'sink-menu-items 'sink-menu-map 'sink-menu)
               (pipe 'sink-menu 'tag-items 'sink-menu-events)
               (pipe 'hover-state 'sink-menu-events)

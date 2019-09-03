@@ -84,7 +84,7 @@
               (r/render (transform-element x ui-out) node))
             (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x)))))
         (recur)))
-    (pipes/pipe ui-in ui-out)))
+    (pipes/pipe ui-in ui-out ::ui)))
 
 (defn mouse []
   (let [c (chan)]
@@ -113,7 +113,7 @@
                                 :samak.mouse/page-y (.-pageY event)
                                 :samak.mouse/target (.-id (.-target event))}))
                      false)))
-    (pipes/source c)))
+    (pipes/source c ::mouse)))
 
 (defn keyboard []
   (let [c (chan)]
@@ -127,7 +127,7 @@
                                 :target (.-id (.-target event))
                                 :type (.-tagName (.-target event))})
                        (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
-    (pipes/source c)))
+    (pipes/source c ::keyboard)))
 
 ;; Graph Layouting
 
@@ -136,7 +136,7 @@
     (layout/compute-layout request [] handler handler)))
 
 (defn layout []
-  (pipes/async-pipe layout-call nil nil))
+  (pipes/async-pipe layout-call nil nil ::layout))
 
 ;; Exported symbols
 

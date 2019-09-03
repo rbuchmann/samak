@@ -22,6 +22,7 @@
 ;; Pipes and flow control
 
 (defprotocol Pipe
+  (db-id [this])
   (in-port [this])
   (out-port [this])
   (in-spec [this])
@@ -33,81 +34,57 @@
 (defprotocol CleanupRequired
   (clean-up [this]))
 
-(defrecord Sink [ch in-spec]
+(defrecord Sink [ch in-spec db-id]
   Pipe
+  (db-id [_] db-id)
   (in-port [_] ch)
   (in-spec [_] in-spec)
   (out-port [_] nil)
   (out-spec [_] nil))
 
 (defn sink
-  ([ch] (sink ch nil))
-  ([ch spec]
-   (Sink. ch in-spec)))
+  ([ch db-id] (sink ch nil db-id))
+  ([ch spec db-id]
+   (Sink. ch in-spec db-id)))
 
-(defrecord Source [ch out-spec]
+(defrecord Source [ch out-spec db-id]
   Pipe
+  (db-id [_] db-id)
   (in-port [_] nil)
   (in-spec [_] nil)
   (out-port [_] ch)
   (out-spec [_] out-spec))
 
 (defn source
-  ([ch] (source ch nil))
-  ([ch out-spec]
-  (Source. (a/mult ch) out-spec)))
+  ([ch db-id] (source ch nil db-id))
+  ([ch out-spec db-id]
+  (Source. (a/mult ch) out-spec db-id)))
 
-(defrecord Pipethrough [in out in-spec out-spec]
+(defrecord Pipethrough [in out in-spec out-spec db-id]
   Pipe
+  (db-id [_] db-id)
   (in-port [_] in)
   (in-spec [_] in-spec)
   (out-port [_] out)
   (out-spec [_] out-spec))
 
 (defn pipe
-  ([ch] (pipe ch nil nil))
-  ([ch in-spec out-spec]
-   (Pipethrough. ch (a/mult ch) in-spec out-spec))
-  ([in out] (pipe in out nil nil))
-  ([in out in-spec out-spec]
-   (Pipethrough. in (a/mult out) in-spec out-spec)))
-
-;; (defn wrap-xf
-;;   ""
-;;   [fun]
-;;   (fn [xf]
-;;     (fn
-;;       ([] (xf))
-;;       ([result] (xf result))
-;;       ([result input]
-;;        (println "res: " result)
-;;        (println "inp: " input)
-;;        (let [inner (map ::content input)
-;;              step (map fun)
-;;              wrap (map #(into {::baz %}))
-;;              appl (xf result (comp inner))]
-;;          (println "step: "  res)
-;;          res)))))
+  ([ch db-id] (pipe ch nil nil db-id))
+  ([ch in-spec out-spec db-id]
+   (Pipethrough. ch (a/mult ch) in-spec out-spec db-id))
+  ([in out db-id] (pipe in out nil nil db-id))
+  ([in out in-spec out-spec db-id]
+   (Pipethrough. in (a/mult out) in-spec out-spec db-id)))
 
 
-(defn transduction-pipe [xf]
-  (pipe (chan 1 xf)))
+(defn transduction-pipe [xf db-id]
+  (pipe (chan 1 xf) db-id))
 
-(defn map-pipe
-  ([f] (map-pipe f "fn"))
-  ([f dbg]
-   (let [wrap-f (fn [x]
-                  (println dbg " x: " x " cont: " (::content x))
-                  (let [res (assoc x ::content (f (::content x)))]
-                    (println dbg " res: " res " cont: " (::content res))
-                    res))]
-     (pipe (chan 1 (map wrap-f))))))
-
-(defn async-pipe [xf in-spec out-spec]
+(defn async-pipe [xf in-spec out-spec db-id]
   (let [in-chan  (chan)
         out-chan (chan)]
     (a/pipeline-async 1 out-chan xf in-chan)
-    (Pipethrough. in-chan (a/mult out-chan) in-spec out-spec)))
+    (Pipethrough. in-chan (a/mult out-chan) in-spec out-spec db-id)))
 
 (def ports (juxt in-port out-port))
 
@@ -132,7 +109,7 @@
 
 (defn fire! [pipe event]
   (let [paket (make-paket event ::fire)]
-    (t/log (str "Fired event: " event))
+    (t/trace (db-id pipe) paket)
     (fire-raw! pipe paket)))
 
 (defrecord CompositePipe [a b]
@@ -147,7 +124,7 @@
 (defn composite-pipe [a b]
   (CompositePipe. a b))
 
-(defn link! [from to]
+(defn link! [from to db-id]
   (let [source (out-port from)
         sink   (in-port to)]
     (a/tap source sink)
@@ -172,20 +149,20 @@
 
 (defn check-values
   ""
-  [state spec x]
+  [state spec paket]
+  (let [x (::content paket)]
   (when (not (s/valid? spec x))
     (println "spec error in state " state)
     (let [reason (s/explain spec x)]
       (println reason)
-      reason))
-  x)
-
+      reason)))
+  paket)
 
 (defn checked-pipe
   ""
-  [pipe in-spec out-spec]
-  (let [in-checked (map-pipe #(check-values "in" in-spec %) "in")
-        out-checked (map-pipe #(check-values "out" out-spec %) "out")]
+  [pipe in-spec out-spec db-id]
+  (let [in-checked (transduction-pipe (map #(check-values "in" in-spec %)))
+        out-checked (transduction-pipe (map #(check-values "out" out-spec %)))]
     (link! in-checked pipe)
     (link! pipe out-checked)
-    (Pipethrough. (in-port in-checked) (out-port out-checked) in-spec out-spec)))
+    (Pipethrough. (in-port in-checked) (out-port out-checked) in-spec out-spec db-id)))

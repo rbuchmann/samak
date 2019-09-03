@@ -679,7 +679,7 @@
               :indent (indent-cell (:arguments call))
               (tools/log "actions unknown: " call))))
         (recur)))
-    (pipes/sink caravan-chan)))
+    (pipes/sink caravan-chan ::caravan)))
 
 
 (def symbols

@@ -1,11 +1,17 @@
 (ns samak.nodes
   (:require [samak.protocols :as p]
             [samak.pipes     :as pipes]
-            [samak.tools     :refer [fail]]
+            [samak.tools     :refer [fail log]]
             [samak.code-db :as db]))
 
 (def ^:dynamic *environment* {})
 (def ^:dynamic *builtins* {})
+(def ^:dynamic *db-id* nil)
+
+(defn compile-error
+  [& args]
+  (fail (concat ["[" *db-id* "]"] args)))
+
 
 (defmulti eval-node ::type)
 
@@ -26,12 +32,12 @@
 
 (defmethod eval-node nil [value]
   (cond
-    (unresolved-name? value) (fail "Tried to eval unresolved name:"
+    (unresolved-name? value) (compile-error "Tried to eval unresolved name:"
                                    (str  "'" (second value) "'"))
     (ref? value)             (let [id (:db/id value)]
                                (or (get *environment* id)
-                                   (fail "Referenced id " id " was undefined")))
-    :default                 (fail (str "unknown token during evaluation: " (str value)))))
+                                   (compile-error "Referenced id " id " was undefined")))
+    :default                 (compile-error "unknown token during evaluation: " (str value))))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]
@@ -56,21 +62,23 @@
         b (when xf (eval-node xf))
         c (eval-node to)]
     (if b
-      (pipes/link! (pipes/link! a b) c)
-      (pipes/link! a c))))
+      (pipes/link! (pipes/link! a b *db-id*) c *db-id*)
+      (pipes/link! a c *db-id*))))
 
 (defmethod eval-node ::fn-ref [{:keys [::fn]}]
+  (log "fn-ref: " fn)
   (or (get *environment* (:db/id fn))
-      (fail "Undefined reference " fn " in " *environment*)))
+      (compile-error "Undefined reference " fn " in " *environment*)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
   ;; (println (str "call: "  fn-expression))
   (apply (p/eval-as-fn (eval-node fn-expression)) (eval-reordered arguments)))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]
-  (pipes/link! (eval-node from) (eval-node to)))
+  (pipes/link! (eval-node from) (eval-node to) *db-id*))
 
-(defn eval-env [env builtins ast]
+(defn eval-env [env builtins ast db-id]
   (binding [*environment* env
-            *builtins* builtins]
+            *builtins* builtins
+            *db-id* db-id]
     (eval-node ast)))

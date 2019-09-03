@@ -28,17 +28,17 @@
 ;; Utility helper
 
 (defn debug
-  ([] (pipes/pipe (chan)))
-  ([spec] (pipes/checked-pipe (debug) spec spec)))
+  ([] (pipes/pipe (chan) ::debug))
+  ([spec] (pipes/checked-pipe (debug) spec spec ::debug)))
 
 (defn log-through
   ([]
    (log-through nil))
   ([prefix]
-   (pipes/map-pipe
-    #(if prefix
-       (fn [x] (tools/log prefix x) x)
-       (fn [x] (tools/log x) x)))))
+   (pipes/transduction-pipe
+    (map (if prefix
+           (fn [x] (tools/log prefix x) x)
+           (fn [x] (tools/log x) x))))))
 
 (defn log
   ([] (log nil))
@@ -50,7 +50,7 @@
            (tools/log prefix x)
            (tools/log x))
          (recur)))
-     (pipes/sink log-chan))))
+     (pipes/sink log-chan ::log))))
 
 ;; Networking
 
@@ -60,7 +60,7 @@
       (a/pipeline 1 res (map :body) req))))
 
 (defn http []
-  (pipes/async-pipe http-call nil nil))
+  (pipes/async-pipe http-call nil nil ::http))
 
 
 ;; DB TODO: Don't think this belongs here
@@ -94,7 +94,7 @@
   []
   (let [source (chan 1)]
     (a/pipeline 1 source (map (fn [x] (println "ast in: " x) x)) notify-chan)
-    (pipes/source source)))
+    (pipes/source source ::eval-notify)))
 
 
 ;; TODO: don't think this belongs here

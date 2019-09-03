@@ -1,4 +1,5 @@
-(ns samak.transduction-tools)
+(ns samak.transduction-tools
+  (:require [samak.tools :as t]))
 
 (defprotocol Streamable
   (get-items [this]))
@@ -20,7 +21,7 @@
       :samak.pipes/content content}
      content)))
 
-(defn instrumentation-xf [f]
+(defn instrumentation-xf [f db-id]
   (fn [rf]
     (completing
      (fn [acc nxt]
@@ -36,7 +37,9 @@
            (->> result
                 get-items
                 (map (re-wrap meta-info))
+                (map #(t/trace db-id %))
                 (reduce rf acc))
            (->> result
                 (re-wrap meta-info)
+                (t/trace db-id)
                 (rf acc))))))))
