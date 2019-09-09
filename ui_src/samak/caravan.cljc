@@ -11,6 +11,7 @@
               [samak.builtins :as builtins]
               [samak.stdlib   :as std]
               [samak.tools :as tools]
+              [samak.trace :as trace]
               [clojure.string :as str])]
    :cljs
    [(:require [clojure.string :as s]
@@ -23,6 +24,7 @@
               [samak.pipes    :as pipes]
               [samak.builtins :as builtins]
               [samak.stdlib   :as std]
+              [samak.trace :as trace]
               [samak.tools :as tools])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
@@ -644,14 +646,17 @@
 (defn load-net
   ""
   []
-  (let [parsed (p/parse-all (s/join " " chuck))
-        _ (println "parsed: " parsed)
-        _ (rt/persist-to-ids! (:store @rt-conn) (:value parsed))
-        _ (println "rt: " @rt-conn)
-        _ (load-chuck)
-        ;; (load-trivial)
-         ]
-    :done))
+  (trace/init-tracer @rt-conn)
+  (trace/dump)
+  ;; (let [parsed (p/parse-all (s/join " " chuck))
+  ;;       _ (println "parsed: " parsed)
+  ;;       _ (rt/persist-to-ids! (:store @rt-conn) (:value parsed))
+  ;;       _ (println "rt: " @rt-conn)
+  ;;       _ (load-chuck)
+  ;;       ;; (load-trivial)
+  ;;        ]
+  ;;   :done)
+  )
 
 
 (defn init

@@ -1,26 +1,17 @@
 (ns samak.tools
   #?(:clj
      (:require [clojure.spec.alpha :as s]
-               [clojure.pprint     :refer [pprint]]
-               [samak.helpers      :as helper])
+               [clojure.pprint     :refer [pprint]])
      :cljs
      (:require [cljs.spec.alpha :as s]
-               [cljs.pprint :refer [pprint]]
-               [samak.helpers :as helper])))
+               [cljs.pprint :refer [pprint]])))
+
 
 (defn log [& args]
   (let [msg (apply str args)]
     #?(:cljs (.log js/console msg)
        :clj (println msg))))
 
-(defn trace
-  ""
-  [db-id event]
-  (log (merge {:samak.trace/id db-id
-               :samak.trace/level :trace
-               :samak.trace/timestamp (helper/now)}
-              event))
-  event)
 
 
 (defn fail [& args]

@@ -6,6 +6,7 @@
     [clojure.spec.alpha :as s]
     [com.stuartsierra.dependency :as dep]
     [samak.tools :as t]
+    [samak.trace :as trace]
     [samak.helpers :as help]
     [samak.protocols :as p]
     [samak.transduction-tools :as tt])
@@ -16,6 +17,7 @@
     [com.stuartsierra.dependency :as dep]
     [samak.protocols :as p]
     [samak.tools :as t]
+    [samak.trace :as trace]
     [samak.helpers :as help]
     [samak.transduction-tools :as tt])))
 
@@ -109,7 +111,7 @@
 
 (defn fire! [pipe event]
   (let [paket (make-paket event ::fire)]
-    (t/trace (db-id pipe) paket)
+    (trace/trace (db-id pipe) 0 paket)
     (fire-raw! pipe paket)))
 
 (defrecord CompositePipe [a b]
@@ -131,7 +133,7 @@
     (composite-pipe from to)))
 
 (defn instrument [f]
-  (-> f p/eval-as-fn tt/instrumentation-xf))
+  (tt/instrumentation-xf (p/eval-as-fn f) trace/*db-id*))
 
 (defn to-depgraph [edges]
   ; If there is an edge from a->b, then b depends on a
@@ -145,7 +147,7 @@
 
 (defn link-all! [pipe-pairs]
   (doseq [[a b] (order-links pipe-pairs)]
-    (link! a b)))
+    (link! a b ::all)))
 
 (defn check-values
   ""
@@ -161,8 +163,8 @@
 (defn checked-pipe
   ""
   [pipe in-spec out-spec db-id]
-  (let [in-checked (transduction-pipe (map #(check-values "in" in-spec %)))
-        out-checked (transduction-pipe (map #(check-values "out" out-spec %)))]
-    (link! in-checked pipe)
-    (link! pipe out-checked)
+  (let [in-checked (transduction-pipe (map #(check-values "in" in-spec %)) db-id)
+        out-checked (transduction-pipe (map #(check-values "out" out-spec %)) db-id)]
+    (link! in-checked pipe db-id)
+    (link! pipe out-checked db-id)
     (Pipethrough. (in-port in-checked) (out-port out-checked) in-spec out-spec db-id)))

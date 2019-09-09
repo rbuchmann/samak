@@ -1,5 +1,6 @@
 (ns samak.transduction-tools
-  (:require [samak.tools :as t]))
+  (:require [samak.trace :as t]
+            [samak.helpers :as helpers]))
 
 (defprotocol Streamable
   (get-items [this]))
@@ -29,7 +30,9 @@
                          (:samak.pipes/meta nxt))
              content   (cond-> nxt
                          (some? meta-info) :samak.pipes/content)
-             result    (f content)]
+             before    (helpers/now)
+             result    (f content)
+             duration  (helpers/duration before (helpers/now))]
          (when (nil? result)
            (throw (str "received nil on " rf ", with meta: " meta-info
                        " - " acc)))
@@ -37,9 +40,9 @@
            (->> result
                 get-items
                 (map (re-wrap meta-info))
-                (map #(t/trace db-id %))
+                (map #(t/trace db-id duration %))
                 (reduce rf acc))
            (->> result
                 (re-wrap meta-info)
-                (t/trace db-id)
+                (t/trace db-id duration)
                 (rf acc))))))))

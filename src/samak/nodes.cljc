@@ -2,11 +2,12 @@
   (:require [samak.protocols :as p]
             [samak.pipes     :as pipes]
             [samak.tools     :refer [fail log]]
+            [samak.trace     :refer [*db-id*]]
             [samak.code-db :as db]))
 
 (def ^:dynamic *environment* {})
 (def ^:dynamic *builtins* {})
-(def ^:dynamic *db-id* nil)
+
 
 (defn compile-error
   [& args]
@@ -59,20 +60,22 @@
 
 (defmethod eval-node ::pipe [{:keys [::from ::to ::xf]}]
   (let [a (eval-node from)
-        b (when xf (eval-node xf))
+        b (when xf
+            (binding [*db-id* (:db/id xf)]
+              (eval-node xf)))
         c (eval-node to)]
     (if b
       (pipes/link! (pipes/link! a b *db-id*) c *db-id*)
       (pipes/link! a c *db-id*))))
 
 (defmethod eval-node ::fn-ref [{:keys [::fn]}]
-  (log "fn-ref: " fn)
   (or (get *environment* (:db/id fn))
       (compile-error "Undefined reference " fn " in " *environment*)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
   ;; (println (str "call: "  fn-expression))
-  (apply (p/eval-as-fn (eval-node fn-expression)) (eval-reordered arguments)))
+  (let [func (eval-node fn-expression)]
+    (apply (p/eval-as-fn func) (eval-reordered arguments))))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]
   (pipes/link! (eval-node from) (eval-node to) *db-id*))

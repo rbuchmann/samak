@@ -12,6 +12,7 @@
      [samak.caravan :as caravan]
      [samak.api :as api]
      [samak.tools :as t]
+     [samak.trace :as trace]
      [samak.core :as core]
      [samak.runtime.servers :as servers]
      [samak.runtime.stores :as stores])]
@@ -27,11 +28,13 @@
      [samak.caravan :as caravan]
      [samak.api :as api]
      [samak.tools :as t]
+     [samak.trace :as trace]
      [samak.core :as core]
      [samak.runtime.servers :as servers]
      [samak.runtime.stores :as stores])]))
 
 (def rt (atom (run/make-runtime core/samak-symbols)))
+;; (def trace (atom (trace/init-tracer rt)))
 (caravan/init @rt)
 
 (defn catch-errors [ast]

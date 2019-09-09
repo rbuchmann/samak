@@ -38,7 +38,8 @@
    (pipes/transduction-pipe
     (map (if prefix
            (fn [x] (tools/log prefix x) x)
-           (fn [x] (tools/log x) x))))))
+           (fn [x] (tools/log x) x)))
+    ::log)))
 
 (defn log
   ([] (log nil))
@@ -125,7 +126,7 @@
 
 (defn reductions* [f init]
   (pipes/transduction-pipe (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
-                                         init)))
+                                         init) ::reductions))
 
 
 (def pipe-symbols
