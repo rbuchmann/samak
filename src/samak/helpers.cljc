@@ -51,3 +51,8 @@
   []
   #?(:clj  (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
+
+(defn make-span
+  ""
+  []
+  (rand-int 1000000))

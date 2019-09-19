@@ -8,6 +8,7 @@
      [samak.pipes :as pipes]
      [samak.code-db :as db]
      [samak.tools :as tools]
+     [samak.trace :as trace]
      [clojure.string :as str]
      [net.cgrand.xforms :as x]
      [samak.protocols :as p])]
@@ -20,6 +21,7 @@
      [samak.pipes :as pipes]
      [samak.code-db :as db]
      [samak.tools :as tools]
+     [samak.trace :as trace]
      [samak.protocols :as p]
      [net.cgrand.xforms :as x])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
@@ -57,6 +59,7 @@
 
 (defn http-call [request res]
   (go
+    (println (str "http: " request))
     (let [req (http/get (:url request))]
       (a/pipeline 1 res (map :body) req))))
 

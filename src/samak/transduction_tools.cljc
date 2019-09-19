@@ -18,7 +18,7 @@
    (partial re-wrap meta-info))
   ([meta-info content]
    (if (some? meta-info)
-     {:samak.pipes/meta    meta-info
+     {:samak.pipes/meta    (assoc meta-info :samak.pipes/span (helpers/make-span))
       :samak.pipes/content content}
      content)))
 
