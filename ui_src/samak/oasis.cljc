@@ -2467,7 +2467,7 @@
               ;; render SVG components
               (defncall 'svg-render 'pipes/debug)
               (defncall 'render-svg '->
-                (api/fn-call (api/symbol 'spy) [(api/string "XXX rsvg")])
+                ;; (api/fn-call (api/symbol 'spy) [(api/string "XXX rsvg")])
                 (api/map {(api/keyword :svg)
                           (api/map {(api/keyword :oasis.gui/order)
                                     (api/integer 2)
@@ -2621,7 +2621,12 @@
                                                      })
                      ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
                                    (api/keyword :tests) (api/map {(api/keyword ::test)
-                                                                  (api/map {(api/keyword :input) (api/map {(api/string "uuid1") (api/string "1")})})})
+                                                                  (api/map {(api/keyword :input) (api/map {(api/keyword :main)
+                                                                                                           (api/map {(api/string "uuid1") (api/string "1")
+                                                                                                                     (api/string "uuid2") (api/string "2")})})
+                                                                            (api/keyword :output) (api/map {(api/keyword :ui)
+                                                                                                            (api/map {(api/string "uuid1") (api/integer 1)
+                                                                                                                      (api/string "uuid2") (api/integer 2)})})})})
                      ;; (api/keyword :network) (api/)
                      }))
    ])

@@ -7,11 +7,13 @@
               [samak.api      :as api]
               [samak.lisparser :as p]
               [samak.runtime  :as rt]
+              [samak.runtime.servers  :as servers]
               [samak.pipes    :as pipes]
               [samak.builtins :as builtins]
               [samak.stdlib   :as std]
               [samak.tools :as tools]
               [samak.trace :as trace]
+              [samak.nodes :as nodes]
               [clojure.string :as str])]
    :cljs
    [(:require [clojure.string :as s]
@@ -21,10 +23,12 @@
               [samak.api      :as api]
               [samak.lisparser :as p]
               [samak.runtime  :as rt]
+              [samak.runtime.servers  :as servers]
               [samak.pipes    :as pipes]
               [samak.builtins :as builtins]
               [samak.stdlib   :as std]
               [samak.trace :as trace]
+              [samak.nodes :as nodes]
               [samak.tools :as tools])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
@@ -184,7 +188,7 @@
                                              std/pipe-symbols)))
   (reset! rt (reduce rt/eval-expression! @rt (vals @net)))
   (let [p (rt/get-definition-by-name @rt (symbol "start"))
-        r (when p (pipes/fire! p 1))]
+        r (when p (pipes/fire! p 1 ::init))]
     (println (str "fire2! " p " - " r))))
 
 
@@ -232,7 +236,7 @@
       (swap! net assoc key pipe)
       ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
       (println (str "def: " source " - " (rt/get-definition-by-name @rt-conn source)))
-      ;; (swap! rt-preview rt/eval-expression! pipe)
+      (swap! rt-conn rt/eval-expression! pipe)
       ;; (reset-rt rt-preview)
       (notify-source {:caravan/type :caravan/pipe
                       :caravan/name pipe-name
@@ -535,38 +539,87 @@
           (disconnect)
           (connect source connector sink))))))
 
+(defn find-tests
+  ""
+  [samak-map]
+  (let [val (:samak.nodes/mapkv-pairs samak-map)
+        tests (first (filter #(= :tests (:samak.nodes/value (:samak.nodes/mapkey %))) val))
+        actual (:samak.nodes/mapvalue tests)]
+    (when actual (nodes/eval-node actual))))
+
+(defn add-pipe-net
+  ""
+  [ast]
+  (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
+        assert-name (str "assert-" (rand-int 1000000))
+        connect-name (str "c/" assert-name)
+        assert-exp (api/defexp (symbol assert-name) (api/fn-call (api/symbol 'pipes/verify) [(api/vector [])]))
+        assert-ast (single! assert-exp)]
+    (println (str "pipe source: " source))
+    (println (str "pipe conn: " connect-name))
+    (println (str "pipe assert: " assert-name))
+    (add-node (symbol assert-name) assert-ast)
+    (connect source connect-name assert-name)
+    (add-pipe ast)))
+
+
 (defn load-source
   ""
-  [sym]
-  (let [source (rt/load-network @rt-conn sym)
-        nodes (take 10000 (distinct (flatten (concat [sym]
-                                                     (map :ends (vals source))
-                                                     (map :xf (vals source))))))
+  [sym config]
+  (let [tests (find-tests config)
+        source (rt/load-network @rt-conn sym)
+        _ (println (str "bar: " source))
+        _ (println (str "t: " tests))
+        nodes (distinct (flatten (concat [sym]
+                                         (map :ends (vals source))
+                                         (map :xf (vals source)))))
         asts (map #(load-ast @rt-conn %1) nodes)
         _ (doall (map #(add-node (symbol (name-of-node %)) %) asts))
         pipes (map :db/id (flatten (map :pipes (vals source))))
         pipe-asts (map #(load-ast @rt-conn %1) pipes)
-        _ (doall (map add-pipe pipe-asts))
+        _ (doall (map add-pipe-net pipe-asts))
         ]
     source))
 
 (defn load-bundle
   ""
-  [sym]
-  (map #(load-source %1) (take 100 (rt/load-bundle @rt-conn sym))))
+  [sym config]
+  (doall (map #(load-source %1 config) (rt/load-bundle @rt-conn sym))))
 
 (defn load-oasis
    ""
    []
   (load-bundle 'oasis-ns))
 
+(defn persist-tl-net
+  ""
+  []
+  (persist! @rt-conn [(api/defexp 'tl (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'in)})
+                                                (api/keyword :tests) (api/map {(api/keyword ::test)
+                                                                               (api/map {(api/keyword :input) (api/map {(api/string "in")
+                                                                                                                        (api/map {(api/string "uuid1") (api/integer 1)
+                                                                                                                                  (api/string "uuid2") (api/integer 2)})})
+                                                                                         (api/keyword :output) (api/map {(api/keyword "out")
+                                                                                                                         (api/map {(api/string "uuid1") (api/integer 1)
+                                                                                                                                   (api/string "uuid2") (api/integer 2)})})})})}))]))
+
 (defn load-chuck
   ""
   []
   (persist! @rt-conn [(api/defexp 'chuck (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'in)
-                                                                        (api/keyword :ui) (api/symbol 'ui-in)
-                                                                        (api/keyword :http) (api/symbol 'http-in)
-                                                                         })}))])
+                                                                                   (api/keyword :ui) (api/symbol 'ui-in)
+                                                                                   (api/keyword :http) (api/symbol 'http-in)
+                                                                                   })
+                                                   (api/keyword :tests) (api/map {(api/keyword ::test)
+                                                                                  (api/map {(api/keyword :input) (api/map {(api/string "in")
+                                                                                                                           (api/map {(api/string "uuid1") (api/string "1")
+                                                                                                                                     (api/string "uuid2") (api/string "2")})
+                                                                                                                           (api/string "http-out")
+                                                                                                                           (api/map {(api/string "uuid1") (api/string "1")
+                                                                                                                                     (api/string "uuid2") (api/string "2")})})
+                                                                                            (api/keyword :output) (api/map {(api/keyword :ui)
+                                                                                                                            (api/map {(api/string "uuid1") (api/integer 1)
+                                                                                                                                      (api/string "uuid2") (api/integer 2)})})})})}))])
   (load-bundle 'chuck))
 
 
@@ -579,14 +632,14 @@
 (def tl
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(def incinc (|> (inc) (inc)))"
+   "(def incinc (|> (inc _) (inc _)))"
    "(| in incinc out)"])
 
 
 (def tl3
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in (|> (inc) (inc)) out)"])
+   "(| in (|> (inc _) (inc _) out)"])
 
 
 (def chuck
@@ -594,7 +647,7 @@
    "(def ui-in (pipes/ui))"
    "(def ui-out (pipes/ui))"
    "(def http-in (pipes/http))"
-   "(def http-out (pipes/http))"
+   "(def http-out (pipes/debug))"
    "(def render-joke [:li (str :-id \": \" :-joke)])"
    "(def render-ui (|> [:div
                 [:h1 \"The grand Chuck Norris Joke fetcher!\"]
@@ -642,20 +695,60 @@
         _ (println "loaded: " loaded)]
     :done))
 
-
-(defn load-net
+(defn trace-dump
   ""
   []
   (trace/init-tracer @rt-conn)
-  (trace/dump)
-  ;; (let [parsed (p/parse-all (s/join " " chuck))
-  ;;       _ (println "parsed: " parsed)
-  ;;       _ (rt/persist-to-ids! (:store @rt-conn) (:value parsed))
-  ;;       _ (println "rt: " @rt-conn)
-  ;;       _ (load-chuck)
-  ;;       ;; (load-trivial)
-  ;;        ]
-  ;;   :done)
+  (trace/dump))
+
+
+(defn persist-tl
+  ""
+  []
+  (let [parsed (p/parse-all (s/join " " tl))
+        _ (rt/persist-to-ids! (:store @rt-conn) (:value parsed))
+        _ (persist-tl-net)
+         ]
+    :done))
+
+
+(defn run-event
+  ""
+  [pipe pipe-name [uuid content]]
+  (let [source-name (str "test/" pipe-name)
+        paket (pipes/make-paket content source-name uuid)]
+    (println (str "f! " content))
+    (trace/trace source-name 0 paket)
+    (pipes/fire-raw! pipe paket)))
+
+
+(defn run-test
+  ""
+  [[name tst]]
+  (println (str "test " name " - " tst))
+
+  (doall (map (fn [[pipe-name values]]
+                (println (str "pipe " (symbol pipe-name) " values: " values))
+                (let [pipe (rt/get-definition-by-name @rt-conn (symbol pipe-name))]
+                  (doall (map #(run-event pipe pipe-name %) values))))
+              (:input tst))))
+
+
+(defn run-testsuite
+  ""
+  [net]
+  (let [tests (find-tests (:samak.nodes/rhs net))]
+    (doall (map run-test tests))))
+
+
+(defn test-net
+  ""
+  []
+  (persist-tl)
+  (let [net (rt/load-by-sym @rt-conn 'tl)]
+    (load-bundle 'tl (:samak.nodes/rhs net))
+    (run-testsuite net))
+  ;; (trace-dump)
   )
 
 
@@ -689,6 +782,6 @@
 
 (def symbols
   {'create-sink create-sink
-   'load-node load-net
+   'load-node test-net
    'pipes/caravan caravan-pipe
    'connect link})

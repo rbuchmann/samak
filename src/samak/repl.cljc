@@ -59,7 +59,7 @@
   (let [pipe (run/get-definition-by-name @rt (symbol pipe-name))]
     (if (pipes/pipe? pipe)
       (do (let [arg (edn/read-string event)]
-            (pipes/fire! pipe arg))
+            (pipes/fire! pipe arg pipe-name))
           {})
       (println (str "could not find pipe " pipe-name)))))
 

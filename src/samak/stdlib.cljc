@@ -29,9 +29,22 @@
 
 ;; Utility helper
 
+(defn verify
+  "verify checks the received values of the sink against the given checks"
+  [checks]
+  (let [c (chan)]
+    (go-loop [c c
+              v checks]
+       (when-let [x (<! c)]
+         (trace/trace ::verify 0 x)
+         (println (str "verify: " x " == " v " " (= x v)))
+         (recur c v)))
+     (pipes/sink c)))
+
+
 (defn debug
-  ([] (pipes/pipe (chan) ::debug))
-  ([spec] (pipes/checked-pipe (debug) spec spec ::debug)))
+  ([] (pipes/pipe (chan)))
+  ([spec] (pipes/checked-pipe (debug) spec spec)))
 
 (defn log-through
   ([]
@@ -40,8 +53,7 @@
    (pipes/transduction-pipe
     (map (if prefix
            (fn [x] (tools/log prefix x) x)
-           (fn [x] (tools/log x) x)))
-    ::log)))
+           (fn [x] (tools/log x) x))))))
 
 (defn log
   ([] (log nil))
@@ -49,11 +61,12 @@
    (let [log-chan (chan)]
      (go-loop []
        (when-let [x (<! log-chan)]
+         (trace/trace ::log 1337 x)
          (if prefix
            (tools/log prefix x)
            (tools/log x))
          (recur)))
-     (pipes/sink log-chan ::log))))
+     (pipes/sink log-chan))))
 
 ;; Networking
 
@@ -64,7 +77,7 @@
       (a/pipeline 1 res (map :body) req))))
 
 (defn http []
-  (pipes/async-pipe http-call nil nil ::http))
+  (pipes/async-pipe http-call nil nil))
 
 
 ;; DB TODO: Don't think this belongs here
@@ -98,7 +111,7 @@
   []
   (let [source (chan 1)]
     (a/pipeline 1 source (map (fn [x] (println "ast in: " x) x)) notify-chan)
-    (pipes/source source ::eval-notify)))
+    (pipes/source source)))
 
 
 ;; TODO: don't think this belongs here
@@ -129,7 +142,7 @@
 
 (defn reductions* [f init]
   (pipes/transduction-pipe (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
-                                         init) ::reductions))
+                                         init)))
 
 
 (def pipe-symbols
@@ -138,6 +151,7 @@
    'pipes/debug       debug
    'pipes/http        http
    'pipes/eval-notify eval-notify
+   'pipes/verify      verify
 
    ;; 'pipes/eval-line   eval-line
 

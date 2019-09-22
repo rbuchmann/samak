@@ -160,3 +160,14 @@
                                       )}
       #(is (= 2 (count (keys (sut/load-oasis)))))))
   )
+
+(deftest should-run-tests
+  (let [syms (merge {'pipes/ui    pipes/debug
+                     'pipes/http  pipes/debug}
+                    core/samak-symbols)
+        rt (rt/make-runtime syms)
+        _ (sut/init rt)
+        _ (sut/test-net)]
+    (Thread/sleep 1000)
+    (is (= :foo (sut/trace-dump))))
+  )

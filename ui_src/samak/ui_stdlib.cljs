@@ -139,7 +139,7 @@
     (layout/compute-layout request [] handler handler)))
 
 (defn layout []
-  (pipes/async-pipe layout-call nil nil ::layout))
+  (pipes/async-pipe layout-call nil nil))
 
 ;; Exported symbols
 

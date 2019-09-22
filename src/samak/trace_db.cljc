@@ -31,7 +31,7 @@
   (d/q '[:find [(pull ?traces [*]) ...]
          :in $
          :where
-         [?traces :samak.pipes/meta]
+         [?traces :samak.pipes/content]
          ]
        @db))
 
@@ -43,7 +43,7 @@
 
 (defn load-nodes
   [db]
-  (d/q '[:find ?node
+  (d/q '[:find [?node ...]
          :in $
          :where
          [?trace :samak.trace/node ?node]]
