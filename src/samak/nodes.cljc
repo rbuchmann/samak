@@ -73,7 +73,6 @@
       (compile-error "Undefined reference " fn " in " *environment*)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
-  ;; (println (str "call: "  fn-expression))
   (let [func (eval-node fn-expression)]
     (apply (p/eval-as-fn func) (eval-reordered arguments))))
 

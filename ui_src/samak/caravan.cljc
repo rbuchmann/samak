@@ -195,8 +195,8 @@
 (defn add-node
   ""
   [sym fn]
-  (swap! fns assoc sym fn)
   (println (str "function cache: " (keys @fns)))
+  (swap! fns assoc sym fn)
   (swap! rt-conn rt/eval-expression! fn)
   ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
   ;; (reset-rt rt-preview)
@@ -515,7 +515,7 @@
 (defn connect
   ""
   [source connector sink]
-  (let [fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/fn-call (api/symbol '_) [])]))
+  (let [fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/symbol '_)]))
         fn-ast (single! fn)
         pipe (api/pipe (api/symbol (symbol source))
                        (api/symbol (symbol connector))
@@ -552,14 +552,14 @@
   [ast]
   (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
         assert-name (str "assert-" (rand-int 1000000))
-        connect-name (str "c/" assert-name)
-        assert-exp (api/defexp (symbol assert-name) (api/fn-call (api/symbol 'pipes/verify) [(api/vector [])]))
-        assert-ast (single! assert-exp)]
-    (println (str "pipe source: " source))
-    (println (str "pipe conn: " connect-name))
-    (println (str "pipe assert: " assert-name))
+        assert-exp (api/defexp (symbol assert-name) (api/fn-call (api/symbol 'pipes/verify) [(api/integer 1)]))
+        assert-ast (single! assert-exp)
+        xf (get-in ast [:samak.nodes/xf])
+        verify-pipe (api/pipe (api/symbol (symbol source))
+                              xf
+                              (api/symbol (symbol assert-name)))]
     (add-node (symbol assert-name) assert-ast)
-    (connect source connect-name assert-name)
+    (add-pipe verify-pipe)
     (add-pipe ast)))
 
 
@@ -568,8 +568,6 @@
   [sym config]
   (let [tests (find-tests config)
         source (rt/load-network @rt-conn sym)
-        _ (println (str "bar: " source))
-        _ (println (str "t: " tests))
         nodes (distinct (flatten (concat [sym]
                                          (map :ends (vals source))
                                          (map :xf (vals source)))))

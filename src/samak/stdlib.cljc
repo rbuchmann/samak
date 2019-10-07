@@ -37,7 +37,7 @@
               v checks]
        (when-let [x (<! c)]
          (trace/trace ::verify 0 x)
-         (println (str "verify: " x " == " v " " (= x v)))
+         (println (str "verify: " x " - " (:samak.pipes/content x) " == " v " " (= (:samak.pipes/content x) v)))
          (recur c v)))
      (pipes/sink c)))
 
