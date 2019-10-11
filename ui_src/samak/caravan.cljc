@@ -3,7 +3,7 @@
   (:clj
    [(:require [clojure.string :as s]
               [clojure.walk   :as w]
-              [clojure.core.async :as a :refer [<! put! chan go-loop close!]]
+              [clojure.core.async :as a :refer [<! <!! put! chan go go-loop close!]]
               [samak.api      :as api]
               [samak.lisparser :as p]
               [samak.runtime  :as rt]
@@ -547,27 +547,58 @@
         actual (:samak.nodes/mapvalue tests)]
     (when actual (nodes/eval-node actual))))
 
+(defn attach-assert
+  ""
+  [verify ast]
+  (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
+        xf (get-in ast [:samak.nodes/xf])
+        verify-name (str "assert-" (rand-int 1000000))
+        verify-exp (api/defexp (symbol verify-name) (api/fn-call (api/symbol 'pipes/debug) []))
+        verify-ast (single! verify-exp)
+        ident-name (str "ident-" (rand-int 1000000))
+        ident-exp (api/defexp (symbol ident-name) (api/fn-call (api/symbol '|>) [(api/symbol '_)]))
+        ident-ast (single! ident-exp)
+
+        assert-pipe (api/pipe (api/symbol (symbol source))
+                              xf
+                              (api/symbol (symbol verify-name)))
+        verify-pipe (api/pipe (api/symbol (symbol verify-name))
+                              ident-ast
+                              (api/symbol (symbol verify)))]
+    (println (str "--------------------- test setup"))
+    (add-node (symbol verify-name) verify-ast)
+    (add-node (symbol ident-name) ident-ast)
+    (add-pipe assert-pipe)
+    (add-pipe verify-pipe)
+    ))
+
+
 (defn add-pipe-net
   ""
-  [ast]
-  (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
-        assert-name (str "assert-" (rand-int 1000000))
-        assert-exp (api/defexp (symbol assert-name) (api/fn-call (api/symbol 'pipes/verify) [(api/integer 1)]))
-        assert-ast (single! assert-exp)
-        xf (get-in ast [:samak.nodes/xf])
-        verify-pipe (api/pipe (api/symbol (symbol source))
-                              xf
-                              (api/symbol (symbol assert-name)))]
-    (add-node (symbol assert-name) assert-ast)
-    (add-pipe verify-pipe)
+  [verify config ast]
+  (let [sink (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name])
+        test-ref (ffirst config)
+        _ (println (str "sink: " sink " = " test-ref))]
+    (when (= (str sink) test-ref)
+      (attach-assert verify ast))
     (add-pipe ast)))
+
+
+(defn setup-verify
+  ""
+  []
+  (let [verify-name (symbol (str "verify-" (rand-int 1000000)))
+        verify-exp (api/defexp verify-name (api/fn-call (api/symbol 'pipes/debug) []))
+        verify-ast (single! verify-exp)
+        ]
+    (add-node verify-name verify-ast)
+    verify-name))
 
 
 (defn load-source
   ""
-  [sym config]
-  (let [tests (find-tests config)
-        source (rt/load-network @rt-conn sym)
+  [sym config verify]
+  (let [source (rt/load-network @rt-conn sym)
         nodes (distinct (flatten (concat [sym]
                                          (map :ends (vals source))
                                          (map :xf (vals source)))))
@@ -575,14 +606,17 @@
         _ (doall (map #(add-node (symbol (name-of-node %)) %) asts))
         pipes (map :db/id (flatten (map :pipes (vals source))))
         pipe-asts (map #(load-ast @rt-conn %1) pipes)
-        _ (doall (map add-pipe-net pipe-asts))
+        _ (doall (map #(add-pipe-net verify (:then config) %) pipe-asts))
         ]
     source))
 
 (defn load-bundle
   ""
-  [sym config]
-  (doall (map #(load-source %1 config) (rt/load-bundle @rt-conn sym))))
+  [sym test]
+  (let [verify (setup-verify)
+        ]
+    (doall (map #(load-source %1 test verify) (rt/load-bundle @rt-conn sym)))
+    verify))
 
 (defn load-oasis
    ""
@@ -594,12 +628,13 @@
   []
   (persist! @rt-conn [(api/defexp 'tl (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'in)})
                                                 (api/keyword :tests) (api/map {(api/keyword ::test)
-                                                                               (api/map {(api/keyword :input) (api/map {(api/string "in")
-                                                                                                                        (api/map {(api/string "uuid1") (api/integer 1)
-                                                                                                                                  (api/string "uuid2") (api/integer 2)})})
-                                                                                         (api/keyword :output) (api/map {(api/keyword "out")
-                                                                                                                         (api/map {(api/string "uuid1") (api/integer 1)
-                                                                                                                                   (api/string "uuid2") (api/integer 2)})})})})}))]))
+                                                                               (api/map {(api/keyword :when) (api/map {(api/string "in")
+                                                                                                                       (api/vector [(api/integer 1)])})
+                                                                                         (api/keyword :then) (api/map {(api/string "out")
+                                                                                                                       (api/vector [(api/integer 1) (api/integer 2)])
+                                                                                                                       ;; (api/keyword "out2")
+                                                                                                                       ;; (api/vector [(api/integer 1) (api/integer 2)])
+                                                                                                                       })})})}))]))
 
 (defn load-chuck
   ""
@@ -607,17 +642,7 @@
   (persist! @rt-conn [(api/defexp 'chuck (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'in)
                                                                                    (api/keyword :ui) (api/symbol 'ui-in)
                                                                                    (api/keyword :http) (api/symbol 'http-in)
-                                                                                   })
-                                                   (api/keyword :tests) (api/map {(api/keyword ::test)
-                                                                                  (api/map {(api/keyword :input) (api/map {(api/string "in")
-                                                                                                                           (api/map {(api/string "uuid1") (api/string "1")
-                                                                                                                                     (api/string "uuid2") (api/string "2")})
-                                                                                                                           (api/string "http-out")
-                                                                                                                           (api/map {(api/string "uuid1") (api/string "1")
-                                                                                                                                     (api/string "uuid2") (api/string "2")})})
-                                                                                            (api/keyword :output) (api/map {(api/keyword :ui)
-                                                                                                                            (api/map {(api/string "uuid1") (api/integer 1)
-                                                                                                                                      (api/string "uuid2") (api/integer 2)})})})})}))])
+                                                                                   })}))])
   (load-bundle 'chuck))
 
 
@@ -630,7 +655,9 @@
 (def tl
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
+   "(def out2 (pipes/log))"
    "(def incinc (|> (inc _) (inc _)))"
+   "(| in incinc out2)"
    "(| in incinc out)"])
 
 
@@ -712,31 +739,39 @@
 
 (defn run-event
   ""
-  [pipe pipe-name [uuid content]]
+  [pipe pipe-name content]
   (let [source-name (str "test/" pipe-name)
-        paket (pipes/make-paket content source-name uuid)]
+        paket (pipes/make-paket content source-name)]
     (println (str "f! " content))
     (trace/trace source-name 0 paket)
-    (pipes/fire-raw! pipe paket)))
+    (pipes/fire-raw! pipe paket)
+    ))
 
 
 (defn run-test
   ""
-  [[name tst]]
+  [config [name tst]]
   (println (str "test " name " - " tst))
 
-  (doall (map (fn [[pipe-name values]]
-                (println (str "pipe " (symbol pipe-name) " values: " values))
-                (let [pipe (rt/get-definition-by-name @rt-conn (symbol pipe-name))]
-                  (doall (map #(run-event pipe pipe-name %) values))))
-              (:input tst))))
+  (let [verify (load-bundle 'tl tst)]
+    (go (let [pipe (rt/get-definition-by-name @rt-conn verify)
+              listener (chan 1)]
+          (a/tap (.out-port pipe) listener)
+          (println (str "verify: " (<!! listener)))))
+    (doall (map (fn [[pipe-name values]]
+                  (println (str "pipe " (symbol pipe-name) " values: " values))
+                  (let [pipe (rt/get-definition-by-name @rt-conn (symbol pipe-name))]
+                    (doall (map #(run-event pipe pipe-name %) values))))
+                (:when tst)))))
 
 
 (defn run-testsuite
   ""
   [net]
-  (let [tests (find-tests (:samak.nodes/rhs net))]
-    (doall (map run-test tests))))
+  (let [config (:samak.nodes/rhs net)
+        tests (find-tests config)
+        _ (println "test: " tests)]
+    (doall (map #(run-test config %) tests))))
 
 
 (defn test-net
@@ -744,7 +779,6 @@
   []
   (persist-tl)
   (let [net (rt/load-by-sym @rt-conn 'tl)]
-    (load-bundle 'tl (:samak.nodes/rhs net))
     (run-testsuite net))
   ;; (trace-dump)
   )
