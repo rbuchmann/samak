@@ -11,7 +11,7 @@
 
 (defn compile-error
   [& args]
-  (fail (concat ["[" *db-id* "]"] args)))
+  (fail ["[" *db-id* "]"] args))
 
 
 (defmulti eval-node ::type)

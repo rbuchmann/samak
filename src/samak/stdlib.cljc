@@ -29,24 +29,6 @@
 
 ;; Utility helper
 
-(defn verify
-  "verify checks the received values of the sink against the given checks"
-  [checks]
-  (let [c (chan)
-        counter (atom 0)]
-    (go-loop [c c
-              v checks]
-      (when-let [x (<! c)]
-        (swap! counter inc)
-        (trace/trace ::verify @counter x)
-        (println (str "verify: [" @counter "] "  x " - " (:samak.pipes/content x) " == " v " " (= (:samak.pipes/content x) v)))
-        (recur c v)
-        ;; (when (< @counter checks)
-        ;;   (recur c v))
-        ))
-     (pipes/pipe c)))
-
-
 (defn debug
   ([] (pipes/pipe (chan)))
   ([spec] (pipes/checked-pipe (debug) spec spec)))
@@ -156,7 +138,6 @@
    'pipes/debug       debug
    'pipes/http        http
    'pipes/eval-notify eval-notify
-   'pipes/verify      verify
 
    ;; 'pipes/eval-line   eval-line
 

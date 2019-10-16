@@ -3,7 +3,7 @@
   (:clj
    [(:require [clojure.string :as s]
               [clojure.walk   :as w]
-              [clojure.core.async :as a :refer [<! <!! put! chan go go-loop close!]]
+              [clojure.core.async :as a :refer [<! >! chan go go-loop close!]]
               [samak.api      :as api]
               [samak.lisparser :as p]
               [samak.runtime  :as rt]
@@ -18,7 +18,7 @@
    :cljs
    [(:require [clojure.string :as s]
               [clojure.walk   :as w]
-              [clojure.core.async :as a :refer [<! put! chan close!]]
+              [clojure.core.async :as a :refer [<! >! chan close!]]
               [samak.oasis :as oasis]
               [samak.api      :as api]
               [samak.lisparser :as p]
@@ -226,7 +226,7 @@
 (defn add-pipe
   ""
   [pipe]
-  (println (str "add pipe " pipe))
+  ;; (println (str "add pipe " pipe))
   (let [source (name-of-node (:samak.nodes/from pipe))
         func (name-of-node (:samak.nodes/xf pipe))
         sink (name-of-node (:samak.nodes/to pipe))
@@ -235,7 +235,6 @@
     (when (and source func sink)
       (swap! net assoc key pipe)
       ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
-      (println (str "def: " source " - " (rt/get-definition-by-name @rt-conn source)))
       (swap! rt-conn rt/eval-expression! pipe)
       ;; (reset-rt rt-preview)
       (notify-source {:caravan/type :caravan/pipe
@@ -541,46 +540,37 @@
 
 (defn find-tests
   ""
-  [samak-map]
-  (let [val (:samak.nodes/mapkv-pairs samak-map)
-        tests (first (filter #(= :tests (:samak.nodes/value (:samak.nodes/mapkey %))) val))
-        actual (:samak.nodes/mapvalue tests)]
-    (when actual (nodes/eval-node actual))))
+  [conf]
+  (let [
+        rt2 (update @rt-conn :server #(rt/eval-all % [conf]))
+        evaled (rt/get-definition-by-name rt2 (symbol (:samak.nodes/name conf)))]
+    (:tests evaled)))
 
 (defn attach-assert
   ""
-  [verify ast]
+  [verify ast conf]
   (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
         xf (get-in ast [:samak.nodes/xf])
         verify-name (str "assert-" (rand-int 1000000))
         verify-exp (api/defexp (symbol verify-name) (api/fn-call (api/symbol 'pipes/debug) []))
         verify-ast (single! verify-exp)
-        ident-name (str "ident-" (rand-int 1000000))
-        ident-exp (api/defexp (symbol ident-name) (api/fn-call (api/symbol '|>) [(api/symbol '_)]))
-        ident-ast (single! ident-exp)
-
         assert-pipe (api/pipe (api/symbol (symbol source))
                               xf
-                              (api/symbol (symbol verify-name)))
-        verify-pipe (api/pipe (api/symbol (symbol verify-name))
-                              ident-ast
-                              (api/symbol (symbol verify)))]
-    (println (str "--------------------- test setup"))
+                              (api/symbol (symbol verify-name)))]
     (add-node (symbol verify-name) verify-ast)
-    (add-node (symbol ident-name) ident-ast)
     (add-pipe assert-pipe)
-    (add-pipe verify-pipe)
-    ))
+    (let [def1 (rt/get-definition-by-name @rt-conn (symbol verify-name))
+          def2 (rt/get-definition-by-name @rt-conn (symbol verify))]
+      (pipes/link! (pipes/link! def1 conf) def2))))
 
 
 (defn add-pipe-net
   ""
   [verify config ast]
   (let [sink (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name])
-        test-ref (ffirst config)
-        _ (println (str "sink: " sink " = " test-ref))]
+        test-ref (ffirst config)]
     (when (= (str sink) test-ref)
-      (attach-assert verify ast))
+      (attach-assert verify ast (first (second (first config)))))
     (add-pipe ast)))
 
 
@@ -589,14 +579,13 @@
   []
   (let [verify-name (symbol (str "verify-" (rand-int 1000000)))
         verify-exp (api/defexp verify-name (api/fn-call (api/symbol 'pipes/debug) []))
-        verify-ast (single! verify-exp)
-        ]
+        verify-ast (single! verify-exp)]
     (add-node verify-name verify-ast)
     verify-name))
 
 
 (defn load-source
-  ""
+  ")"
   [sym config verify]
   (let [source (rt/load-network @rt-conn sym)
         nodes (distinct (flatten (concat [sym]
@@ -623,19 +612,6 @@
    []
   (load-bundle 'oasis-ns))
 
-(defn persist-tl-net
-  ""
-  []
-  (persist! @rt-conn [(api/defexp 'tl (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'in)})
-                                                (api/keyword :tests) (api/map {(api/keyword ::test)
-                                                                               (api/map {(api/keyword :when) (api/map {(api/string "in")
-                                                                                                                       (api/vector [(api/integer 1)])})
-                                                                                         (api/keyword :then) (api/map {(api/string "out")
-                                                                                                                       (api/vector [(api/integer 1) (api/integer 2)])
-                                                                                                                       ;; (api/keyword "out2")
-                                                                                                                       ;; (api/vector [(api/integer 1) (api/integer 2)])
-                                                                                                                       })})})}))]))
-
 (defn load-chuck
   ""
   []
@@ -658,7 +634,8 @@
    "(def out2 (pipes/log))"
    "(def incinc (|> (inc _) (inc _)))"
    "(| in incinc out2)"
-   "(| in incinc out)"])
+   "(| in incinc out)"
+   "(def tl {:source {:main in} :tests {:test {:when {\"in\" [1 2]} :then {\"out\" [(|> :success)]}}}})"])
 
 
 (def tl3
@@ -732,7 +709,7 @@
   []
   (let [parsed (p/parse-all (s/join " " tl))
         _ (rt/persist-to-ids! (:store @rt-conn) (:value parsed))
-        _ (persist-tl-net)
+        ;; _ (persist-tl-net)
          ]
     :done))
 
@@ -750,14 +727,21 @@
 
 (defn run-test
   ""
-  [config [name tst]]
+  [config c [name tst]]
   (println (str "test " name " - " tst))
 
   (let [verify (load-bundle 'tl tst)]
     (go (let [pipe (rt/get-definition-by-name @rt-conn verify)
               listener (chan 1)]
           (a/tap (.out-port pipe) listener)
-          (println (str "verify: " (<!! listener)))))
+          (go-loop [results []]
+            (let [msg (<! listener)
+                  results (conj results msg)
+                  runs (count (flatten (vals (:then tst))))]
+              (println (str (count results) "/" runs " - " msg))
+              (if (= (count results) runs)
+                (>! c (or (some #(when (not= :success (:samak.pipes/content %)) %) results) :success))
+                (recur results))))))
     (doall (map (fn [[pipe-name values]]
                   (println (str "pipe " (symbol pipe-name) " values: " values))
                   (let [pipe (rt/get-definition-by-name @rt-conn (symbol pipe-name))]
@@ -767,19 +751,20 @@
 
 (defn run-testsuite
   ""
-  [net]
+  [net c]
   (let [config (:samak.nodes/rhs net)
-        tests (find-tests config)
+        foo (load-bundle 'tl :noop)
+        tests (find-tests net)
         _ (println "test: " tests)]
-    (doall (map #(run-test config %) tests))))
+    (doall (map #(run-test config c %) tests))))
 
 
 (defn test-net
   ""
-  []
+  [c]
   (persist-tl)
   (let [net (rt/load-by-sym @rt-conn 'tl)]
-    (run-testsuite net))
+    (run-testsuite net c))
   ;; (trace-dump)
   )
 
