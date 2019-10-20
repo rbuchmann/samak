@@ -44,7 +44,7 @@
 (defmethod handle-node
   :samak.nodes/fn-call
   [node]
-  (println (str "func: " node))
+  ;; (println (str "func: " node))
   {:type :caravan/func
    :display "func"
    :value (str (or (get-in node [:samak.nodes/fn-expression :samak.nodes/fn :samak.nodes/name])
@@ -612,15 +612,6 @@
    []
   (load-bundle 'oasis-ns))
 
-(defn load-chuck
-  ""
-  []
-  (persist! @rt-conn [(api/defexp 'chuck (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'in)
-                                                                                   (api/keyword :ui) (api/symbol 'ui-in)
-                                                                                   (api/keyword :http) (api/symbol 'http-in)
-                                                                                   })}))])
-  (load-bundle 'chuck))
-
 
 (def tl4
   ["(def in (pipes/debug))"
@@ -635,7 +626,12 @@
    "(def incinc (|> (inc _) (inc _)))"
    "(| in incinc out2)"
    "(| in incinc out)"
-   "(def tl {:source {:main in} :tests {:test {:when {\"in\" [1 2]} :then {\"out\" [(|> :success)]}}}})"])
+   "(def tl {:source {:main in}
+             :tests {:test {:when {\"in\" [1]}
+                            :then {\"out\" [(|> (incase (= 3 _) :success))]
+                                   \"out2\" [(|> (incase (= 3 _) :success))]}}
+                     :test2 {:when {\"in\" [3]}
+                            :then {\"out\" [(|> (incase (= 5 _) :success))]}}}})"])
 
 
 (def tl3
@@ -645,47 +641,51 @@
 
 
 (def chuck
-  ["(def in (pipes/debug))"
-   "(def ui-in (pipes/ui))"
-   "(def ui-out (pipes/ui))"
-   "(def http-in (pipes/http))"
-   "(def http-out (pipes/debug))"
-   "(def render-joke [:li (str :-id \": \" :-joke)])"
-   "(def render-ui (|> [:div
+  ["(def in (pipes/debug))
+   (def ui-in (pipes/ui))
+   (def ui-out (pipes/ui))
+   (def http-in (pipes/http))
+   (def http-out (pipes/debug))
+   (def render-joke [:li (str :-id \": \" :-joke)])
+   (def render-ui (|> [:div
                 [:h1 \"The grand Chuck Norris Joke fetcher!\"]
                 [:h2 \"Enter any joke id and press enter\"]
                 [:form {:on-submit :submit}
                  [:input {:on-change :change}]]
-                (into [:ul] (map inc _))]))"
-   "(def joke-input-state (pipes/reductions
+                (into [:ul] (map inc _))]))
+   (def joke-input-state (pipes/reductions
                        (if (= (-> :-next :-data) :change)
                          {:event :change
                           :value (-> :-next :-event :-target :-value)}
                          {:event :submit
                           :value (-> :-state :-value)})
                        {:event :change
-                        :value \"\"}))"
+                        :value \"\"}))
 
-   "(def handle-ev-in (|> _))"
-   "(| ui-in handle-ev-in joke-input-state)"
-   "(def handle-input (|> (if (= :submit :-event)
+   (def handle-ev-in (|> _))
+   (| ui-in handle-ev-in joke-input-state)
+   (def handle-input (|> (if (= :submit :-event)
          {:url (str \"http://api.icndb.com/jokes/\" :-value)}
-         ignore)))"
-   "(| joke-input-state handle-input http-out)"
+         ignore)))
+   (| joke-input-state handle-input http-out)
 
 
-   "(def joke-list (pipes/reductions (conj :-state :-next) []))"
+   (def joke-list (pipes/reductions (conj :-state :-next) []))
 
-   "(def handle-http (|> (if (= \"success\" :-type)
+   (def handle-http (|> (if (= \"success\" :-type)
               :-value
-              {:id -1 :joke \"Failed fetching joke\"})))"
-   "(| http-in handle-http joke-list)"
+              {:id -1 :joke \"Failed fetching joke\"})))
+   (| http-in handle-http joke-list)
 
-   "(def handle-in (|> _))"
-   "(| in handle-in joke-list)"
+   (def handle-in (|> _))
+   (| in handle-in joke-list)
 
-   "(| joke-list render-ui ui-out)"
-   ])
+   (| joke-list render-ui ui-out)
+   (def chuck {:source {:main in}
+                :tests {:test {:when {\"in\" [1]}
+                               :then {\"ui-out\" [(|> (incase (and (= :div (first _))
+                                                                   (= 5 (count _)))
+                                                              :success))]}}}})"])
 
 
 (defn load-trivial
@@ -704,12 +704,11 @@
   (trace/dump))
 
 
-(defn persist-tl
+(defn persist-net
   ""
-  []
-  (let [parsed (p/parse-all (s/join " " tl))
+  [code]
+  (let [parsed (p/parse-all (s/join " " code))
         _ (rt/persist-to-ids! (:store @rt-conn) (:value parsed))
-        ;; _ (persist-tl-net)
          ]
     :done))
 
@@ -727,14 +726,14 @@
 
 (defn run-test
   ""
-  [config c [name tst]]
+  [config c sym [name tst]]
   (println (str "test " name " - " tst))
 
-  (let [verify (load-bundle 'tl tst)]
+  (let [verify (load-bundle sym tst)]
     (go (let [pipe (rt/get-definition-by-name @rt-conn verify)
               listener (chan 1)]
           (a/tap (.out-port pipe) listener)
-          (go-loop [results []]
+          (loop [results []]
             (let [msg (<! listener)
                   results (conj results msg)
                   runs (count (flatten (vals (:then tst))))]
@@ -743,7 +742,7 @@
                 (>! c (or (some #(when (not= :success (:samak.pipes/content %)) %) results) :success))
                 (recur results))))))
     (doall (map (fn [[pipe-name values]]
-                  (println (str "pipe " (symbol pipe-name) " values: " values))
+                  (println (str "pipe " (str pipe-name) " values: " values))
                   (let [pipe (rt/get-definition-by-name @rt-conn (symbol pipe-name))]
                     (doall (map #(run-event pipe pipe-name %) values))))
                 (:when tst)))))
@@ -751,20 +750,37 @@
 
 (defn run-testsuite
   ""
-  [net c]
-  (let [config (:samak.nodes/rhs net)
-        foo (load-bundle 'tl :noop)
+  [c sym]
+  (let [net (rt/load-by-sym @rt-conn sym)
+        config (:samak.nodes/rhs net)
+        _ (load-bundle sym :noop)
         tests (find-tests net)
+        test-results-chan (chan 1)
         _ (println "test: " tests)]
-    (doall (map #(run-test config c %) tests))))
+    (go-loop [results []]
+      (let [msg (<! test-results-chan)
+            results (conj results msg)
+            test-num (count tests)]
+        (println (str "#" (count results) "/" test-num " - " msg))
+        (if (= (count results) test-num)
+          (>! c (or (some #(when (not= :success %) %) results) :success))
+          (recur results))))
+    (doall (map #(run-test config test-results-chan sym %) tests))))
 
 
 (defn test-net
   ""
   [c]
-  (persist-tl)
-  (let [net (rt/load-by-sym @rt-conn 'tl)]
-    (run-testsuite net c))
+  (persist-net tl)
+  (run-testsuite  c 'tl)
+  ;; (trace-dump)
+  )
+
+(defn test-chuck
+  ""
+  [c]
+  (persist-net chuck)
+  (run-testsuite c 'chuck)
   ;; (trace-dump)
   )
 

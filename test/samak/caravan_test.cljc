@@ -147,7 +147,7 @@
                                         (is (= 5 (count (:samak.nodes/children l))))))}
       #(is (= :done ((sut/cut-cell) {:sym "test" :cell-idx 5}))))))
 
-(deftest should-load-network
+#_(deftest should-load-network
   (let [syms (merge {'pipes/ui       pipes/debug
                      'pipes/mouse    pipes/debug
                      'pipes/keyboard pipes/debug
@@ -175,6 +175,23 @@
     (utils/test-async
       (go
         (let [val (<! c)]
-          (println (str "\ntraces: "))
-          (sut/trace-dump)
+          ;; (println (str "\ntraces: "))
+          ;; (sut/trace-dump)
+          (is (= :success val)))))))
+
+
+(deftest should-tests-chuck
+  (let [syms (merge {'pipes/ui    pipes/debug
+                     'pipes/http  pipes/debug}
+                    core/samak-symbols)
+        c (chan 1)
+        rt (rt/make-runtime syms)
+        _ (sut/init rt)
+        _ (sut/test-chuck c)]
+    (utils/test-async
+      (go
+        (let [[raw port] (a/alts! [c (a/timeout 3000)])
+              val (if (= port c) raw :timeout)]
+          ;; (println (str "\ntraces: "))
+          ;; (sut/trace-dump)
           (is (= :success val)))))))
