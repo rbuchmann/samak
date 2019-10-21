@@ -14,6 +14,7 @@
      [samak.tools :as t]
      [samak.trace :as trace]
      [samak.core :as core]
+     [samak.test-programs :as test-programs]
      [samak.runtime.servers :as servers]
      [samak.runtime.stores :as stores])]
    :cljs
@@ -30,6 +31,7 @@
      [samak.tools :as t]
      [samak.trace :as trace]
      [samak.core :as core]
+     [samak.test-programs :as test-programs]
      [samak.runtime.servers :as servers]
      [samak.runtime.stores :as stores])]))
 
@@ -59,7 +61,7 @@
   (let [pipe (run/get-definition-by-name @rt (symbol pipe-name))]
     (if (pipes/pipe? pipe)
       (do (let [arg (edn/read-string event)]
-            (pipes/fire! pipe arg))
+            (pipes/fire! pipe arg pipe-name))
           {})
       (println (str "could not find pipe " pipe-name)))))
 
@@ -123,64 +125,3 @@
 (defn eval-lines [lines]
   (doseq [line (group-repl-cmds lines)]
     (eval-line line)))
-
-(def t0
-  ["(def in (|> inc inc))"])
-
-(def t
-  ["(def in (|> inc inc))"
-   "(def out (pipes/log))"
-   "(| in out)"
-   "!f in 5"])
-
-(def tm
-  ["(def in (|> {:foo inc}))"
-   "(def out (pipes/log))"
-   "(| in out)"
-   "!f in 5"])
-
-(def tl
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> inc inc) out)"
-   "!f in 5"])
-
-(def tl2
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> [:div id]) out)"
-   "!f in 42"])
-
-(def tl3
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> (if even? id ignore)) out)"
-   "!f in 5"
-   "!f in 6"])
-
-(def tl3b
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> (only even?)) out)"
-   "!f in 5"
-   "!f in 6"])
-
-(def tl4
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (pipes/reductions (-> [:-next :-state] sum) 0) out)"
-   "!f in 5"
-   "!f in 6"])
-
-(def tl4b
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (pipes/reductions (-> [:-state :-next] into) {}) out)"
-   "!f in 5"
-   "!f in 6"])
-
-(def tl5
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> (mapcat (repeat 3))) out)"
-   "!f in [5 6]"])

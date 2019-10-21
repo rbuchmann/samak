@@ -2363,7 +2363,7 @@
                 (api/key-fn :x)
                 (api/string ",")
                 (api/key-fn :y)
-                (api/string ")")
+                (api/string ") ")
                 (api/string "scale(")
                 (api/key-fn :zoom)
                 (api/string ")"))
@@ -2401,6 +2401,7 @@
               (defncall 'svg-elements-reduce 'pipes/reductions
                 (api/fn-call (api/symbol '->)
                              [(api/vector [(api/key-fn :state) (api/key-fn :next)])
+                              (api/fn-call (api/symbol 'spy) [(api/string "XXX reduce")])
                               (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)]) ])
                 (api/map {(api/keyword :graph) (api/vector [(api/keyword :g)])
                           (api/keyword :sink-menu) (api/vector [(api/keyword :g)])
@@ -2466,6 +2467,7 @@
               ;; render SVG components
               (defncall 'svg-render 'pipes/debug)
               (defncall 'render-svg '->
+                ;; (api/fn-call (api/symbol 'spy) [(api/string "XXX rsvg")])
                 (api/map {(api/keyword :svg)
                           (api/map {(api/keyword :oasis.gui/order)
                                     (api/integer 2)
@@ -2474,20 +2476,16 @@
                                                  (api/map {(api/keyword :width) (api/integer 1200)
                                                            (api/keyword :height) (api/integer 800)})
                                                  (api/symbol 'svg-defs)
-                                                 ;; (api/key-fn :graph)
+                                                 (api/key-fn :graph)
                                                  ;; (api/key-fn :source-menu)
                                                  ;; (api/key-fn :sink-menu)
                                                  ;; (api/key-fn :action-menu)
                                                  ])})}))
 
-              (defncall 'test-spy '->
-                (api/fn-call (api/symbol 'spy) [(api/string "test")])
-                (api/symbol '_))
-
               (defncall 'init-view '->
-                (api/map {(api/keyword :view) (api/map {(api/keyword :zoom) (api/integer 1)
-                                                        (api/keyword :x) (api/integer 150)
-                                                        (api/keyword :y) (api/integer 50)})}))
+                (api/map {(api/keyword :zoom) (api/integer 1)
+                          (api/keyword :x) (api/integer 150)
+                          (api/keyword :y) (api/integer 50)}))
 
               ])
 
@@ -2497,8 +2495,8 @@
               (pipe 'd 'log)
               (pipe 'oasis-ev 'log)
 
-              (red 'oasis-mouse 'mouse-reduce 'mouse-state)
-              (red 'oasis-mouse 'target-reduce 'target-events)
+              ;; (red 'oasis-mouse 'mouse-reduce 'mouse-state)
+              ;; (red 'oasis-mouse 'target-reduce 'target-events)
 
               (pipe 'target-events 'only-different 'hover-events)
               (pipe 'hover-events 'tag-hover 'hover-state)
@@ -2610,8 +2608,7 @@
 
               (pipe 'state 'render-action-menu 'svg-render)
 
-              (pipe 'init 'header 'log)
-              (pipe 'oasis 'test-spy 'log-render)
+              (pipe 'init 'header 'render)
               ;;                (pipe 'init 'repl 'render)
    (pipe 'init 'init-view 'view-events)
    (api/defexp 'oasis-main (api/pipe (api/symbol 'oasis)
@@ -2623,6 +2620,13 @@
                                                      ;; (api/keyword :layout) (api/symbol 'oasis-layout)
                                                      })
                      ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
+                                   (api/keyword :tests) (api/map {(api/keyword ::test)
+                                                                  (api/map {(api/keyword :input) (api/map {(api/keyword :main)
+                                                                                                           (api/map {(api/string "uuid1") (api/string "1")
+                                                                                                                     (api/string "uuid2") (api/string "2")})})
+                                                                            (api/keyword :output) (api/map {(api/keyword :ui)
+                                                                                                            (api/map {(api/string "uuid1") (api/integer 1)
+                                                                                                                      (api/string "uuid2") (api/integer 2)})})})})
                      ;; (api/keyword :network) (api/)
                      }))
    ])

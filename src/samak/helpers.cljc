@@ -51,3 +51,23 @@
   []
   #?(:clj  (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
+
+(defn make-span
+  ""
+  []
+  (rand-int 1000000))
+
+(defn str-len
+  ""
+  [s]
+  #?(:clj (count s)
+     :cljs (.-length s)))
+
+
+(defn substring
+  ""
+  [s n]
+  (str
+   (if (> (str-len s) n)
+     (str (subs (str s) 0 (- n 3)) "...")
+     s)))

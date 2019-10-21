@@ -11,7 +11,7 @@
 
 (defn compile-error
   [& args]
-  (fail (concat ["[" *db-id* "]"] args)))
+  (fail ["[" *db-id* "]"] args))
 
 
 (defmulti eval-node ::type)
@@ -65,20 +65,20 @@
               (eval-node xf)))
         c (eval-node to)]
     (if b
-      (pipes/link! (pipes/link! a b *db-id*) c *db-id*)
-      (pipes/link! a c *db-id*))))
+      (pipes/link! (pipes/link! a b) c)
+      (pipes/link! a c))))
 
 (defmethod eval-node ::fn-ref [{:keys [::fn]}]
   (or (get *environment* (:db/id fn))
+      (when (= (::type fn) ::def) (eval-node fn))
       (compile-error "Undefined reference " fn " in " *environment*)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
-  ;; (println (str "call: "  fn-expression))
   (let [func (eval-node fn-expression)]
     (apply (p/eval-as-fn func) (eval-reordered arguments))))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]
-  (pipes/link! (eval-node from) (eval-node to) *db-id*))
+  (pipes/link! (eval-node from) (eval-node to)))
 
 (defn eval-env [env builtins ast db-id]
   (binding [*environment* env

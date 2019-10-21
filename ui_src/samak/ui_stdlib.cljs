@@ -5,6 +5,7 @@
             [clojure.spec.alpha :as s]
             [reagent.core       :as r]
             [samak.pipes        :as pipes]
+            [samak.trace        :as trace]
             [cljs.core.async    :as a :refer [<! put! chan close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -77,6 +78,7 @@
         ui-out (chan)]
     (go-loop []
       (when-some [i (<! ui-in)]
+        (trace/trace ::ui 0 i)
         (let [x (or (:samak.pipes/content i) i)]
           (if (s/valid? ::hiccup x)
             (when-let [node (js/document.getElementById (str "samak" n))]
@@ -133,10 +135,11 @@
 
 (defn layout-call [request res]
   (let [handler (fn [result] (put! res result) (close! res))]
+    (trace/trace ::ui 0 request)
     (layout/compute-layout request [] handler handler)))
 
 (defn layout []
-  (pipes/async-pipe layout-call nil nil ::layout))
+  (pipes/async-pipe layout-call nil nil))
 
 ;; Exported symbols
 

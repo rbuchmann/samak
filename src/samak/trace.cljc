@@ -35,7 +35,7 @@
           :samak.trace/level :trace
           :samak.trace/duration duration
           :samak.trace/timestamp (helper/serialize-timestamp (helper/now))}
-         event))
+         (if (map? event) event {:value event})))
 
 (defn trace
   ""
@@ -73,7 +73,8 @@
     (str "[" id "] "
        (helper/print-timestamp (:samak.trace/timestamp trace)) " - " (:samak.trace/duration trace) "ms: "
        (node-as-str (:samak.trace/node trace)) " - "
-       (subs (str (:samak.pipes/content trace)) 1 100) "...")))
+       (let [c (str (:samak.pipes/content trace))]
+         (helper/substring c 100)))))
 
 
 (defn dump
