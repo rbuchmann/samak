@@ -14,7 +14,6 @@
   [& args]
   (fail ["[" *db-id* "]"] args))
 
-
 (defmulti eval-node ::type)
 
 (defn eval-reordered [nodes]
