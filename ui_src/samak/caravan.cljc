@@ -165,7 +165,8 @@
 (defn notify-source
   ""
   [src]
-  (std/notify-source {(:caravan/name src) src}))
+  ;; (std/notify-source {(:caravan/name src) src})
+  )
 
 
 (defn is-sink?
@@ -196,9 +197,9 @@
 (defn add-node
   ""
   [sym fn]
-  (println (str "function cache: " (keys @fns)))
+  ;; (println (str "function cache: " (keys @fns)))
   (swap! fns assoc sym fn)
-  (swap! rt-conn rt/eval-expression! fn)
+  (swap! rt-conn #(update % :server rt/eval-all [fn]))
   ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
   ;; (reset-rt rt-preview)
   (let [type (if (is-sink? fn) :caravan/sink :caravan/func)
@@ -232,7 +233,7 @@
         func (name-of-node (:samak.nodes/xf pipe))
         sink (name-of-node (:samak.nodes/to pipe))
         pipe-name (str source "-" func "-" sink)]
-    (println (str "adding pipe from " source " with " func " to " sink))
+    ;; (println (str "adding pipe from " source " with " func " to " sink))
     (when (and source func sink)
       (swap! net assoc key pipe)
       ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
@@ -590,8 +591,8 @@
   [sym config verify]
   (let [source (rt/load-network @rt-conn sym)
         nodes (distinct (flatten (concat [sym]
-                                         (map :ends (vals source))
-                                         (map :xf (vals source)))))
+                                         (map :xf (vals source))
+                                         (map :ends (vals source)))))
         asts (map #(load-ast @rt-conn %1) nodes)
         _ (doall (map #(add-node (symbol (name-of-node %)) %) asts))
         pipes (map :db/id (flatten (map :pipes (vals source))))

@@ -180,7 +180,7 @@
           (is (= :success val)))))))
 
 
-(deftest should-tests-chuck
+(deftest should-test-chuck
   (let [syms (merge {'pipes/ui    pipes/debug
                      'pipes/http  pipes/debug}
                     core/samak-symbols)
@@ -192,6 +192,6 @@
       (go
         (let [[raw port] (a/alts! [c (a/timeout 3000)])
               val (if (= port c) raw :timeout)]
-          ;; (println (str "\ntraces: "))
-          ;; (sut/trace-dump)
+          (println (str "\ntraces: "))
+          (sut/trace-dump)
           (is (= :success val)))))))

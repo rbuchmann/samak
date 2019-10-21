@@ -70,6 +70,7 @@
 
 (defmethod eval-node ::fn-ref [{:keys [::fn]}]
   (or (get *environment* (:db/id fn))
+      (when (= (::type fn) ::def) (eval-node fn))
       (compile-error "Undefined reference " fn " in " *environment*)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
