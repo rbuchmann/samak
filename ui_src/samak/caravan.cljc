@@ -120,6 +120,11 @@
    :value (str (get-in node [:samak.nodes/value]))})
 
 (defmethod handle-node
+  :samak.nodes/fn-ref
+  [node]
+  {:type (str "fn-ref: " (get node :samak.nodes/fn))})
+
+(defmethod handle-node
   :default
   [node]
   (if (and (vector? node) (= (count node) 2) (= :samak.nodes/name (first node)))
@@ -550,35 +555,46 @@
 
 (defn attach-assert
   ""
-  [verify ast conf]
-  (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
-        xf (get-in ast [:samak.nodes/xf])
-        verify-name (str "assert-" (rand-int 1000000))
+  [verify source xf conf]
+  (let [verify-name (str "assert-" (rand-int 1000000))
         verify-exp (api/defexp (symbol verify-name) (api/fn-call (api/symbol 'pipes/debug) []))
         verify-ast (single! verify-exp)
-        assert-pipe (api/pipe (api/symbol (symbol source))
-                              xf
-                              (api/symbol (symbol verify-name)))]
+        ;; assert-pipe (api/pipe (api/symbol (symbol source))
+        ;;                       xf
+        ;;                       (api/symbol (symbol verify-name)))
+        ]
     (add-node (symbol verify-name) verify-ast)
-    (add-pipe assert-pipe)
-    (let [def1 (rt/get-definition-by-name @rt-conn (symbol verify-name))
-          def2 (rt/get-definition-by-name @rt-conn (symbol verify))]
-      (pipes/link! (pipes/link! def1 conf) def2))))
+    (let [def1 (rt/get-definition-by-name @rt-conn (symbol source))
+          bar (get (servers/get-defined (:server @rt-conn)) (:db/id (:samak.nodes/fn xf)))
+          def2 (rt/get-definition-by-name @rt-conn (symbol verify-name))
+          def3 (rt/get-definition-by-name @rt-conn (symbol verify))]
+      ;; (println "BAAAR:" bar)
+      (pipes/link! (pipes/link! def1 bar) def2)
+      (pipes/link! (pipes/link! def2 conf) def3))))
 
 
 (defn add-pipe-net
   ""
   [verify config ast]
-  (let [sink (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name])
-        test-ref (ffirst config)]
-    (when (= (str sink) test-ref)
-      (attach-assert verify ast (first (second (first config)))))
-    (add-pipe ast)))
+  (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
+        xf (get-in ast [:samak.nodes/xf])
+        sink (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name])
+        test-ref (get config (str sink))]
+    (when test-ref
+      (println "Verifying pipe: " sink " with " test-ref)
+      (attach-assert verify source xf (first test-ref)))
+    (println "Adding pipe: " sink)
+    (let [def1 (rt/get-definition-by-name @rt-conn (symbol source))
+          bar (get (servers/get-defined (:server @rt-conn)) (:db/id (:samak.nodes/fn xf)))
+          def2 (rt/get-definition-by-name @rt-conn (symbol sink))]
+      ;; (println "BAAAR:" bar)
+      (pipes/link! (pipes/link! def1 bar) def2))))
 
 
 (defn setup-verify
   ""
   []
+  (println "Set up result collection")
   (let [verify-name (symbol (str "verify-" (rand-int 1000000)))
         verify-exp (api/defexp verify-name (api/fn-call (api/symbol 'pipes/debug) []))
         verify-ast (single! verify-exp)]
@@ -587,15 +603,19 @@
 
 
 (defn load-source
-  ")"
+  ""
   [sym config verify]
+  ;; (println "Loading source: " (str sym))
   (let [source (rt/load-network @rt-conn sym)
         nodes (distinct (flatten (concat [sym]
                                          (map :xf (vals source))
                                          (map :ends (vals source)))))
+        ;; _ (println "Loading asts: " (s/join ", " nodes))
         asts (map #(load-ast @rt-conn %1) nodes)
+        ;; _ (println "Adding nodes: " (s/join ", " (map :samak.nodes/name asts)))
         _ (doall (map #(add-node (symbol (name-of-node %)) %) asts))
         pipes (map :db/id (flatten (map :pipes (vals source))))
+        ;; _ (println "Adding pipes: " (s/join ", " pipes))
         pipe-asts (map #(load-ast @rt-conn %1) pipes)
         _ (doall (map #(add-pipe-net verify (:then config) %) pipe-asts))
         ]
@@ -605,8 +625,10 @@
   ""
   [sym test]
   (let [verify (setup-verify)
-        ]
-    (doall (map #(load-source %1 test verify) (rt/load-bundle @rt-conn sym)))
+        _ (print "Fetching bundle from DB: ")
+        bundle (rt/load-bundle @rt-conn sym)]
+    (println (s/join "," bundle))
+    (doall (map #(load-source %1 test verify) bundle))
     verify))
 
 (defn load-oasis
@@ -679,22 +701,26 @@
 
 (defn run-testsuite
   ""
-  [c sym]
-  (let [net (rt/load-by-sym @rt-conn sym)
-        config (:samak.nodes/rhs net)
-        _ (load-bundle sym :noop)
-        tests (find-tests net)
-        test-results-chan (chan 1)
-        _ (println "test: " tests)]
-    (go-loop [results []]
-      (let [msg (<! test-results-chan)
-            results (conj results msg)
-            test-num (count tests)]
-        (println (str "#" (count results) "/" test-num " - " msg))
-        (if (= (count results) test-num)
-          (>! c (or (some #(when (not= :success %) %) results) :success))
-          (recur results))))
-    (doall (map #(run-test config test-results-chan sym %) tests))))
+  ([c sym] (run-testsuite c sym {}))
+  ([c sym {timeout :timeout :or {timeout 3000}}]
+   (let [net (rt/load-by-sym @rt-conn sym)
+         config (:samak.nodes/rhs net)
+         _ (println "Preloading network")
+         _ (load-bundle sym :noop)
+         _ (println "Loading test definitions")
+         tests (find-tests net)
+         test-num (count tests)
+         test-results-chan (chan 1)]
+     (go-loop [results []
+               tests tests]
+       (run-test config test-results-chan sym (first tests))
+       (let [[raw port] (a/alts! [test-results-chan (a/timeout timeout)])
+             msg (if (= port test-results-chan) raw :timeout)
+             results (conj results msg)]
+         (println (str "#" (count results) "/" test-num " - " msg))
+         (if (= (count results) test-num)
+           (>! c (or (some #(when (not= :success %) %) results) :success))
+           (recur results (rest tests))))))))
 
 
 (defn test-net
@@ -709,7 +735,7 @@
   ""
   [c]
   (persist-net test-programs/chuck)
-  (run-testsuite c 'chuck)
+  (run-testsuite c 'chuck {:timeout 60000})
   ;; (trace-dump)
   )
 

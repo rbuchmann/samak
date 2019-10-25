@@ -175,8 +175,8 @@
     (utils/test-async
       (go
         (let [val (<! c)]
-          ;; (println (str "\ntraces: "))
-          ;; (sut/trace-dump)
+          (println (str "\ntraces: "))
+          (sut/trace-dump)
           (is (= :success val)))))))
 
 
@@ -190,8 +190,8 @@
         _ (sut/test-chuck c)]
     (utils/test-async
       (go
-        (let [[raw port] (a/alts! [c (a/timeout 3000)])
-              val (if (= port c) raw :timeout)]
+        (let [[raw port] (a/alts! [c (a/timeout 300000)])
+              val (if (= port c) raw :timeout-overall)]
           (println (str "\ntraces: "))
           (sut/trace-dump)
           (is (= :success val)))))))

@@ -74,15 +74,15 @@
                             :then {\"out\" [(|> (incase (= 3 _) :success))]
                                    \"out2\" [(|> (incase (= 3 _) :success))]}}
                      :test2 {:when {\"in\" [3]}
-                             :then {\"out\" [(|> (incase (= 5 _) :success))]}}}})"])
-
+                             :then {\"out\" [(|> (incase (= 5 _) :success))]}}
+                     }})"])
 (def chuck
   ["(def in (pipes/debug))
    (def ui-in (pipes/ui))
    (def ui-out (pipes/ui))
-   (def http-in (pipes/http))
-   (def http-out (pipes/debug))
-   (def render-joke [:li (str :-id \": \" :-joke)])
+   (def http-in (pipes/debug))
+   (def http-out (pipes/http))
+   (def render-joke [:li (str :-id \": \" :-joke \"-\"_)])
    (def render-ui (|> [:div
                 [:h1 \"The grand Chuck Norris Joke fetcher!\"]
                 [:h2 \"Enter any joke id and press enter\"]
@@ -120,14 +120,16 @@
    (def chuck {:source {:main in
                         :ui-in ui-in
                         :http-in http-in}
-                :tests {:test-init {:when {\"in\" [[]]}
-                                    :then {\"ui-out\" [(|> (incase (and (= :div (first _))
-                                                                        (= 5 (count _)))
-                                                                   :success))]}}
-                        :test-event {:when {\"ui-in\" [{:data :change :event {:target {:value 42}}}]}
-                                     :then {\"http-out\" [(|> :success)
-                                                          (|> (incase (and (= \"http://api.icndb.com/jokes/42\" :-url))
-                                                                    :success))]}}
+                :tests {
                         :test-response {:when {\"http-in\" [{:type \"success\" :value {:id 42 :joke \"is on you\"}}]}
-                                     :then {\"ui-out\" [(|> (incase (and (= \"http://api.icndb.com/jokes/42\" :-url))
-                                                                    :success))]}}}})"])
+                                     :then {\"ui-out\" [(|> (nth _ 4) (count _))
+(|> _)]}}}})"])
+
+;; :test-init {:when {\"in\" [[]]}
+;;                                     :then {\"ui-out\" [(|> (incase (and (= :div (first _))
+;;                                                                         (= 5 (count _)))
+;;                                                                    :success))]}}
+;;                         :test-event {:when {\"ui-in\" [{:data :change :event {:target {:value 42}}}]}
+;;                                      :then {\"http-out\" [
+;;                                                           (|> (incase (and (= \"http://api.icndb.com/jokes/42\" :-url))
+;;                                                                     :success))]}}
