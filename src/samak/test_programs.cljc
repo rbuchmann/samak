@@ -82,7 +82,7 @@
    (def ui-out (pipes/ui))
    (def http-in (pipes/debug))
    (def http-out (pipes/http))
-   (def render-joke [:li (str :-id \": \" :-joke \"-\"_)])
+   (def render-joke [:li (str :-id \": \" :-joke)])
    (def render-ui (|> [:div
                 [:h1 \"The grand Chuck Norris Joke fetcher!\"]
                 [:h2 \"Enter any joke id and press enter\"]
@@ -122,8 +122,7 @@
                         :http-in http-in}
                 :tests {
                         :test-response {:when {\"http-in\" [{:type \"success\" :value {:id 42 :joke \"is on you\"}}]}
-                                     :then {\"ui-out\" [(|> (nth _ 4) (count _))
-(|> _)]}}}})"])
+                                     :then {\"ui-out\" [(|> _) (|> _)]}}}})"])
 
 ;; :test-init {:when {\"in\" [[]]}
 ;;                                     :then {\"ui-out\" [(|> (incase (and (= :div (first _))
