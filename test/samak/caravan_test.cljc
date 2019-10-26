@@ -185,13 +185,13 @@
                      'pipes/http  pipes/debug}
                     core/samak-symbols)
         c (chan 1)
-        rt (rt/make-runtime syms)
-        _ (sut/init rt)
-        _ (sut/test-chuck c)]
+        rt (rt/make-runtime syms)]
+    (sut/init rt)
+    (sut/test-chuck c)
     (utils/test-async
-      (go
-        (let [[raw port] (a/alts! [c (a/timeout 300000)])
-              val (if (= port c) raw :timeout-overall)]
-          (println (str "\ntraces: "))
-          (sut/trace-dump)
-          (is (= :success val)))))))
+     (go
+       (let [[raw port] (a/alts! [c (a/timeout 300000)])
+             val (if (= port c) raw :timeout-overall)]
+         (println (str "\ntraces: "))
+         (sut/trace-dump)
+         (is (= :success val)))))))

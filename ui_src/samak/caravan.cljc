@@ -555,22 +555,17 @@
 
 (defn attach-assert
   ""
-  [verify source xf conf]
-  (let [verify-name (str "assert-" (rand-int 1000000))
-        verify-exp (api/defexp (symbol verify-name) (api/fn-call (api/symbol 'pipes/debug) []))
-        verify-ast (single! verify-exp)
-        ;; assert-pipe (api/pipe (api/symbol (symbol source))
-        ;;                       xf
-        ;;                       (api/symbol (symbol verify-name)))
-        ]
-    (add-node (symbol verify-name) verify-ast)
-    (let [def1 (rt/get-definition-by-name @rt-conn (symbol source))
-          bar (get (servers/get-defined (:server @rt-conn)) (:db/id (:samak.nodes/fn xf)))
-          def2 (rt/get-definition-by-name @rt-conn (symbol verify-name))
-          def3 (rt/get-definition-by-name @rt-conn (symbol verify))]
-      ;; (println "BAAAR:" bar)
-      (pipes/link! (pipes/link! def1 bar) def2)
-      (pipes/link! (pipes/link! def2 conf) def3))))
+  [verify source xf assert-fn]
+  (let [assert-name (str "assert-" (rand-int 1000000))
+        assert-exp (api/defexp (symbol assert-name) (api/fn-call (api/symbol 'pipes/debug) []))
+        assert-ast (single! assert-exp)]
+    (add-node (symbol assert-name) assert-ast)
+    (let [source-pipe (rt/get-definition-by-name @rt-conn (symbol source))
+          xf-pipe (get (servers/get-defined (:server @rt-conn)) (:db/id (:samak.nodes/fn xf)))
+          assert-pipe (rt/get-definition-by-name @rt-conn (symbol assert-name))
+          verify-pipe (rt/get-definition-by-name @rt-conn (symbol verify))]
+      (pipes/link! (pipes/link! source-pipe xf-pipe) assert-pipe)
+      (pipes/link! (pipes/link! assert-pipe assert-fn) verify-pipe))))
 
 
 (defn add-pipe-net
@@ -634,19 +629,7 @@
 (defn load-oasis
    ""
    []
-  (load-bundle 'oasis-ns))
-
-
-
-
-(defn load-trivial
-  ""
-  []
-  (let [ id (rt/load-by-sym @rt-conn 'in)
-        _ (println "in: " id)
-        loaded (load-source (:db/id id))
-        _ (println "loaded: " loaded)]
-    :done))
+  (load-bundle 'oasis-ns :none))
 
 (defn trace-dump
   ""
@@ -681,9 +664,10 @@
   (println (str "test " name " - " tst))
 
   (let [verify (load-bundle sym tst)]
+    (println (str "VERIFY: " verify))
     (go (let [pipe (rt/get-definition-by-name @rt-conn verify)
               listener (chan 1)]
-          (a/tap (.out-port pipe) listener)
+          (a/tap (.-out pipe) listener) ;; TODO: FIX protocol?
           (loop [results []]
             (let [msg (<! listener)
                   results (conj results msg)
@@ -727,17 +711,26 @@
   ""
   [c]
   (persist-net test-programs/tl6)
-  (run-testsuite  c 'tl)
-  ;; (trace-dump)
-  )
+  (run-testsuite  c 'tl))
 
 (defn test-chuck
   ""
   [c]
   (persist-net test-programs/chuck)
-  (run-testsuite c 'chuck {:timeout 60000})
-  ;; (trace-dump)
-  )
+  (run-testsuite c 'chuck {:timeout 60000}))
+
+
+(defn oasis-hook
+  ""
+  []
+  (let [c (chan 1)]
+    (test-net c)
+    (go
+      (let [[raw port] (a/alts! [c (a/timeout 30000)])
+            val (if (= port c) raw :timeout-overall)]
+        (println (str "\nresult: " val))
+        (println (str "\ntraces: "))
+        (trace-dump)))))
 
 
 (defn init
@@ -770,6 +763,6 @@
 
 (def symbols
   {'create-sink create-sink
-   'load-node test-net
+   'load-node oasis-hook
    'pipes/caravan caravan-pipe
    'connect link})
