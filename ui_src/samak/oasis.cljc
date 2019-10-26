@@ -275,7 +275,7 @@
 
               ;; repl
 
-              (defncall 'oasis 'pipes/debug)
+              (defncall 'oasis-init 'pipes/debug)
               (defncall 'init 'pipes/debug)
               (defmap 'repl
                 {(api/keyword :repl)
@@ -2610,23 +2610,21 @@
 
               (pipe 'init 'header 'render)
               ;;                (pipe 'init 'repl 'render)
-   (pipe 'init 'init-view 'view-events)
-   (api/defexp 'oasis-main (api/pipe (api/symbol 'oasis)
-                                     (api/symbol 'init)))
-   (api/defexp 'oasis-ns (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'init)
-                                                                   (api/keyword :ui) (api/symbol 'oasis-ev)
+   ;; (pipe 'init 'init-view 'view-events)
+   ;; (api/defexp 'oasis-main (api/pipe (api/symbol 'oasis-init)
+   ;;                                   (api/symbol 'init)))
+   (api/defexp 'oasis (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'init)
+                                                                (api/keyword :ui) (api/symbol 'oasis-ev)
                                                      ;; (api/keyword :mouse) (api/symbol 'oasis-mouse)
                                                      ;; (api/keyword :kb) (api/symbol 'oasis-kb)
                                                      ;; (api/keyword :layout) (api/symbol 'oasis-layout)
                                                      })
                      ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
                                    (api/keyword :tests) (api/map {(api/keyword ::test)
-                                                                  (api/map {(api/keyword :input) (api/map {(api/keyword :main)
-                                                                                                           (api/map {(api/string "uuid1") (api/string "1")
-                                                                                                                     (api/string "uuid2") (api/string "2")})})
-                                                                            (api/keyword :output) (api/map {(api/keyword :ui)
-                                                                                                            (api/map {(api/string "uuid1") (api/integer 1)
-                                                                                                                      (api/string "uuid2") (api/integer 2)})})})})
+                                                                  (api/map {(api/keyword :when) (api/map {(api/string "main")
+                                                                                                          (api/vector [(api/string "1") (api/string "2")])})
+                                                                            (api/keyword :then) (api/map {(api/string "ui")
+                                                                                                          (api/vector [(api/fn-call (api/symbol '|>) [(api/keyword :success)])])})})})
                      ;; (api/keyword :network) (api/)
                      }))
    ])
@@ -2636,4 +2634,6 @@
   (into oasis (flatten network)))
 
 (defn store [stores]
-  (.persist-tree! stores oasis))
+  (.persist-tree! stores oasis)
+  (.persist-tree! stores (flatten network))
+  stores)

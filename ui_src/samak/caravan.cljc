@@ -548,10 +548,10 @@
 (defn find-tests
   ""
   [conf]
-  (let [
-        rt2 (update @rt-conn :server #(rt/eval-all % [conf]))
-        evaled (rt/get-definition-by-name rt2 (symbol (:samak.nodes/name conf)))]
-    (:tests evaled)))
+  (when conf
+    (let [rt2 (update @rt-conn :server #(rt/eval-all % [conf]))
+          evaled (rt/get-definition-by-name rt2 (symbol (:samak.nodes/name conf)))]
+      (:tests evaled))))
 
 (defn attach-assert
   ""
@@ -629,7 +629,7 @@
 (defn load-oasis
    ""
    []
-  (load-bundle 'oasis-ns :none))
+  (load-bundle 'oasis :none))
 
 (defn trace-dump
   ""
@@ -687,6 +687,7 @@
   ([c sym] (run-testsuite c sym {}))
   ([c sym {timeout :timeout :or {timeout 3000}}]
    (let [net (rt/load-by-sym @rt-conn sym)
+         _ (println "SYM " net)
          config (:samak.nodes/rhs net)
          _ (println "Preloading network")
          _ (load-bundle sym :noop)
@@ -694,16 +695,18 @@
          tests (find-tests net)
          test-num (count tests)
          test-results-chan (chan 1)]
-     (go-loop [results []
-               tests tests]
-       (run-test config test-results-chan sym (first tests))
-       (let [[raw port] (a/alts! [test-results-chan (a/timeout timeout)])
-             msg (if (= port test-results-chan) raw :timeout)
-             results (conj results msg)]
-         (println (str "#" (count results) "/" test-num " - " msg))
-         (if (= (count results) test-num)
-           (>! c (or (some #(when (not= :success %) %) results) :success))
-           (recur results (rest tests))))))))
+     (if (zero? test-num)
+       (a/put! c :no-tests)
+       (go-loop [results []
+                 tests tests]
+         (run-test config test-results-chan sym (first tests))
+         (let [[raw port] (a/alts! [test-results-chan (a/timeout timeout)])
+               msg (if (= port test-results-chan) raw :timeout)
+               results (conj results msg)]
+           (println (str "#" (count results) "/" test-num " - " msg))
+           (if (>= (count results) test-num)
+             (>! c (or (some #(when (not= :success %) %) results) :success))
+             (recur results (rest tests)))))))))
 
 
 (defn test-net
@@ -718,12 +721,16 @@
   (persist-net test-programs/chuck)
   (run-testsuite c 'chuck {:timeout 3000}))
 
+(defn test-oasis
+  ""
+  [c]
+  (run-testsuite c 'oasis {:timeout 3000}))
 
 (defn oasis-hook
   ""
   []
   (let [c (chan 1)]
-    (test-net c)
+    (test-oasis c)
     (go
       (let [[raw port] (a/alts! [c (a/timeout 30000)])
             val (if (= port c) raw :timeout-overall)]
