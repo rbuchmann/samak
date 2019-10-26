@@ -664,7 +664,6 @@
   (println (str "test " name " - " tst))
 
   (let [verify (load-bundle sym tst)]
-    (println (str "VERIFY: " verify))
     (go (let [pipe (rt/get-definition-by-name @rt-conn verify)
               listener (chan 1)]
           (a/tap (.-out pipe) listener) ;; TODO: FIX protocol?
@@ -717,7 +716,7 @@
   ""
   [c]
   (persist-net test-programs/chuck)
-  (run-testsuite c 'chuck {:timeout 60000}))
+  (run-testsuite c 'chuck {:timeout 3000}))
 
 
 (defn oasis-hook
