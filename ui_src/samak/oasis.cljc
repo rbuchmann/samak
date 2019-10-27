@@ -2621,7 +2621,7 @@
                                                      })
                      ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
                                    (api/keyword :tests) (api/map {(api/keyword ::test)
-                                                                  (api/map {(api/keyword :when) (api/map {(api/string "main")
+                                                                  (api/map {(api/keyword :when) (api/map {(api/string "init")
                                                                                                           (api/vector [(api/string "1") (api/string "2")])})
                                                                             (api/keyword :then) (api/map {(api/string "ui")
                                                                                                           (api/vector [(api/fn-call (api/symbol '|>) [(api/keyword :success)])])})})})

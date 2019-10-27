@@ -61,10 +61,10 @@
                      'pipes/layout   pipes/debug}
                     )
         c (chan 1)
-        rt (runtime/make-runtime syms)]
-    (caravan/init rt)
+        rt (runtime/make-runtime syms)
+        state (reduce (fn [s e] (runtime/eval-expression! s e)) rt (sut/start))]
     ;; (println (sut/store (:store rt)))
-    (doall (reduce (fn [s e] (runtime/eval-expression! s e)) rt (sut/start)))
+    (caravan/init state)
     (caravan/test-oasis c)
     (utils/test-async
      (go

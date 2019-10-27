@@ -561,7 +561,7 @@
         assert-ast (single! assert-exp)]
     (add-node (symbol assert-name) assert-ast)
     (let [source-pipe (rt/get-definition-by-name @rt-conn (symbol source))
-          xf-pipe (get (servers/get-defined (:server @rt-conn)) (:db/id (:samak.nodes/fn xf)))
+          xf-pipe (get (servers/get-defined (:server @rt-conn)) xf)
           assert-pipe (rt/get-definition-by-name @rt-conn (symbol assert-name))
           verify-pipe (rt/get-definition-by-name @rt-conn (symbol verify))]
       (pipes/link! (pipes/link! source-pipe xf-pipe) assert-pipe)
@@ -572,18 +572,19 @@
   ""
   [verify config ast]
   (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
-        xf (get-in ast [:samak.nodes/xf])
+        xf (get-in ast [:samak.nodes/xf :samak.nodes/fn])
         sink (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name])
         test-ref (get config (str sink))]
     (when test-ref
       (println "Verifying pipe: " sink " with " test-ref)
-      (attach-assert verify source xf (first test-ref)))
-    (println "Adding pipe: " sink)
-    (let [def1 (rt/get-definition-by-name @rt-conn (symbol source))
-          bar (get (servers/get-defined (:server @rt-conn)) (:db/id (:samak.nodes/fn xf)))
-          def2 (rt/get-definition-by-name @rt-conn (symbol sink))]
-      ;; (println "BAAAR:" bar)
-      (pipes/link! (pipes/link! def1 bar) def2))))
+      (attach-assert verify source (:db/id xf) (first test-ref)))
+    (println "Adding pipe:" source "with [" (:db/id xf) "]" (:samak.nodes/name xf) "to" sink)
+    (let [source-pipe (rt/get-definition-by-name @rt-conn (symbol source))
+          xf-pipe (get (servers/get-defined (:server @rt-conn)) (:db/id xf))
+          sink-pipe (rt/get-definition-by-name @rt-conn (symbol sink))]
+      (if xf
+        (pipes/link! (pipes/link! source-pipe xf-pipe) sink-pipe)
+        (pipes/link! source-pipe sink-pipe)))))
 
 
 (defn setup-verify
@@ -687,7 +688,6 @@
   ([c sym] (run-testsuite c sym {}))
   ([c sym {timeout :timeout :or {timeout 3000}}]
    (let [net (rt/load-by-sym @rt-conn sym)
-         _ (println "SYM " net)
          config (:samak.nodes/rhs net)
          _ (println "Preloading network")
          _ (load-bundle sym :noop)
