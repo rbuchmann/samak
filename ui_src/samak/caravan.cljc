@@ -575,13 +575,13 @@
         xf (get-in ast [:samak.nodes/xf :samak.nodes/fn])
         sink (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name])
         test-ref (get config (str sink))]
-    (when test-ref
-      (println "Verifying pipe: " sink " with " test-ref)
-      (attach-assert verify source (:db/id xf) (first test-ref)))
-    (println "Adding pipe:" source "with [" (:db/id xf) "]" (:samak.nodes/name xf) "to" sink)
     (let [source-pipe (rt/get-definition-by-name @rt-conn (symbol source))
           xf-pipe (get (servers/get-defined (:server @rt-conn)) (:db/id xf))
           sink-pipe (rt/get-definition-by-name @rt-conn (symbol sink))]
+      (when test-ref
+        (println "  V" "Verifying pipe: " sink " with " test-ref)
+        (attach-assert verify source (:db/id xf) (first test-ref)))
+      (println "  V" "Adding pipe:" source "with [" (:db/id xf) "]" (:samak.nodes/name xf) "to" sink)
       (if xf
         (pipes/link! (pipes/link! source-pipe xf-pipe) sink-pipe)
         (pipes/link! source-pipe sink-pipe)))))
@@ -590,7 +590,7 @@
 (defn setup-verify
   ""
   []
-  (println "Set up result collection")
+  (println "  V" "Set up result collection")
   (let [verify-name (symbol (str "verify-" (rand-int 1000000)))
         verify-exp (api/defexp verify-name (api/fn-call (api/symbol 'pipes/debug) []))
         verify-ast (single! verify-exp)]
@@ -606,12 +606,12 @@
         nodes (distinct (flatten (concat [sym]
                                          (map :xf (vals source))
                                          (map :ends (vals source)))))
-        ;; _ (println "Loading asts: " (s/join ", " nodes))
+        _ (println "  V Loading asts: " (s/join ", " nodes))
         asts (map #(load-ast @rt-conn %1) nodes)
-        ;; _ (println "Adding nodes: " (s/join ", " (map :samak.nodes/name asts)))
+        _ (println "  V" "Adding nodes: " (s/join ", " (map :samak.nodes/name asts)))
         _ (doall (map #(add-node (symbol (name-of-node %)) %) asts))
-        pipes (map :db/id (flatten (map :pipes (vals source))))
-        ;; _ (println "Adding pipes: " (s/join ", " pipes))
+        pipes (distinct (map :db/id (flatten (map :pipes (vals source)))))
+        _ (println "  V" "Adding pipes: " (s/join ", " pipes))
         pipe-asts (map #(load-ast @rt-conn %1) pipes)
         _ (doall (map #(add-pipe-net verify (:then config) %) pipe-asts))
         ]
@@ -621,7 +621,7 @@
   ""
   [sym test]
   (let [verify (setup-verify)
-        _ (print "Fetching bundle from DB: ")
+        _ (print "  V" "Fetching bundle from DB: ")
         bundle (rt/load-bundle @rt-conn sym)]
     (println (s/join "," bundle))
     (doall (map #(load-source %1 test verify) bundle))
