@@ -8,6 +8,8 @@
      [samak.pipes :as pipes]
      [samak.code-db :as db]
      [samak.tools :as tools]
+     [samak.transduction-tools :as tt]
+     [samak.helpers :as helpers]
      [samak.trace :as trace]
      [clojure.string :as str]
      [net.cgrand.xforms :as x]
@@ -21,6 +23,8 @@
      [samak.pipes :as pipes]
      [samak.code-db :as db]
      [samak.tools :as tools]
+     [samak.transduction-tools :as tt]
+     [samak.helpers :as helpers]
      [samak.trace :as trace]
      [samak.protocols :as p]
      [net.cgrand.xforms :as x])
@@ -123,13 +127,28 @@
 ;; General purpose
 
 (defn wrap-samak-reducer [f]
-  (fn [state nxt]
-    (f {:next  nxt
-        :state state})))
+  (let [db-id trace/*db-id*]
+    (fn [state nxt]
+      (let [meta-info-nxt (when (map? nxt)
+                            (:samak.pipes/meta nxt))
+            content-nxt   (cond-> nxt
+                            (some? meta-info-nxt) :samak.pipes/content)
+            meta-info-state (when (map? state)
+                              (:samak.pipes/meta state))
+            content-state   (cond-> state
+                              (some? meta-info-state) :samak.pipes/content)
+            before    (helpers/now)
+            res (f {:next  content-nxt
+                    :state content-state})
+            duration  (helpers/duration before (helpers/now))
+            end (tt/re-wrap meta-info-nxt res)]
+        (trace/trace db-id duration end)
+        end))))
 
 (defn reductions* [f init]
   (pipes/transduction-pipe (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
-                                         init)))
+                                         (tt/re-wrap (pipes/make-meta {:samak.pipes/source ::reductions})
+                                                     init))))
 
 
 (def pipe-symbols

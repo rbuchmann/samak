@@ -82,7 +82,8 @@
         parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
     ;; (println "oasis loaded: " (str net))
     (reset! rt state)
-    (fire-event-into-named-pipe "oasis" "1")
+    (caravan/init @rt)
+    (fire-event-into-named-pipe "init" "1")
     (println "oasis started")
     (doseq [expression parsed]
         (caravan/repl-eval expression))
