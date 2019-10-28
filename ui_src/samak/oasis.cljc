@@ -85,7 +85,7 @@
               (defncall 'd 'pipes/debug)
               (defncall 'log 'pipes/log)
 
-              (defncall 'log-state 'pipes/log (api/string "state: "))
+              (defncall 'log-state 'pipes/log (api/string "log-state: "))
               (defncall 'log-command 'pipes/log (api/string "cmd: "))
               (defncall 'log-layout 'pipes/log (api/string "layout: "))
               (defncall 'log-render 'pipes/log (api/string "render: "))
@@ -2401,8 +2401,9 @@
               (defncall 'svg-elements-reduce 'pipes/reductions
                 (api/fn-call (api/symbol '->)
                              [(api/vector [(api/key-fn :state) (api/key-fn :next)])
-                              (api/fn-call (api/symbol 'spy) [(api/string "XXX reduce")])
-                              (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)]) ])
+                              (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])
+                              ;; (api/fn-call (api/symbol 'spy) [(api/string "XXX reduce")])
+                              ])
                 (api/map {(api/keyword :graph) (api/vector [(api/keyword :g)])
                           (api/keyword :sink-menu) (api/vector [(api/keyword :g)])
                           (api/keyword :source-menu) (api/vector [(api/keyword :g)])
@@ -2477,9 +2478,9 @@
                                                            (api/keyword :height) (api/integer 800)})
                                                  (api/symbol 'svg-defs)
                                                  (api/key-fn :graph)
-                                                 ;; (api/key-fn :source-menu)
-                                                 ;; (api/key-fn :sink-menu)
-                                                 ;; (api/key-fn :action-menu)
+                                                 (api/key-fn :source-menu)
+                                                 (api/key-fn :sink-menu)
+                                                 (api/key-fn :action-menu)
                                                  ])})}))
 
               (defncall 'init-view '->
@@ -2495,8 +2496,8 @@
               (pipe 'd 'log)
               (pipe 'oasis-ev 'log)
 
-              ;; (red 'oasis-mouse 'mouse-reduce 'mouse-state)
-              ;; (red 'oasis-mouse 'target-reduce 'target-events)
+              (red 'oasis-mouse 'mouse-reduce 'mouse-state)
+              (red 'oasis-mouse 'target-reduce 'target-events)
 
               (pipe 'target-events 'only-different 'hover-events)
               (pipe 'hover-events 'tag-hover 'hover-state)
@@ -2559,7 +2560,7 @@
               (pipe 'state 'log-state)
 
               (pipe 'eval-state 'format-state 'oasis-layout)
-              ;; (pipe 'eval-state 'format-state 'log-layout)
+              (pipe 'eval-state 'format-state 'log-layout)
 
               (pipe 'eval-state 'edit-information 'editor-events)
 
@@ -2592,14 +2593,14 @@
               (red 'svg-render 'svg-elements-reduce 'svg-reduced)
               (pipe 'svg-reduced 'render-svg 'render)
 
-              ;; (pipe 'init 'source-menu-const 'source-menu-items)
-              (red 'source-menu-items 'source-menu-map 'source-menu)
+              (pipe 'init 'source-menu-const 'source-menu-items)
+   (red 'source-menu-items 'source-menu-map 'source-menu)
               (pipe 'source-menu 'tag-items 'source-menu-events)
               (pipe 'hover-state 'source-menu-events)
               (red 'source-menu-events 'reduce-menu-source 'source-menu-state)
               (pipe 'source-menu-state 'render-source-menu 'svg-render)
 
-              ;; (pipe 'init 'sink-menu-const 'sink-menu-items)
+              (pipe 'init 'sink-menu-const 'sink-menu-items)
               (red 'sink-menu-items 'sink-menu-map 'sink-menu)
               (pipe 'sink-menu 'tag-items 'sink-menu-events)
               (pipe 'hover-state 'sink-menu-events)

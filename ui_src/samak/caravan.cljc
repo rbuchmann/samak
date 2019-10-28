@@ -170,7 +170,7 @@
 (defn notify-source
   ""
   [src]
-  ;; (std/notify-source {(:caravan/name src) src})
+  (std/notify-source {(:caravan/name src) src})
   )
 
 
@@ -769,6 +769,6 @@
 
 (def symbols
   {'create-sink create-sink
-   'load-node oasis-hook
+   'load-node trace-dump
    'pipes/caravan caravan-pipe
    'connect link})
