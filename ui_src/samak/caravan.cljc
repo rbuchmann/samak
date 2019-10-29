@@ -170,7 +170,7 @@
 (defn notify-source
   ""
   [src]
-  (std/notify-source {(:caravan/name src) src})
+  (std/notify-source {(keyword (:caravan/name src)) src})
   )
 
 
@@ -222,7 +222,7 @@
                 (get-in node [:samak.nodes/fn-expression :samak.nodes/fn]))]
     (or (if (= (:samak.nodes/type node) :samak.nodes/def) (:samak.nodes/name node))
         (if (= (:samak.nodes/type fun) :samak.nodes/def) (:samak.nodes/name fun))
-        (when-let [named (second fun)] (str ))
+        (when-let [named (second fun)] (str named))
         (str "anon-" (rand-int 100000)))))
 
 (defn make-pipe-key
@@ -233,12 +233,11 @@
 (defn add-pipe
   ""
   [pipe]
-  ;; (println (str "add pipe " pipe))
   (let [source (name-of-node (:samak.nodes/from pipe))
         func (name-of-node (:samak.nodes/xf pipe))
         sink (name-of-node (:samak.nodes/to pipe))
         pipe-name (str source "-" func "-" sink)]
-    ;; (println (str "adding pipe from " source " with " func " to " sink))
+    (println (str "adding pipe from " source " with " func " to " sink))
     (when (and source func sink)
       (swap! net assoc key pipe)
       ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
@@ -521,6 +520,7 @@
 (defn connect
   ""
   [source connector sink]
+  ;; (println (str "connect " source " with " connector " to " sink))
   (let [fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/symbol '_)]))
         fn-ast (single! fn)
         pipe (api/pipe (api/symbol (symbol source))
@@ -537,7 +537,7 @@
   []
   (fn [{:keys [:source :sink] :as x}]
     (println "connect: " x)
-    (let [connector  (str "c/" source "-" sink)
+    (let [connector (str "c-" source "-" sink)
           pipe-key (make-pipe-key source connector sink)
           existing (contains? @net pipe-key)]
       (when (and sink source (not= sink source) )

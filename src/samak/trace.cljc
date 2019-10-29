@@ -42,8 +42,8 @@
   [db-id duration event]
   (let [data (make-trace db-id duration event)]
     ;; (tools/log data)
-    (db/persist! *db* [data]))
-  event)
+    (db/persist! *db* [data])
+    event))
 
 (defn load-ast
   "loads an ast given by its entity id from the database"
