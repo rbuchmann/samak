@@ -259,7 +259,6 @@
                 (api/string ")"))
 
               (defncall 'fn-name-from-select '->
-                (api/fn-call (api/symbol 'spy) [(api/string "select")])
                 (api/fn-call (api/symbol 'str-split) [(api/symbol '_) (api/string "/")]) ;; func/
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-valid-target)
                                                    (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])]))
@@ -1372,6 +1371,7 @@
                 (api/key-fn :cursor))
 
               (defncall 'get-fn-size '->
+                (api/fn-call (api/symbol 'spy) [(api/string "ast")])
                 (api/key-fn :ast)
                 (api/key-fn :caravan/ast)
                 (api/fn-call (api/symbol 'count) [(api/symbol '_)]))
@@ -1474,10 +1474,15 @@
 
               (defncall 'is-cell-editable '->
                 (api/key-fn :state)
-                (api/fn-call (api/symbol 'lookup)  [(api/fn-call (api/symbol '->) [(api/key-fn :ast)
-                                                                                (api/key-fn :caravan/ast)])
-                                                 (api/fn-call (api/symbol '->) [(api/key-fn :mark)
-                                                                                (api/symbol 'dec)])
+                (api/fn-call (api/symbol 'spy) [(api/string "editable1")])
+                (api/map {(api/keyword :map) (api/fn-call (api/symbol '->) [(api/key-fn :ast)
+                                                                            (api/key-fn :caravan/ast)])
+                          (api/keyword :key) (api/fn-call (api/symbol '->) [(api/key-fn :mark)
+                                                                            (api/fn-call (api/symbol 'spy) [(api/string "editable3")])
+                                                                            (api/fn-call (api/symbol 'dec) [(api/symbol '_)])])})
+                (api/fn-call (api/symbol 'spy) [(api/string "editable2")])
+                (api/fn-call (api/symbol 'lookup)  [(api/key-fn :map)
+                                                    (api/key-fn :key)
                                                     (api/keyword :none)])
                 (api/key-fn :type)
                 (api/fn-call (api/symbol 'or) [(api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :caravan/str)])
@@ -1552,7 +1557,6 @@
               (defncall 'is-selected '->
                 (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :selected)])
                              (api/symbol 'func-id)])
-                (api/fn-call (api/symbol 'spy) [(api/string "is-select")])
                 (api/fn-call (api/symbol 'distinct) [(api/symbol '_)])
                 (api/fn-call (api/symbol 'count) [(api/symbol '_)])
                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 1)]))
@@ -1830,14 +1834,14 @@
                 (api/map {(api/keyword :state) (api/key-fn :state)
                           (api/keyword :next) (api/key-fn :next)
                           (api/keyword :target) (api/fn-call (api/symbol '->) [(api/symbol 'get-mark)
-                                                                               (api/symbol 'inc)])})
+                                                                               (api/fn-call (api/symbol 'inc) [(api/symbol '_)])])})
                 (api/symbol 'swap-at-pos))
 
               (defncall 'leap-at-pos '->
                 (api/map {(api/keyword :state) (api/key-fn :state)
                           (api/keyword :next) (api/key-fn :next)
                           (api/keyword :target) (api/fn-call (api/symbol '->) [(api/symbol 'get-mark)
-                                                                               (api/symbol 'dec)])})
+                                                                               (api/fn-call (api/symbol 'dec) [(api/symbol '_)])])})
                 (api/symbol 'swap-at-pos))
 
               (defncall 'indent-call '->
@@ -1981,12 +1985,12 @@
                 (api/key-fn :editor)
                 (api/key-fn :hover)
                 (api/key-fn :current)
-                (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-sink)
+                (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-source)
                                                     (api/vector [(api/string "LMB construct")])])
                 (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-sink)
                                                     (api/vector [(api/string "LMB construct")])])
                 (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-node)
-                                                    (api/vector [(api/string "LMB connect")])])
+                                                    (api/vector [(api/string "DRAG connect")])])
                 (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-hover-func)
                                                     (api/vector [(api/string "LMB select")])]))
 
@@ -2302,7 +2306,8 @@
                                                                                    (api/keyword :filter) (api/string "url(#shadow)")
                                                                                    (api/keyword :pointer-events) (api/string "all")})})])
                              (api/vector [(api/keyword :text)
-                                          (api/map {(api/keyword :x) (api/integer 50)
+                                          (api/map {;; (api/keyword :transform) (api/string "rotate(90 50 50)")
+                                                    (api/keyword :x) (api/integer 50)
                                                     (api/keyword :y) (api/integer 43)
                                                     (api/keyword :dy) (api/integer 14)
                                                     (api/keyword :fill)
@@ -2367,22 +2372,29 @@
 
 
               (defncall 'translate-graph 'str
-                (api/string "translate(")
-                (api/key-fn :x)
+                (api/string "matrix(")
+                (api/fn-call (api/symbol '*) [(api/integer 1) (api/key-fn :zoom)])
                 (api/string ",")
-                (api/key-fn :y)
-                (api/string ") ")
-                (api/string "scale(")
-                (api/key-fn :zoom)
+                (api/fn-call (api/symbol '*) [(api/integer 0) (api/key-fn :zoom)])
+                (api/string ",")
+                (api/fn-call (api/symbol '*) [(api/integer 0) (api/key-fn :zoom)])
+                (api/string ",")
+                (api/fn-call (api/symbol '*) [(api/integer 1) (api/key-fn :zoom)])
+                (api/string ",")
+                (api/fn-call (api/symbol '+) [(api/key-fn :x) (api/integer 200)])
+                (api/string ",")
+                (api/fn-call (api/symbol '+) [(api/key-fn :y) (api/integer 200)])
                 (api/string ")"))
 
               (defncall 'graph-background '->
                 (api/vector [(api/keyword :rect)
                              (api/map {(api/keyword :id) (api/string "back/ground")
-                                       (api/keyword :width) (api/integer 1200)
-                                       (api/keyword :height) (api/integer 800)
-                                       (api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/key-fn :x) (api/fn-call (api/symbol '-) [(api/symbol '_)])])
-                                       (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/key-fn :y) (api/fn-call (api/symbol '-) [(api/symbol '_)])])
+                                       (api/keyword :width) (api/integer 2000)
+                                       (api/keyword :height) (api/integer 2000)
+                                       (api/keyword :x) (api/integer -1000)
+                                       (api/keyword :y) (api/integer -1000)
+                                       ;; (api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/key-fn :x) (api/fn-call (api/symbol '-) [(api/symbol '_)])])
+                                       ;; (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/key-fn :y) (api/fn-call (api/symbol '-) [(api/symbol '_)])])
                                        (api/keyword :fill) (api/string "url(#grid)")
                                        ;; (api/fn-call (api/symbol '->) [(api/keyword :graph-background)
                                        ;;   (api/symbol 'get-color)])
@@ -2523,7 +2535,7 @@
               (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
               (pipe 'keyboard-filtered 'filter-menu 'editor-commands)
               ;; (pipe 'keyboard-filtered 'log-keyboard)
-              (pipe 'oasis-kb 'log-keyboard)
+              ;; (pipe 'oasis-kb 'log-keyboard)
 
               (pipe 'keyboard-filtered 'filter-view 'view-commands)
               (pipe 'view-commands 'make-zoom 'view-events)

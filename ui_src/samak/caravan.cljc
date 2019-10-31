@@ -114,7 +114,6 @@
 (defmethod handle-node
   :samak.nodes/builtin
   [node]
-  (println (str "builtin?: " node))
   {:type :caravan/func
    :display "lib"
    :value (str (get-in node [:samak.nodes/value]))})
@@ -122,7 +121,9 @@
 (defmethod handle-node
   :samak.nodes/fn-ref
   [node]
-  {:type (str "fn-ref: " (get node :samak.nodes/fn))})
+  (handle-node (get-in node [:samak.nodes/fn :samak.nodes/rhs]))
+  ;; {:type (str "fn-ref: " (get-in node [:samak.nodes/fn :samak.nodes/rhs]))}
+  )
 
 (defmethod handle-node
   :default
@@ -170,7 +171,7 @@
 (defn notify-source
   ""
   [src]
-  (std/notify-source {(keyword (:caravan/name src)) src})
+  (std/notify-source {(str (:caravan/name src)) src})
   )
 
 
