@@ -455,7 +455,7 @@
                 (api/fn-call (api/symbol '->) [(api/key-fn :mode)
                                                (api/key-fn :actions)
                                                (api/fn-call (api/symbol 'map) [(api/symbol 'render-menu-action) (api/symbol '_)])])
-                (api/fn-call (api/symbol 'str-join) [(api/string ",") (api/symbol '_)])
+                (api/fn-call (api/symbol 'str-join) [(api/string ", ") (api/symbol '_)])
                 (api/vector [(api/string "type: ") (api/symbol '_)])
                 (api/fn-call (api/symbol 'str-join) [(api/string "") (api/symbol '_)]))
 
@@ -1066,18 +1066,15 @@
                           (api/keyword :data) (api/map {(api/keyword :name) (api/symbol '_)})}))
 
               (defncall 'is-func '->
-                (api/fn-call (api/symbol 'spy) [(api/string "func")])
                 (api/key-fn :type)
                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "func")]))
 
               (defncall 'handle-func '->
-                (api/fn-call (api/symbol 'spy) [(api/string "func2")])
                 (api/key-fn :name)
                 (api/map {(api/keyword :command) (api/keyword :select)
                           (api/keyword :data) (api/fn-call (api/symbol 'str) [(api/string "func/")(api/symbol '_)])}))
 
               (defncall 'handle-mouse-click '->
-                (api/fn-call (api/symbol 'spy) [(api/string "click")])
                 (api/key-fn :source)
                 (api/symbol 'make-target)
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-source)
@@ -2412,9 +2409,7 @@
               (defncall 'svg-elements-reduce 'pipes/reductions
                 (api/fn-call (api/symbol '->)
                              [(api/vector [(api/key-fn :state) (api/key-fn :next)])
-                              (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])
-                              ;; (api/fn-call (api/symbol 'spy) [(api/string "XXX reduce")])
-                              ])
+                              (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])])
                 (api/map {(api/keyword :graph) (api/vector [(api/keyword :g)])
                           (api/keyword :sink-menu) (api/vector [(api/keyword :g)])
                           (api/keyword :source-menu) (api/vector [(api/keyword :g)])
@@ -2495,7 +2490,6 @@
               ;; render SVG components
               (defncall 'svg-render 'pipes/debug)
               (defncall 'render-svg '->
-                ;; (api/fn-call (api/symbol 'spy) [(api/string "XXX rsvg")])
                 (api/map {(api/keyword :svg)
                           (api/map {(api/keyword :oasis.gui/order)
                                     (api/integer 2)
@@ -2514,7 +2508,6 @@
                 (api/map {(api/keyword :zoom) (api/integer 1)
                           (api/keyword :x) (api/integer 150)
                           (api/keyword :y) (api/integer 50)}))
-
               ])
 
 (def network
@@ -2610,7 +2603,6 @@
               (red 'render 'elements-reduce 'reducer)
               ;; (red 'render 'elements-reduce 'log-render)
 
-              ;; (pipe 'reducer 'render-elements 'log-render)
               (pipe 'reducer 'render-elements 'oasis-ui)
 
               (red 'svg-render 'svg-elements-reduce 'svg-reduced)

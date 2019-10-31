@@ -91,11 +91,11 @@
         (let [x (or (:samak.pipes/content i) i)]
           (if (s/valid? ::hiccup x)
             (when-let [node (js/document.getElementById (str "samak" n))]
-              (when (not n) (.warn js/console (str "render " n " - " x)))
+              (when n (.warn js/console (str "render " n " - " x)))
               (r/render (transform-element x ui-out) node))
             (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x)))))
         (recur)))
-    (pipes/pipe ui-in ui-out ::ui)))
+    (pipes/pipe ui-in ui-out)))
 
 (defn mouse []
   (let [c (chan)]
@@ -127,7 +127,7 @@
                                       :samak.mouse/target (.-id (.-target event))})
                                  ::mouse)
                      false)))
-    (pipes/source c ::mouse)))
+    (pipes/source c)))
 
 (defn keyboard []
   (let [c (chan)]
@@ -142,7 +142,7 @@
                                       :type (.-tagName (.-target event))}
                                    ::keyboard)
                        (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
-    (pipes/source c ::keyboard)))
+    (pipes/source c)))
 
 ;; Graph Layouting
 
