@@ -7,6 +7,7 @@
             [samak.pipes        :as pipes]
             [samak.trace        :as trace]
             [samak.transduction-tools :as tt]
+            [samak.helpers :as helpers]
             [cljs.core.async    :as a :refer [<! put! chan close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -82,17 +83,17 @@
             (map #(transform-element % ch) children)))
     x))
 
-(defn ui [n]
-  (let [ui-in (chan)
-        ui-out (chan)]
+(defn ui [n events]
+  (let [ui-in (chan (a/sliding-buffer 1))
+        ui-out (chan (a/sliding-buffer 1000))]
     (go-loop []
       (when-some [i (<! ui-in)]
-        (trace/trace ::ui 0 i)
+        ;; (trace/trace ::ui 0 i)
         (let [x (or (:samak.pipes/content i) i)]
-          (if (s/valid? ::hiccup x)
+          (if (or true (s/valid? ::hiccup x))
             (when-let [node (js/document.getElementById (str "samak" n))]
-              (when n (.warn js/console (str "render " n " - " x)))
-              (r/render (transform-element x ui-out) node))
+              ;; (when n (.warn js/console (str "render " n " - " x)))
+              (r/render (if events (transform-element x ui-out) x) node))
             (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x)))))
         (recur)))
     (pipes/pipe ui-in ui-out)))
@@ -148,12 +149,22 @@
 
 (defn layout-call [request res]
   (let [meta (:samak.pipes/meta request)
-        handler (fn [result] (put! res (tt/re-wrap meta result)) (close! res))]
+        before (helpers/now)
+        handler (fn [result]
+                  (trace/trace ::layout (helpers/duration before (helpers/now)) result)
+                  (put! res (tt/re-wrap meta result))
+                  (close! res))]
     (trace/trace ::layout 0 request)
-    (layout/compute-layout (or (:samak.pipes/content request) request) [] handler handler)))
+    (layout/compute-layout (or (:samak.pipes/content request) request)
+                           []
+                           handler
+                           handler)))
 
 (defn layout []
-  (pipes/async-pipe layout-call nil nil))
+  (let [in-chan  (chan (a/sliding-buffer 1))
+        out-chan (chan)]
+    (a/pipeline-async 1 out-chan layout-call in-chan)
+    (pipes/Pipethrough. in-chan (a/mult out-chan) nil nil)))
 
 ;; Exported symbols
 

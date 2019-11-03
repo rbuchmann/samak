@@ -171,8 +171,7 @@
 (defn notify-source
   ""
   [src]
-  (std/notify-source {(str (:caravan/name src)) src})
-  )
+  (doall (map (fn [[key val]] (std/notify-source {key val})) src)))
 
 
 (defn is-sink?
@@ -212,9 +211,9 @@
         ast (make-cell-list fn)]
     (if (empty? ast)
       (println (str "ERROR: no ast for: " sym " - " fn))
-      (notify-source {:caravan/type type
-                      :caravan/name (str sym)
-                      :caravan/ast ast}))))
+      {(str sym) {:caravan/type type
+                  :caravan/name (str sym)
+                  :caravan/ast ast}})))
 
 (defn name-of-node
   ""
@@ -244,11 +243,11 @@
       ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
       (swap! rt-conn rt/eval-expression! pipe)
       ;; (reset-rt rt-preview)
-      (notify-source {:caravan/type :caravan/pipe
-                      :caravan/name pipe-name
-                      :caravan/source source
-                      :caravan/func func
-                      :caravan/sink sink}))))
+      {pipe-name {:caravan/type :caravan/pipe
+                  :caravan/name pipe-name
+                  :caravan/source source
+                  :caravan/func func
+                  :caravan/sink sink}})))
 
 
 (defn load-ast
@@ -278,9 +277,9 @@
 (defn repl-eval
   [exp]
   (if (api/is-pipe? exp)
-    (add-pipe exp)
+    (notify-source (add-pipe exp))
     (let [loaded (single! exp)]
-      (add-node (symbol (str (:samak.nodes/name exp))) loaded))))
+      (notify-source (add-node (symbol (str (:samak.nodes/name exp))) loaded)))))
 
 
 (defn find-cell-internal
@@ -380,7 +379,7 @@
         (let [write (persist! @rt-conn [updated])
               exp (load-ast @rt-conn root-id)]
           (println (str "res: " exp))
-          (add-node (symbol sym) exp)
+          (notify-source (add-node (symbol sym) exp))
           :done)))))
 
 (defn value-from-type
@@ -406,7 +405,7 @@
         (let [write (persist! @rt-conn [updated])
               exp (load-ast @rt-conn root-id)]
           (println (str "res: " exp))
-          (add-node (symbol sym) exp))))))
+          (notify-source (add-node (symbol sym) exp)))))))
 
 
 (defn change-order
@@ -434,7 +433,7 @@
         (let [write (persist! @rt-conn [node])
               exp (load-ast @rt-conn root-id)]
           (println (str "res: " exp))
-          (add-node (symbol sym) exp))
+          (notify-source (add-node (symbol sym) exp)))
         ))))
 
 (defn remove-arg
@@ -464,7 +463,7 @@
         (let [write (persist! @rt-conn [updated retract])
               exp (load-ast @rt-conn root-id)]
           (println (str "res: " exp))
-          (add-node (symbol sym) exp)
+          (notify-source (add-node (symbol sym) exp))
           :done)))))
 
 (defn indent-cell
@@ -497,7 +496,7 @@
             (let [write (persist! @rt-conn [insertion fixup retract])
                   exp (load-ast @rt-conn root-id)]
               (println (str "res: " exp))
-              (add-node (symbol sym) exp)
+              (notify-source (add-node (symbol sym) exp))
               :done)))))))
 
 (defn create-sink
@@ -510,7 +509,7 @@
           exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
           ast (single! exp)]
       (println (str "res: " ast))
-      (add-node (symbol sym) ast)
+      (notify-source (add-node (symbol sym) ast))
       :okay)))
 
 (defn disconnect
@@ -527,10 +526,8 @@
         pipe (api/pipe (api/symbol (symbol source))
                        (api/symbol (symbol connector))
                        (api/symbol (symbol sink)))]
-    (add-node (symbol connector) fn-ast)
-    (add-pipe pipe)
-    ;; [fn-ast pipe]
-    :okay))
+    (notify-source (add-node (symbol connector) fn-ast))
+    (notify-source (add-pipe pipe))))
 
 
 (defn link
@@ -601,7 +598,7 @@
 
 (defn load-source
   ""
-  [sym config verify]
+  [sym]
   ;; (println "Loading source: " (str sym))
   (let [source (rt/load-network @rt-conn sym)
         nodes (distinct (flatten (concat [sym]
@@ -610,28 +607,45 @@
         _ (println "  V Loading asts: " (s/join ", " nodes))
         asts (map #(load-ast @rt-conn %1) nodes)
         _ (println "  V" "Adding nodes: " (s/join ", " (map :samak.nodes/name asts)))
-        _ (doall (map #(add-node (symbol (name-of-node %)) %) asts))
+        node-notify (map #(add-node (symbol (name-of-node %)) %) asts)
         pipes (distinct (map :db/id (flatten (map :pipes (vals source)))))
         _ (println "  V" "Adding pipes: " (s/join ", " pipes))
-        pipe-asts (map #(load-ast @rt-conn %1) pipes)
-        _ (doall (map #(add-pipe-net verify (:then config) %) pipe-asts))
-        ]
-    source))
+        pipe-asts (map #(load-ast @rt-conn %1) pipes)]
+    [node-notify pipe-asts]))
+
+
+(defn runtime-net
+  ""
+  [sym config verify]
+  ;; (println "Loading source: " (str sym))
+  (let [[_ pipe-asts] (load-source sym)]
+    (doall (map #(add-pipe-net verify (:then config) %) pipe-asts))))
+
+(defn database-net
+  ""
+  [sym]
+  ;; (println "Loading source: " (str sym))
+  (let [[node-notify pipe-asts] (load-source sym)
+        pipe-notify (map #(add-pipe %) pipe-asts)]
+    {:nodes node-notify :pipes pipe-notify}))
 
 (defn load-bundle
+  ""
+  [sym]
+  (let [_ (print "  V" "Fetching bundle from DB: ")
+        bundle (rt/load-bundle @rt-conn sym)]
+    (println (s/join "," bundle))
+    (map #(database-net %1) bundle)))
+
+(defn test-bundle
   ""
   [sym test]
   (let [verify (setup-verify)
         _ (print "  V" "Fetching bundle from DB: ")
         bundle (rt/load-bundle @rt-conn sym)]
     (println (s/join "," bundle))
-    (doall (map #(load-source %1 test verify) bundle))
+    (doall (map #(runtime-net %1 test verify) bundle))
     verify))
-
-(defn load-oasis
-   ""
-   []
-  (load-bundle 'oasis :none))
 
 (defn trace-dump
   ""
@@ -665,7 +679,7 @@
   [config c sym [name tst]]
   (println (str "test " name " - " tst))
 
-  (let [verify (load-bundle sym tst)]
+  (let [verify (test-bundle sym tst)]
     (go (let [pipe (rt/get-definition-by-name @rt-conn verify)
               listener (chan 1)]
           (a/tap (.-out pipe) listener) ;; TODO: FIX protocol?
@@ -691,7 +705,7 @@
    (let [net (rt/load-by-sym @rt-conn sym)
          config (:samak.nodes/rhs net)
          _ (println "Preloading network")
-         _ (load-bundle sym :noop)
+         _ (test-bundle sym :noop)
          _ (println "Loading test definitions")
          tests (find-tests net)
          test-num (count tests)
@@ -709,6 +723,19 @@
              (>! c (or (some #(when (not= :success %) %) results) :success))
              (recur results (rest tests)))))))))
 
+(defn load-lib
+  ""
+  [sym]
+  (doall (map (fn [{:keys [:nodes :pipes]}]
+                (doall (map notify-source nodes))
+                (doall (map notify-source pipes)))
+              (load-bundle sym))))
+
+(defn load-net
+  ""
+  [c]
+  (persist-net test-programs/tl6)
+  (load-lib 'tl))
 
 (defn test-net
   ""
@@ -716,11 +743,22 @@
   (persist-net test-programs/tl6)
   (run-testsuite  c 'tl))
 
+(defn load-chuck
+  ""
+  [c]
+  (persist-net test-programs/chuck)
+  (load-lib 'chuck))
+
 (defn test-chuck
   ""
   [c]
   (persist-net test-programs/chuck)
   (run-testsuite c 'chuck {:timeout 3000}))
+
+(defn load-oasis
+   ""
+   []
+  (load-lib 'oasis))
 
 (defn test-oasis
   ""
@@ -770,6 +808,6 @@
 
 (def symbols
   {'create-sink create-sink
-   'load-node trace-dump
+   'load-node load-oasis
    'pipes/caravan caravan-pipe
    'connect link})
