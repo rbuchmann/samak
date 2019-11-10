@@ -580,7 +580,7 @@
         (println "  V" "Verifying pipe: " sink " with " test-ref)
         (attach-assert verify source (:db/id xf) (first test-ref)))
       (println "  V" "Adding pipe:" source "with [" (:db/id xf) "]" (:samak.nodes/name xf) "to" sink)
-      (if xf
+      (if xf-pipe
         (pipes/link! (pipes/link! source-pipe xf-pipe) sink-pipe)
         (pipes/link! source-pipe sink-pipe)))))
 
@@ -792,7 +792,8 @@
   (let [caravan-chan (chan)]
     (go-loop []
       (when-let [x (<! caravan-chan)]
-        (when-let [call (:call x)]
+        (tools/log "caravan: " x)
+        (when-let [call (:call (:samak.pipes/content x))]
           (do
             (tools/log "caravan: " call)
             (case (:action call)
@@ -808,6 +809,6 @@
 
 (def symbols
   {'create-sink create-sink
-   'load-node load-oasis
+   'load-node load-chuck
    'pipes/caravan caravan-pipe
    'connect link})
