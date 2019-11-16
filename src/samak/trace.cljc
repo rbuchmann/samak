@@ -42,7 +42,7 @@
   [db-id duration event]
   (let [data (make-trace db-id duration event)]
     ;; (tools/log data)
-    (db/persist! *db* [data])
+    ;; (db/persist! *db* [data])
     event))
 
 (defn load-ast

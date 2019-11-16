@@ -89,6 +89,7 @@
    (remove     [!f col])
    (filter     [!f col])
    (map        [!f col])
+   (mapv        [!f col])
    (mapcat     [!f col])
    (concat     [& args])
    (flatten    [col])

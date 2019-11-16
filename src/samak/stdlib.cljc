@@ -95,8 +95,12 @@
 (def notify-chan (chan 1))
 
 (defn notify-source
-  [ast]
-  (put! notify-chan (pipes/make-paket ast ::notify)))
+  ([ast]
+   (notify-source ast nil))
+  ([ast cb]
+   (if cb
+     (put! notify-chan (pipes/make-paket ast ::notify) cb)
+     (put! notify-chan (pipes/make-paket ast ::notify)))))
 
 (defn eval-notify
   ""

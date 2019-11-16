@@ -34,7 +34,7 @@
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 (def rt-conn (atom {}))
-;; (def rt-preview (atom {}))
+(def rt-preview (atom {}))
 (def fns (atom {}))
 (def net (atom {}))
 
@@ -171,7 +171,7 @@
 (defn notify-source
   ""
   [src]
-  (doall (map (fn [[key val]] (std/notify-source {key val})) src)))
+  (doall (map (fn [[key val]] (std/notify-source {(str key) val})) src)))
 
 
 (defn is-sink?
@@ -726,16 +726,19 @@
 (defn load-lib
   ""
   [sym]
-  (doall (map (fn [{:keys [:nodes :pipes]}]
-                (doall (map notify-source nodes))
-                (doall (map notify-source pipes)))
-              (load-bundle sym))))
+  (let [bundle (load-bundle sym)]
+    (doall (map (fn [{:keys [:nodes]}]
+                  (doall (map notify-source nodes)))
+                bundle))
+    (doall (map (fn [{:keys [:pipes]}]
+                  (doall (map notify-source pipes)))
+                bundle)))
 
-(defn load-net
-  ""
-  [c]
-  (persist-net test-programs/tl6)
-  (load-lib 'tl))
+  (defn load-net
+    ""
+    []
+    (persist-net test-programs/tl6)
+    (load-lib 'tl)))
 
 (defn test-net
   ""
@@ -747,7 +750,8 @@
   ""
   [c]
   (persist-net test-programs/chuck)
-  (load-lib 'chuck))
+  (load-lib 'chuck)
+  (std/notify-source {::state ::done} #(a/put! c (pipes/make-paket {::event ::load ::status ::done ::percent 100} ::caravan))))
 
 (defn test-chuck
   ""
@@ -789,14 +793,16 @@
 (defn caravan-pipe
   ""
   []
-  (let [caravan-chan (chan)]
+  (let [caravan-in (chan)
+        caravan-out (chan)]
     (go-loop []
-      (when-let [x (<! caravan-chan)]
+      (when-let [x (<! caravan-in)]
         (tools/log "caravan: " x)
         (when-let [call (:call (:samak.pipes/content x))]
           (do
             (tools/log "caravan: " call)
             (case (:action call)
+              :load (load-chuck caravan-out)
               :insert (add-cell (:arguments call))
               :edit (edit-cell (:arguments call))
               :cut (cut-cell (:arguments call))
@@ -804,11 +810,10 @@
               :indent (indent-cell (:arguments call))
               (tools/log "actions unknown: " call))))
         (recur)))
-    (pipes/sink caravan-chan ::caravan)))
+    (pipes/pipe caravan-in caravan-out ::caravan ::caravan)))
 
 
 (def symbols
   {'create-sink create-sink
-   'load-node load-chuck
    'pipes/caravan caravan-pipe
    'connect link})

@@ -150,15 +150,17 @@
 (defn layout-call [request res]
   (let [meta (:samak.pipes/meta request)
         before (helpers/now)
-        handler (fn [result]
-                  (trace/trace ::layout (helpers/duration before (helpers/now)) result)
-                  (put! res (tt/re-wrap meta result))
-                  (close! res))]
+        handler (fn [token]
+                  (fn [return]
+                    (let [result (assoc {} token return)]
+                      (trace/trace ::layout (helpers/duration before (helpers/now)) result)
+                      (put! res (tt/re-wrap meta result))
+                      (close! res))))]
     (trace/trace ::layout 0 request)
     (layout/compute-layout (or (:samak.pipes/content request) request)
                            []
-                           handler
-                           handler)))
+                           (handler :success)
+                           (handler :error))))
 
 (defn layout []
   (let [in-chan  (chan (a/sliding-buffer 1))
