@@ -725,20 +725,30 @@
 
 (defn load-lib
   ""
-  [sym]
-  (let [bundle (load-bundle sym)]
+  [c sym]
+  (let [bundle (load-bundle sym)
+        ;; merged (merge-with concat bundle)
+        ;; _ (println (str "bundle: " merged))
+        ;; dist (into {} (for [[k v] merged] [k (distinct v)]))
+        ;; _ (println (str "bundle2: " dist))
+        ;; cnt (apply + (map #(map count (vals %)) merged))
+        ]
+    ;; (println (str "count: " cnt))
     (doall (map (fn [{:keys [:nodes]}]
                   (doall (map notify-source nodes)))
                 bundle))
     (doall (map (fn [{:keys [:pipes]}]
                   (doall (map notify-source pipes)))
-                bundle)))
+                bundle))
+    (std/notify-source
+     {::state ::done}
+     #(a/put! c (pipes/make-paket {::event ::load ::status ::done ::percent 100} ::caravan))))
 
   (defn load-net
     ""
-    []
+    [c]
     (persist-net test-programs/tl6)
-    (load-lib 'tl)))
+    (load-lib c 'tl)))
 
 (defn test-net
   ""
@@ -750,8 +760,7 @@
   ""
   [c]
   (persist-net test-programs/chuck)
-  (load-lib 'chuck)
-  (std/notify-source {::state ::done} #(a/put! c (pipes/make-paket {::event ::load ::status ::done ::percent 100} ::caravan))))
+  (load-lib c 'chuck))
 
 (defn test-chuck
   ""
@@ -761,8 +770,8 @@
 
 (defn load-oasis
    ""
-   []
-  (load-lib 'oasis))
+   [c]
+  (load-lib c 'oasis))
 
 (defn test-oasis
   ""
