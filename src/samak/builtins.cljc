@@ -57,7 +57,7 @@
   (into [] (map vec (partition 2 (interleave c1 c2)))))
 
 (defn lookup [m x d]
-  (get x m d))
+  (get m x d))
 
 (def samakified-builtins
   (samakify-all
@@ -89,6 +89,7 @@
    (remove     [!f col])
    (filter     [!f col])
    (map        [!f col])
+   (mapv        [!f col])
    (mapcat     [!f col])
    (concat     [& args])
    (flatten    [col])

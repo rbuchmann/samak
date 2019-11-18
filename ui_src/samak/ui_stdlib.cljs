@@ -6,6 +6,8 @@
             [reagent.core       :as r]
             [samak.pipes        :as pipes]
             [samak.trace        :as trace]
+            [samak.transduction-tools :as tt]
+            [samak.helpers :as helpers]
             [cljs.core.async    :as a :refer [<! put! chan close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -47,15 +49,23 @@
 (defmethod convert-event nil [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 (defmethod convert-event :default [ev] (let [ev (to-clj ev)] (do (println "unhandled event: " ev) ev)))
 
+(defn put-meta!
+  ""
+  [ch ev source]
+  (put! ch (pipes/make-paket ev source)))
+
+
 (defn to-handler [v ch]
   (fn
     ([& args]
      (case (count args)
-       0 (put! ch {:data  v})
-       1 (put! ch {:data  v
-                   :event (convert-event (first args))})
-       2 (put! ch {:data  v
-                   :event (convert-event (first args))})
+       0 (put-meta! ch {:data  v} ::handler)
+       1 (put-meta! ch {:data  v
+                        :event (convert-event (first args))}
+                    ::handler)
+       2 (put-meta! ch {:data  v
+                        :event (convert-event (first args))}
+                    ::handler)
        (println (str "unknown event" args))))
     ;; ([]    (put! ch {:data  v}))
     ;; ([evt] (put! ch {:data  v
@@ -73,73 +83,90 @@
             (map #(transform-element % ch) children)))
     x))
 
-(defn ui [n]
-  (let [ui-in (chan)
-        ui-out (chan)]
+(defn ui [n events]
+  (let [ui-in (chan (a/sliding-buffer 1))
+        ui-out (chan (a/sliding-buffer 1000))]
     (go-loop []
       (when-some [i (<! ui-in)]
-        (trace/trace ::ui 0 i)
+        ;; (trace/trace ::ui 0 i)
         (let [x (or (:samak.pipes/content i) i)]
-          (if (s/valid? ::hiccup x)
+          (if (or true (s/valid? ::hiccup x))
             (when-let [node (js/document.getElementById (str "samak" n))]
-              (when (not n) (.warn js/console (str "render " n " - " x)))
-              (r/render (transform-element x ui-out) node))
+              ;; (when n (.warn js/console (str "render " n " - " x)))
+              (r/render (if events (transform-element x ui-out) x) node))
             (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x)))))
         (recur)))
-    (pipes/pipe ui-in ui-out ::ui)))
+    (pipes/pipe ui-in ui-out)))
 
 (defn mouse []
   (let [c (chan)]
     (set! (.-onmousedown (.-body js/document))
-          (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
-                               {:samak.mouse/type :down
-                                :samak.mouse/button (mouse-button-to-keyword (.-button event))
-                                :samak.mouse/page-x (.-pageX event)
-                                :samak.mouse/page-y (.-pageY event)
-                                :samak.mouse/target (.-id (.-target event))}
-                               ))
+          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)]
+                                     {:samak.mouse/type :down
+                                      :samak.mouse/button (mouse-button-to-keyword (.-button event))
+                                      :samak.mouse/page-x (.-pageX event)
+                                      :samak.mouse/page-y (.-pageY event)
+                                      :samak.mouse/target (.-id (.-target event))}
+                                     )
+                                 ::mouse)
                      false)))
     (set! (.-onmouseup (.-body js/document))
-          (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
-                               {:samak.mouse/type :up
-                                :samak.mouse/button (mouse-button-to-keyword (.-button event))
-                                :samak.mouse/page-x (.-pageX event)
-                                :samak.mouse/page-y (.-pageY event)
-                                :samak.mouse/target (.-id (.-target event))
-                                }))
+          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)]
+                                     {:samak.mouse/type :up
+                                      :samak.mouse/button (mouse-button-to-keyword (.-button event))
+                                      :samak.mouse/page-x (.-pageX event)
+                                      :samak.mouse/page-y (.-pageY event)
+                                      :samak.mouse/target (.-id (.-target event))
+                                      })
+                                 ::mouse)
                      false)))
     (set! (.-onmousemove (.-body js/document))
-          (fn [e] (do (put! c (let [event (js->clj e :keywordize-keys true)]
-                               {:samak.mouse/type :move
-                                :samak.mouse/page-x (.-pageX event)
-                                :samak.mouse/page-y (.-pageY event)
-                                :samak.mouse/target (.-id (.-target event))}))
+          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)]
+                                     {:samak.mouse/type :move
+                                      :samak.mouse/page-x (.-pageX event)
+                                      :samak.mouse/page-y (.-pageY event)
+                                      :samak.mouse/target (.-id (.-target event))})
+                                 ::mouse)
                      false)))
-    (pipes/source c ::mouse)))
+    (pipes/source c)))
 
 (defn keyboard []
   (let [c (chan)]
     (set! (.-onkeypress js/document)
           (fn [e] (do (let [event (js->clj e :keywordize-keys true)]
-                       (put! c {:which (.-which event)
-                                :key (.-key event)
-                                :ctrl-key (.-ctrlKey event)
-                                :meta-key (.-metaKey event)
-                                :shift-key (.-shiftKey event)
-                                :target (.-id (.-target event))
-                                :type (.-tagName (.-target event))})
+                        (put-meta! c {:which (.-which event)
+                                      :key (.-key event)
+                                      :ctrl-key (.-ctrlKey event)
+                                      :meta-key (.-metaKey event)
+                                      :shift-key (.-shiftKey event)
+                                      :target (.-id (.-target event))
+                                      :type (.-tagName (.-target event))}
+                                   ::keyboard)
                        (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
-    (pipes/source c ::keyboard)))
+    (pipes/source c)))
 
 ;; Graph Layouting
 
 (defn layout-call [request res]
-  (let [handler (fn [result] (put! res result) (close! res))]
-    (trace/trace ::ui 0 request)
-    (layout/compute-layout request [] handler handler)))
+  (let [meta (:samak.pipes/meta request)
+        before (helpers/now)
+        handler (fn [token]
+                  (fn [return]
+                    (let [result (assoc {} token return)]
+                      (trace/trace ::layout (helpers/duration before (helpers/now)) result)
+                      (put! res (tt/re-wrap meta result))
+                      (close! res))))]
+    (trace/trace ::layout 0 request)
+    (layout/compute-layout (or (:samak.pipes/content request) request)
+                           []
+                           (handler :success)
+                           (handler :error))))
 
 (defn layout []
-  (pipes/async-pipe layout-call nil nil))
+  (let [in-chan  (chan (a/sliding-buffer 1))
+        out-chan (chan)]
+    (a/pipeline-async 1 out-chan layout-call in-chan)
+    (pipes/Pipethrough. in-chan (a/mult out-chan) nil nil)))
 
 ;; Exported symbols
 

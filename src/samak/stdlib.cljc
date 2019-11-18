@@ -64,8 +64,9 @@
 (defn http-call [request res]
   (go
     (println (str "http: " request))
-    (let [req (http/get (:url request))]
-      (a/pipeline 1 res (map :body) req))))
+    (let [meta (:samak.pipes/meta request)
+          req (http/get (:url request))]
+      (a/pipeline 1 res  (map #(tt/re-wrap meta (:body %))) req))))
 
 (defn http []
   (pipes/async-pipe http-call nil nil))
@@ -94,8 +95,12 @@
 (def notify-chan (chan 1))
 
 (defn notify-source
-  [ast]
-  (put! notify-chan ast))
+  ([ast]
+   (notify-source ast nil))
+  ([ast cb]
+   (if cb
+     (put! notify-chan (pipes/make-paket ast ::notify) cb)
+     (put! notify-chan (pipes/make-paket ast ::notify)))))
 
 (defn eval-notify
   ""
