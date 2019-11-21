@@ -77,7 +77,7 @@
 (s/def :oasis.spec/mouse-state (s/keys :req-un [:samak.mouse/type]))
 
 (def oasis1   [(defncall 'oasis-ui 'pipes/ui (api/integer 2))
-               (defncall 'oasis-mouse 'pipes/mouse)
+               (defncall 'oasis-mouse 'pipes/mouse (api/integer 2))
                (defncall 'oasis-kb 'pipes/keyboard)
                (defncall 'oasis-layout 'pipes/layout)
                (defncall 'oasis-eval 'pipes/eval-notify)
@@ -117,6 +117,7 @@
                   (api/keyword :pipe-fill) (api/string "#292824")
                   (api/keyword :pipe-glow) (api/string "#6684e1")
                   (api/keyword :pipe-stroke) (api/string "#a6a28c")
+                  (api/keyword :pipe-drag) (api/string "orange")
                   (api/keyword :graph-background) (api/string "#20201d")
                   (api/keyword :shadow-flood) (api/string "#292824")
                   (api/keyword :menu-entry-bg) (api/string "#999580")
@@ -677,9 +678,13 @@
                                                                                                             (api/key-fn :x)
                                                                                                             ])])]))
 
+               (defncall 'get-mouse-y '-
+                 (api/key-fn :samak.mouse/page-y)
+                 (api/integer 56))
+
                (defncall 'calculate-mouse-delta-y '->
                  (api/fn-call (api/symbol '+) [(api/fn-call (api/symbol '->) [(api/key-fn :next)
-                                                                              (api/key-fn :samak.mouse/page-y)])
+                                                                              (api/symbol 'get-mouse-y)])
                                                (api/fn-call (api/symbol '-) [(api/fn-call (api/symbol '->) [(api/key-fn :state)
                                                                                                             (api/key-fn :mouse)
                                                                                                             (api/key-fn :position)
@@ -690,7 +695,7 @@
                  (api/map {(api/keyword :state) (api/key-fn :state)
                            (api/keyword :next) (api/map {(api/keyword :position)
                                                          (api/map {(api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/page-x)])
-                                                                   (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/page-y)])})
+                                                                   (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/symbol 'get-mouse-y)])})
                                                          (api/keyword :delta)
                                                          (api/map {(api/keyword :x)
                                                                    (api/symbol 'calculate-mouse-delta-x)
@@ -700,6 +705,7 @@
                                                          (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :mouse) (api/key-fn :drag)
                                                                                         (api/map {(api/keyword :active) (api/key-fn :active)
                                                                                                   (api/keyword :source) (api/key-fn :source)
+                                                                                                  (api/keyword :begin) (api/keyword :false)
                                                                                                   (api/keyword :button) (api/key-fn :button)})])})}))
 
                (defncall 'is-mouse-down '->
@@ -711,12 +717,15 @@
                  (api/map {(api/keyword :state) (api/key-fn :state)
                            (api/keyword :next) (api/fn-call (api/symbol '->)
                                                             [(api/key-fn :next)
-                                                             (api/map {(api/keyword :drag) (api/map {(api/keyword :active) (api/keyword :true)
+                                                             (api/map {(api/keyword :drag) (api/map {(api/keyword :begin) (api/keyword :true)
+                                                                                                     (api/keyword :active) (api/keyword :true)
                                                                                                      (api/keyword :button) (api/key-fn :samak.mouse/button)
                                                                                                      (api/keyword :source) (api/key-fn :samak.mouse/target)})
 
+                                                                       (api/keyword :position) (api/map {(api/keyword :x) (api/key-fn :samak.mouse/page-x)
+                                                                                                      (api/keyword :y) (api/symbol 'get-mouse-y)})
                                                                        (api/keyword :start) (api/map {(api/keyword :x) (api/key-fn :samak.mouse/page-x)
-                                                                                                      (api/keyword :y) (api/key-fn :samak.mouse/page-y)})})])}))
+                                                                                                      (api/keyword :y) (api/symbol 'get-mouse-y)})})])}))
 
                (defncall 'is-mouse-up '->
                  (api/key-fn :next)
@@ -785,16 +794,24 @@
                  (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :true)]))
 
                (defncall 'is-drag-end '->
-                 (api/key-fn :mouse)
                  (api/key-fn :drag)
                  (api/key-fn :end)
                  (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :end)]))
 
+               (defncall 'is-drag-start '->
+                 (api/key-fn :drag)
+                 (api/key-fn :begin)
+                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :true)]))
+
                (defncall 'is-drag-or-end 'or
                  (api/symbol 'is-drag)
-                 (api/symbol 'is-drag-end))
+                 (api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/symbol 'is-drag-end)]))
 
-               (defncall 'filter-drag-end 'only (api/symbol 'is-drag-end))
+               (defncall 'is-drag-end-or-start 'or
+                 (api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/symbol 'is-drag-start)])
+                 (api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/symbol 'is-drag-end)]))
+
+               (defncall 'filter-drag-end-or-start 'only (api/symbol 'is-drag-end-or-start))
 
                (defncall 'filter-drag 'only (api/symbol 'is-drag-or-end))
 
@@ -1101,11 +1118,22 @@
                            (api/keyword :type) (api/keyword :immediate)
                            (api/keyword :data) (api/keyword :load)}))
 
+               (defncall 'is-kb-test '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "t")]))
+
+               (defncall 'construct-test '->
+                 (api/map {(api/keyword :command) (api/keyword :test)
+                           (api/keyword :type) (api/keyword :immediate)
+                           (api/keyword :data) (api/keyword :test)}))
+
                (defncall 'filter-menu '->
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-menu)
                                                     (api/symbol 'construct-menu)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-load)
                                                     (api/symbol 'construct-load)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-test)
+                                                    (api/symbol 'construct-test)])
                  (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
                                                     (api/symbol 'ignore)]))
 
@@ -1171,6 +1199,7 @@
                            (api/keyword :data) (api/fn-call (api/symbol 'str) [(api/string "func/")(api/symbol '_)])}))
 
                (defncall 'handle-mouse-click '->
+               (api/fn-call (api/symbol 'spy) [(api/string "click")])
                  (api/key-fn :source)
                  (api/symbol 'make-target)
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-source)
@@ -1228,15 +1257,26 @@
                  (api/fn-call (api/symbol 'and) [(api/symbol 'is-source-source)
                                                  (api/symbol 'is-target-sink)]))
 
+               (defncall 'is-start '->
+                 (api/fn-call (api/symbol 'and) [(api/symbol 'is-lmb-event)
+                                                 (api/fn-call (api/symbol '=) [(api/key-fn :begin) (api/keyword :true)])]))
+
+               (defncall 'handle-drag-start '->
+                 (api/map {(api/keyword :command) (api/keyword :activity)
+                           (api/keyword :data) (api/keyword :dragging)}))
+
                (defncall 'interpret-drag '->
                  (api/key-fn :mouse)
                  (api/key-fn :drag)
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-lmb-click)
                                                     (api/symbol 'handle-mouse-click)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-start)
+                                                    (api/symbol 'handle-drag-start)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'both-pipe)
                                                     (api/symbol 'handle-mouse-connect)])
                  (api/fn-call (api/symbol 'unless) [(api/symbol 'is-command)
-                                                    (api/symbol 'ignore)]))
+                                                    (api/map {(api/keyword :command) (api/keyword :activity)
+                                                              (api/keyword :data) (api/keyword :scouting)})]))
 
                (defncall 'caravan-commands '->
                  (api/symbol 'construct-back))
@@ -1397,7 +1437,8 @@
               (defncall 'handle-connect '->
                 (api/key-fn :data)
                 (api/fn-call (api/symbol 'connect) [])
-                (api/map {(api/keyword :result) (api/symbol '_)}))
+                (api/map {(api/keyword :result) (api/symbol '_)
+                          (api/keyword :mode) (api/keyword :back)}))
 
               (defncall 'is-select '->
                 (api/key-fn :command)
@@ -1440,6 +1481,15 @@
                 (api/key-fn :data)
                 (api/map {(api/keyword :mode) (api/keyword :load)
                           (api/keyword :load) (api/keyword :none)}))
+
+              (defncall 'is-test '->
+                (api/key-fn :command)
+                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :test)]))
+
+              (defncall 'handle-test '->
+                (api/key-fn :data)
+                (api/map {(api/keyword :mode) (api/keyword :test)
+                          (api/keyword :test) (api/keyword :none)}))
 
               (defncall 'is-mode-change '->
                 (api/key-fn :command)
@@ -1691,7 +1741,7 @@
                            (api/keyword :next) (api/map {(api/keyword :activity)
                                                          (api/fn-call (api/symbol 'if) [(api/symbol 'is-next-drag-end)
                                                                                         (api/keyword :scouting)
-                                                                                        (api/keyword :dragging)])})}))
+                                                                                        (api/keyword :scrolling)])})}))
 
               (defncall 'editor-state-reduce 'pipes/reductions
                 (api/fn-call (api/symbol '->)
@@ -2089,6 +2139,17 @@
                                                        (api/map {(api/keyword :action)
                                                                  (api/keyword :load)})})}))
 
+             (defncall 'should-test '->
+               (api/key-fn :next)
+               (api/key-fn :data)
+               (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :test)]))
+
+             (defncall 'test '->
+               (api/map {(api/keyword :state) (api/key-fn :state)
+                         (api/keyword :next) (api/map {(api/keyword :call)
+                                                       (api/map {(api/keyword :action)
+                                                                 (api/keyword :test)})})}))
+
              (defncall 'should-insert '->
                (api/key-fn :next)
                (api/symbol 'is-insert-state))
@@ -2146,6 +2207,8 @@
                             [(api/symbol 'reset-call)
                              (api/fn-call (api/symbol 'incase) [(api/symbol 'should-load)
                                                                 (api/symbol 'load)])
+                             (api/fn-call (api/symbol 'incase) [(api/symbol 'should-test)
+                                                                (api/symbol 'test)])
                              (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-insert)
                                                                                                 (api/symbol 'is-editor-mode-insert)])
                                                                 (api/symbol 'insert-at-pos)])
@@ -2586,26 +2649,38 @@
                (api/fn-call (api/symbol 'str) [(api/string "pipe/")
                                                (api/key-fn :name)]))
 
-             (defncall 'graph-pipe '->
-               (api/key-fn :node)
+             (defncall 'graph-pipe-single '->
                (api/vector [(api/keyword :g)
                             (api/map {(api/keyword :transform)
-                                      (api/symbol 'translate-str) })
+                                      (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'translate-str)]) })
+                            (api/fn-call (api/symbol 'if) [(api/key-fn :hovered)
+                                                           (api/vector [(api/keyword :circle)
+                                                                        (api/map {(api/keyword :cx) (api/integer 50)
+                                                                                  (api/keyword :cy) (api/integer 50)
+                                                                                  (api/keyword :r) (api/integer 50)
+                                                                                  (api/keyword :style) (api/map {(api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :pipe-glow) (api/symbol 'get-color)])
+                                                                                                                 (api/keyword :filter) (api/string "url(#blur)")
+                                                                                                                 (api/keyword :pointer-events) (api/string "all")})})])
+                                                           (api/vector [(api/keyword :g)])])
                             (api/vector [(api/keyword :circle)
-                                         (api/map {(api/keyword :cx) (api/integer 50)
-                                                   (api/keyword :cy) (api/integer 50)
-                                                   (api/keyword :r) (api/integer 50)
-                                                   (api/keyword :style) (api/map {(api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :pipe-glow) (api/symbol 'get-color)])
-                                                                                  (api/keyword :filter) (api/string "url(#blur)")
-                                                                                  (api/keyword :pointer-events) (api/string "all")})})])
-                            (api/vector [(api/keyword :circle)
-                                         (api/map {(api/keyword :id) (api/symbol 'pipe-id)
+                                         (api/map {(api/keyword :id) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'pipe-id)])
                                                    (api/keyword :cx) (api/integer 50)
                                                    (api/keyword :cy) (api/integer 50)
                                                    (api/keyword :r) (api/integer 50)
                                                    (api/keyword :style) (api/map {(api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :pipe-fill) (api/symbol 'get-color)])
                                                                                   (api/keyword :stroke) (api/fn-call (api/symbol '->) [(api/keyword :pipe-stroke) (api/symbol 'get-color)])
                                                                                   (api/keyword :pointer-events) (api/string "all")})})])
+                            (api/fn-call (api/symbol 'if) [(api/key-fn :highlighted)
+                                                           (api/vector [(api/keyword :circle)
+                                                                        (api/map {(api/keyword :cx) (api/integer 53)
+                                                                                  (api/keyword :cy) (api/integer 47)
+                                                                                  (api/keyword :r) (api/integer 50)
+                                                                                  (api/keyword :style) (api/map {(api/keyword :stroke) (api/fn-call (api/symbol '->) [(api/keyword :pipe-drag) (api/symbol 'get-color)])
+                                                                                                                 (api/keyword :stroke-width) (api/string "3px")
+                                                                                                                 (api/keyword :filter) (api/string "url(#blurbit)")
+                                                                                                                 (api/keyword :fill-opacity) (api/float 0.0)
+                                                                                                                 (api/keyword :pointer-events) (api/string "none")})})])
+                                                           (api/vector [(api/keyword :g)])])
                             (api/vector [(api/keyword :text)
                                          (api/map {(api/keyword :transform) (api/string "rotate(90 50 50)")
                                                    (api/keyword :x) (api/integer 50)
@@ -2614,8 +2689,29 @@
                                                    (api/keyword :fill)
                                                    (api/fn-call (api/symbol '->) [(api/keyword :node-name-stroke) (api/symbol 'get-color)])
                                                    (api/keyword :text-anchor) (api/keyword :middle)
-                                                   (api/keyword :font-weight) (api/string "bold")})
-                                         (api/key-fn :name)])]))
+                                                   (api/keyword :font-weight) (api/string "bold")
+                                                   (api/keyword :pointer-events) (api/string "none")})
+                                         (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)])])]))
+
+             (defncall 'is-pipe-drag-begin '->
+               (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :editor) (api/key-fn :mode)])
+                                                                             (api/keyword :navigate)])
+                                               (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :editor) (api/key-fn :activity)])
+                                                                             (api/keyword :dragging)])
+                                               (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :source)])
+                                                                             (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'pipe-id)])])]))
+
+             (defncall 'is-pipe-hovered '->
+               (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :type)])
+                                                                             (api/string "pipe")])
+                                               (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :name)])
+                                                                             (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)])])]))
+
+             (defncall 'graph-pipe '->
+               (api/map {(api/keyword :node) (api/key-fn :node)
+                         (api/keyword :highlighted) (api/symbol 'is-pipe-drag-begin)
+                         (api/keyword :hovered) (api/symbol 'is-pipe-hovered)})
+               (api/symbol 'graph-pipe-single))
 
              (defncall 'is-pipe-node '->
                (api/key-fn :node)
@@ -2667,6 +2763,7 @@
 
              (defncall 'build-context '->
                (api/map {(api/keyword :editor) (api/key-fn :editor)
+                         (api/keyword :mouse) (api/key-fn :mouse)
                          (api/keyword :view) (api/key-fn :view)
                          (api/keyword :selected) (api/fn-call (api/symbol '->) [(api/key-fn :editor)
                                                                                 (api/key-fn :selected)])
@@ -2735,6 +2832,52 @@
                                                         (api/symbol 'graph-loading)
                                                         (api/vector [(api/keyword :g)])])}))
 
+             (defncall 'graph-link '->
+               (api/key-fn :mouse)
+               (api/vector [(api/keyword :g)
+                            (api/vector [(api/keyword :line)
+                                         (api/map {(api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "none")
+                                                                                  (api/keyword :stroke) (api/string "orange")
+                                                                                  (api/keyword :stroke-width) (api/integer 3)})
+
+                                                   (api/keyword :stroke-linecap) (api/string "round")
+                                                   (api/keyword :filter) (api/string "url(#blurbit)")
+                                                   (api/keyword :x1) (api/fn-call (api/symbol '->)[(api/key-fn :start) (api/key-fn :x)])
+                                                   (api/keyword :y1) (api/fn-call (api/symbol '->)[(api/key-fn :start) (api/key-fn :y)])
+                                                   (api/keyword :x2) (api/fn-call (api/symbol '->)[(api/key-fn :position) (api/key-fn :x)])
+                                                   (api/keyword :y2) (api/fn-call (api/symbol '->)[(api/key-fn :position) (api/key-fn :y)])})])
+                            (api/vector [(api/keyword :line)
+                                         (api/map {(api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "none")
+                                                                                  (api/keyword :stroke) (api/string "orange")
+                                                                                  (api/keyword :stroke-width) (api/integer 1)})
+
+                                                   (api/keyword :x1) (api/fn-call (api/symbol '->)[(api/key-fn :start) (api/key-fn :x)])
+                                                   (api/keyword :y1) (api/fn-call (api/symbol '->)[(api/key-fn :start) (api/key-fn :y)])
+                                                   (api/keyword :x2) (api/fn-call (api/symbol '->)[(api/key-fn :position) (api/key-fn :x)])
+                                                   (api/keyword :y2) (api/fn-call (api/symbol '->)[(api/key-fn :position) (api/key-fn :y)])})])
+                            ;; (api/vector [(api/keyword :g)
+                            ;;              (api/map {(api/keyword :transform)
+                            ;;                        (api/fn-call (api/symbol '->) [(api/key-fn :mouse)(api/key-fn :position)(api/symbol 'translate-str)]) })
+                            ;;              (api/vector [(api/keyword :circle)
+                            ;;                           (api/map {(api/keyword :cx) (api/integer -25)
+                            ;;                                     (api/keyword :cy) (api/integer -25)
+                            ;;                                     (api/keyword :r) (api/integer 50)
+                            ;;                                     (api/keyword :style) (api/map {(api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :pipe-glow) (api/symbol 'get-color)])
+                            ;;                                                                    (api/keyword :filter) (api/string "url(#blur)")
+                            ;;                                                                    (api/keyword :pointer-events) (api/string "all")})})])])
+                            ]))
+
+
+             (defncall 'graph-drag '->
+               ;; (api/fn-call (api/symbol 'spy) [(api/string "drag")])
+               (api/map {(api/keyword :graph-drag)
+                         (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :editor) (api/key-fn :activity)])
+                                                                                                                      (api/keyword :dragging)])
+                                                                                        (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :active)])
+                                                                                                                      (api/keyword :true)])])
+                                                        (api/symbol 'graph-link)
+                                                        (api/vector [(api/keyword :g)])])}))
+
              ;; reduce elements to latest version of GUI element
 
              (defncall 'elements-reduce 'pipes/reductions
@@ -2797,6 +2940,11 @@
                                                       (api/map {(api/keyword :in) (api/string "fillPaint")
                                                                 (api/keyword :stdDeviation) (api/string "10 10")})])])
                             (api/vector [(api/keyword :filter)
+                                         (api/map {(api/keyword :id) (api/string "blurbit")})
+                                         (api/vector [(api/keyword :feGaussianBlur)
+                                                      (api/map {(api/keyword :in) (api/string "fillPaint")
+                                                                (api/keyword :stdDeviation) (api/string "2 2")})])])
+                            (api/vector [(api/keyword :filter)
                                          (api/map {(api/keyword :id) (api/string "redshadow")})
                                          (api/vector [(api/keyword :feDropShadow)
                                                       (api/map {(api/keyword :dx) (api/string "3")
@@ -2847,6 +2995,7 @@
                                                 (api/key-fn :source-menu)
                                                 (api/key-fn :sink-menu)
                                                 (api/key-fn :action-menu)
+                                                (api/key-fn :graph-drag)
                                                 (api/key-fn :graph-dialog)
                                                 ])})}))
 
@@ -2890,13 +3039,13 @@
               (red 'eval-events 'eval-reduce 'eval-raw)
               (pipe 'eval-raw 'tag-eval 'eval-state)
 
-
               (pipe 'mouse-state 'filter-drag 'drag-events)
 
-              (pipe 'drag-events 'filter-drag-end 'drag-state)
-
+              (pipe 'drag-events 'filter-drag-end-or-start 'drag-state) ;; FIXME reduce
               ;; (pipe 'drag-state 'log-mouse)
               (pipe 'drag-state 'interpret-drag 'editor-commands)
+              ;; (pipe 'drag-events 'log-mouse)
+
 
               (pipe 'caravan 'caravan-commands 'editor-commands)
               (pipe 'editor-commands 'handle-commands 'editor-events)
@@ -2919,7 +3068,7 @@
               (red 'editor-state 'state-reduce 'state)
               (red 'loaded-state 'state-reduce 'state)
               (red 'view-state 'state-reduce 'state)
-              ;; (red 'mouse-state 'state-reduce 'state)
+              (red 'drag-events 'state-reduce 'state)
               (red 'hover-state 'state-reduce 'state)
               (red 'mode-state 'state-reduce 'state)
               (red 'events 'state-reduce 'state)
@@ -2955,6 +3104,7 @@
               (pipe 'be-commands 'filter-call 'caravan)
 
               (pipe 'state 'graph 'svg-render)
+              (pipe 'state 'graph-drag 'svg-render)
               (pipe 'state 'graph-focus 'svg-render)
               (pipe 'state 'graph-dialog 'svg-render)
               (red 'render 'elements-reduce 'reducer)

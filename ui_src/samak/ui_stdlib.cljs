@@ -98,33 +98,45 @@
         (recur)))
     (pipes/pipe ui-in ui-out)))
 
-(defn mouse []
-  (let [c (chan)]
-    (set! (.-onmousedown (.-body js/document))
-          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)]
+(defn translate-coords
+  ""
+  [bound event]
+  [(- (.-pageX event) (.-left bound))
+   (- (.-pageY event) (.-top bound))])
+
+
+(defn mouse [n]
+  (let [c (chan)
+        elem (if n (js/document.getElementById (str "samak" n)) (.-body js/document))
+        bound (.getBoundingClientRect elem)]
+    (set! (.-onmousedown elem)
+          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)
+                                         [x y] (translate-coords bound event)]
                                      {:samak.mouse/type :down
                                       :samak.mouse/button (mouse-button-to-keyword (.-button event))
-                                      :samak.mouse/page-x (.-pageX event)
-                                      :samak.mouse/page-y (.-pageY event)
+                                      :samak.mouse/page-x x
+                                      :samak.mouse/page-y y
                                       :samak.mouse/target (.-id (.-target event))}
                                      )
                                  ::mouse)
                      false)))
-    (set! (.-onmouseup (.-body js/document))
-          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)]
+    (set! (.-onmouseup elem)
+          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)
+                                         [x y] (translate-coords bound event)]
                                      {:samak.mouse/type :up
                                       :samak.mouse/button (mouse-button-to-keyword (.-button event))
-                                      :samak.mouse/page-x (.-pageX event)
-                                      :samak.mouse/page-y (.-pageY event)
+                                      :samak.mouse/page-x x
+                                      :samak.mouse/page-y y
                                       :samak.mouse/target (.-id (.-target event))
                                       })
                                  ::mouse)
                      false)))
-    (set! (.-onmousemove (.-body js/document))
-          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)]
+    (set! (.-onmousemove elem)
+          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)
+                                         [x y] (translate-coords bound event)]
                                      {:samak.mouse/type :move
-                                      :samak.mouse/page-x (.-pageX event)
-                                      :samak.mouse/page-y (.-pageY event)
+                                      :samak.mouse/page-x x
+                                      :samak.mouse/page-y y
                                       :samak.mouse/target (.-id (.-target event))})
                                  ::mouse)
                      false)))
@@ -147,6 +159,12 @@
 
 ;; Graph Layouting
 
+(defn call-layout
+  ""
+  [handler data]
+  (layout/compute-layout data [] (handler :success) (handler :error)))
+
+
 (defn layout-call [request res]
   (let [meta (:samak.pipes/meta request)
         before (helpers/now)
@@ -157,10 +175,7 @@
                       (put! res (tt/re-wrap meta result))
                       (close! res))))]
     (trace/trace ::layout 0 request)
-    (layout/compute-layout (or (:samak.pipes/content request) request)
-                           []
-                           (handler :success)
-                           (handler :error))))
+    (call-layout handler (or (:samak.pipes/content request) request))))
 
 (defn layout []
   (let [in-chan  (chan (a/sliding-buffer 1))
