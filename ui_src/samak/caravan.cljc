@@ -812,6 +812,7 @@
             (tools/log "caravan: " call)
             (case (:action call)
               :load (load-chuck caravan-out)
+              :test (test-chuck caravan-out)
               :insert (add-cell (:arguments call))
               :edit (edit-cell (:arguments call))
               :cut (cut-cell (:arguments call))
