@@ -1199,7 +1199,6 @@
                            (api/keyword :data) (api/fn-call (api/symbol 'str) [(api/string "func/")(api/symbol '_)])}))
 
                (defncall 'handle-mouse-click '->
-               (api/fn-call (api/symbol 'spy) [(api/string "click")])
                  (api/key-fn :source)
                  (api/symbol 'make-target)
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-source)
@@ -1259,6 +1258,7 @@
 
                (defncall 'is-start '->
                  (api/fn-call (api/symbol 'and) [(api/symbol 'is-lmb-event)
+                                                 (api/symbol 'is-source-source)
                                                  (api/fn-call (api/symbol '=) [(api/key-fn :begin) (api/keyword :true)])]))
 
                (defncall 'handle-drag-start '->
@@ -1615,7 +1615,7 @@
                                                                                                                               (api/integer 300)])])
                          (api/keyword :height) (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '->) [(api/key-fn :def) (api/symbol 'detect-pipe-node)])
                                                                               (api/integer 100)
-                                                                              (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '>) [(api/integer 1) (api/fn-call (api/symbol '>) [(api/integer 1) (api/key-fn :context)])])
+                                                                              (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '>) [(api/key-fn :context) (api/integer 1)])
                                                                                                              (api/fn-call (api/symbol '->) [(api/key-fn :def) (api/symbol 'calc-def-height)])
                                                                                                              (api/integer 30)])])
                          (api/keyword :size) (api/fn-call (api/symbol '->) [(api/key-fn :def) (api/fn-call (api/symbol 'if) [(api/symbol 'detect-pipe-node)
@@ -1639,7 +1639,8 @@
                                                         (api/keyword :selected) (api/fn-call (api/symbol '->) [(api/key-fn :next)
                                                                                                                (api/key-fn :selected)])
                                                         (api/keyword :ast) (api/symbol 'selected-source)
-                                                        (api/keyword :formatted) (api/fn-call (api/symbol '->) [(api/symbol 'selected-source) (api/symbol 'format-def)])})}))
+                                                        (api/keyword :formatted) (api/fn-call (api/symbol '->) [(api/map {(api/keyword :def) (api/symbol 'selected-source)})
+                                                                                                                (api/symbol 'format-def)])})}))
 
               (defncall 'selected-source-change '->
                 (api/fn-call (api/symbol 'lookup) [(api/fn-call (api/symbol '->) [(api/key-fn :next)
@@ -1655,7 +1656,8 @@
                           (api/keyword :next) (api/map {(api/keyword :eval) (api/fn-call (api/symbol '->) [(api/key-fn :next)
                                                                                                            (api/key-fn :eval)])
                                                         (api/keyword :ast) (api/symbol 'selected-source-change)
-                                                        (api/keyword :formatted) (api/fn-call (api/symbol '->) [(api/symbol 'selected-source-change) (api/symbol 'format-def)])})}))
+                                                        (api/keyword :formatted) (api/fn-call (api/symbol '->) [(api/map {(api/keyword :def) (api/symbol 'selected-source-change)})
+                                                                                                                (api/symbol 'format-def)])})}))
 
               (defncall 'is-next-mode '->
                 (api/key-fn :next)
@@ -1793,7 +1795,6 @@
 
              (defncall 'filter-load 'except
                (api/fn-call (api/symbol '->) [
-                ;; (api/fn-call (api/symbol 'spy) [(api/string "load")])
                                               (api/fn-call (api/symbol '->) [(api/key-fn :mode) (api/key-fn :mode)])
                                               (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :load)])]))
 
@@ -2628,6 +2629,7 @@
 
              (defncall 'graph-focused '->
                (api/key-fn :context)
+               (api/fn-call (api/symbol 'spy) [(api/string "focus")])
                (api/vector [(api/keyword :g)
                             (api/map {(api/keyword :id) (api/string "focused")})
                             (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '->) [(api/key-fn :editor) (api/key-fn :formatted)])
@@ -3140,7 +3142,7 @@
                                      (api/symbol 'init)))
    (api/defexp 'oasis (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'init)
 
-                                                     (api/keyword :mouse) (api/symbol 'oasis-mouse)
+                                                     ;; (api/keyword :mouse) (api/symbol 'oasis-mouse)
                                                      ;; (api/keyword :kb) (api/symbol 'oasis-kb)
                                                      ;; (api/keyword :eval) (api/symbol 'oasis-eval)
                                                      (api/keyword :layout) (api/symbol 'oasis-layout)

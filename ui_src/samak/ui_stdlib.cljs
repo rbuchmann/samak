@@ -139,7 +139,19 @@
                                       :samak.mouse/page-y y
                                       :samak.mouse/target (.-id (.-target event))})
                                  ::mouse)
-                     false)))
+                      false)))
+    (set! (.-onwheel elem)
+          (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)
+                                         [x y] (translate-coords bound event)]
+                                     {:samak.mouse/type :wheel
+                                      :samak.mouse/page-x x
+                                      :samak.mouse/page-y y
+                                      :samak.mouse/delta-x (.-deltaX event)
+                                      :samak.mouse/delta-y (.-deltaY event)
+                                      :samak.mouse/target (.-id (.-target event))})
+                                 ::mouse)
+                      (println "wheel")
+                      false)))
     (pipes/source c)))
 
 (defn keyboard []
@@ -164,21 +176,27 @@
   [handler data]
   (layout/compute-layout data [] (handler :success) (handler :error)))
 
+(def cache (atom {}))
 
 (defn layout-call [request res]
   (let [meta (:samak.pipes/meta request)
+        content (or (:samak.pipes/content request) request)
         before (helpers/now)
         handler (fn [token]
                   (fn [return]
                     (let [result (assoc {} token return)]
                       (trace/trace ::layout (helpers/duration before (helpers/now)) result)
+                      (swap! cache assoc content result)
                       (put! res (tt/re-wrap meta result))
                       (close! res))))]
     (trace/trace ::layout 0 request)
-    (call-layout handler (or (:samak.pipes/content request) request))))
+    (if-let [e (get @cache content)]
+      (do (put! res (tt/re-wrap meta e))
+          (close! res))
+      (call-layout handler content))))
 
 (defn layout []
-  (let [in-chan  (chan (a/sliding-buffer 1))
+  (let [in-chan  (chan (a/sliding-buffer 2))
         out-chan (chan)]
     (a/pipeline-async 1 out-chan layout-call in-chan)
     (pipes/Pipethrough. in-chan (a/mult out-chan) nil nil)))
