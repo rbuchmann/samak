@@ -2629,7 +2629,6 @@
 
              (defncall 'graph-focused '->
                (api/key-fn :context)
-               (api/fn-call (api/symbol 'spy) [(api/string "focus")])
                (api/vector [(api/keyword :g)
                             (api/map {(api/keyword :id) (api/string "focused")})
                             (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '->) [(api/key-fn :editor) (api/key-fn :formatted)])
@@ -2695,13 +2694,20 @@
                                                    (api/keyword :pointer-events) (api/string "none")})
                                          (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)])])]))
 
-             (defncall 'is-pipe-drag-begin '->
+             (defncall 'is-dragging '->
                (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :editor) (api/key-fn :mode)])
                                                                              (api/keyword :navigate)])
                                                (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :editor) (api/key-fn :activity)])
-                                                                             (api/keyword :dragging)])
-                                               (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :source)])
-                                                                             (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'pipe-id)])])]))
+                                                                             (api/keyword :dragging)])]))
+
+             (defncall 'is-pipe-drag-begin '->
+               (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :source)])
+                                             (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'pipe-id)])]))
+
+             (defncall 'is-pipe-target '->
+               (api/key-fn :node)
+               (api/key-fn :type)
+               (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :caravan/sink)]))
 
              (defncall 'is-pipe-hovered '->
                (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :type)])
@@ -2711,7 +2717,9 @@
 
              (defncall 'graph-pipe '->
                (api/map {(api/keyword :node) (api/key-fn :node)
-                         (api/keyword :highlighted) (api/symbol 'is-pipe-drag-begin)
+                         (api/keyword :highlighted) (api/fn-call (api/symbol 'and) [(api/symbol 'is-dragging)
+                                                                                    (api/fn-call (api/symbol 'or) [(api/symbol 'is-pipe-drag-begin)
+                                                                                                                   (api/symbol 'is-pipe-target)])])
                          (api/keyword :hovered) (api/symbol 'is-pipe-hovered)})
                (api/symbol 'graph-pipe-single))
 
