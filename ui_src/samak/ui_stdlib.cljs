@@ -85,7 +85,8 @@
 
 (defn ui [n events]
   (let [ui-in (chan (a/sliding-buffer 1))
-        ui-out (chan (a/sliding-buffer 1000))]
+        ui-out (chan (a/sliding-buffer 1000))
+        init (atom true)]
     (go-loop []
       (when-some [i (<! ui-in)]
         ;; (trace/trace ::ui 0 i)
@@ -95,7 +96,24 @@
               ;; (when n (.warn js/console (str "render " n " - " x)))
               (r/render (if events (transform-element x ui-out) x) node))
             (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x)))))
+        (when @init
+          (reset! init false)
+          (put-meta! ui-out
+                     {:data :resize
+                      :width (.-clientWidth (.-documentElement js/document))
+                      :height (.-clientHeight (.-documentElement js/document))}
+                     ::view))
         (recur)))
+    (set! (.-onresize js/window)
+          (fn [e] (do (put-meta! ui-out (let [event (js->clj e :keywordize-keys true)]
+                                     {:data :resize
+                                      :event event
+                                      :width (.-clientWidth (.-documentElement js/document))
+                                      :height (.-clientHeight (.-documentElement js/document))
+                                      :samak.view/target (.-id (.-target event))}
+                                     )
+                                 ::view)
+                     false)))
     (pipes/pipe ui-in ui-out)))
 
 (defn translate-coords
