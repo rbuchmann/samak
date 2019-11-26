@@ -9,30 +9,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.0/react-dom.js"></script>
   </head>
   <body style="background-color:black" oncontextmenu="return false;">
-    <div class="container-fluid">
-      <div class="row">
-        <div class="col-md-12">
-          <div class="panel panel-default">
-            <div class="panel-body">
-              <div id="samak"></div>
-              <div id="samak2">
-                <div class="center">
-                  <div class="center bar-bg">
-                    <div id="bar" class="bar" style="width:0%;"></div>
-                  </div>
-                  <div class="bar-text">
-                    <h1>Loading...</h1>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div id="samak"></div>
+    <div id="samak2" class="fullscreen">
+      <div class="center">
+        <div class="center bar-bg">
+          <div id="bar" class="bar" style="width:0%;"></div>
+        </div>
+        <div class="bar-text">
+          <h1>Loading...</h1>
         </div>
       </div>
-    </div>
-    <div id="app-container">
-      <!-- We are using node.js <script>document.write(process.version)</script> -->
-      <!-- and electron <script>document.write(process.versions['electron'])</script>. -->
     </div>
   </body>
   <!-- <script type="text/javascript"> -->
