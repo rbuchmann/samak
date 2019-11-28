@@ -2,6 +2,7 @@
   #?
   (:clj
    (:require
+    [clojure.data.json :as json]
     [clj-time.core :as time]
     [clj-time.format :as time-format]
     [clj-time.coerce :as time-coerce])
@@ -16,6 +17,12 @@
   []
   (time/now))
 
+(defn past
+  ""
+  [millis]
+  (time/minus (now) (time/millis millis)))
+
+
 (defn duration
   ""
   [from to]
@@ -27,18 +34,24 @@
   [time]
   (time-coerce/to-date time))
 
-(def form (time-format/formatters :date-time))
-
 (defn parse-timestamp
   ""
   [datetime]
   (time-coerce/from-date datetime))
 
+(def form (time-format/formatters :date-time))
 
-(defn print-timestamp
+(defn print-ISO
   ""
   [time]
   (time-format/unparse form time))
+
+(def form (time-format/formatters :date-time))
+
+(defn to-epoch
+  ""
+  [time]
+  (time-coerce/to-long time))
 
 (defn compare-timestamp
   ""
@@ -55,7 +68,9 @@
 (defn make-span
   ""
   []
-  (rand-int 1000000))
+  (letfn [(hex [] (.toString (rand-int 16) 16))]
+    (str (hex) (hex) (hex) (hex)
+         (hex) (hex) (hex) (hex))))
 
 (defn str-len
   ""
@@ -71,3 +86,7 @@
    (if (> (str-len s) n)
      (str (subs (str s) 0 (- n 3)) "...")
      s)))
+
+(defn to-json [x]
+  #?(:cljs (clj->js x)
+     :clj (json/write-str x)))

@@ -38,8 +38,10 @@
      [samak.runtime.stores :as stores])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
-(def rt (atom (run/make-runtime core/samak-symbols)))
-;; (def trace (atom (trace/init-tracer rt)))
+(def config {:tracer {:backend :none}})
+
+(def rt (atom (run/make-runtime core/samak-symbols nil)))
+(def trace (atom (trace/init-tracer rt (:tracer config))))
 (caravan/init @rt)
 
 (defn catch-errors [ast]
@@ -67,12 +69,6 @@
             (pipes/fire! pipe arg pipe-name))
           {})
       (println (str "could not find pipe " pipe-name)))))
-
-(defn update-bar
-  ""
-  []
-  )
-
 
 (defn eval-oasis
   ""

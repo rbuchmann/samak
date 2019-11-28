@@ -91,6 +91,7 @@
   [specific]
   (merge {::created (help/now)
           ::span (help/make-span)
+          ::parent (help/make-span)
           ::uuid (help/uuid)} specific))
 
 (defn make-paket

@@ -147,6 +147,7 @@
                     :state content-state})
             duration  (helpers/duration before (helpers/now))
             end (tt/re-wrap meta-info-nxt res)]
+        (when-not meta-info-nxt (println "wrapper" res))
         (trace/trace db-id duration end)
         end))))
 

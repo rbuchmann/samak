@@ -1,6 +1,5 @@
 (ns samak.ui-stdlib
-  (:require [samak.layout       :as layout]
-            [expound.alpha      :as expound]
+  (:require [expound.alpha      :as expound]
             [clojure.string     :as str]
             [clojure.spec.alpha :as s]
             [reagent.core       :as r]
@@ -89,9 +88,9 @@
         init (atom true)]
     (go-loop []
       (when-some [i (<! ui-in)]
-        ;; (trace/trace ::ui 0 i)
+        (trace/trace ::ui 0 i)
         (let [x (or (:samak.pipes/content i) i)]
-          (if (or true (s/valid? ::hiccup x))
+          (if true ;; (s/valid? ::hiccup x)
             (when-let [node (js/document.getElementById (str "samak" n))]
               ;; (when n (.warn js/console (str "render " n " - " x)))
               (r/render (if events (transform-element x ui-out) x) node))
@@ -107,7 +106,6 @@
     (set! (.-onresize js/window)
           (fn [e] (do (put-meta! ui-out (let [event (js->clj e :keywordize-keys true)]
                                      {:data :resize
-                                      :event event
                                       :width (.-clientWidth (.-documentElement js/document))
                                       :height (.-clientHeight (.-documentElement js/document))
                                       :samak.view/target (.-id (.-target event))}
@@ -187,42 +185,9 @@
                        (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
     (pipes/source c)))
 
-;; Graph Layouting
-
-(defn call-layout
-  ""
-  [handler data]
-  (layout/compute-layout data [] (handler :success) (handler :error)))
-
-(def cache (atom {}))
-
-(defn layout-call [request res]
-  (let [meta (:samak.pipes/meta request)
-        content (or (:samak.pipes/content request) request)
-        before (helpers/now)
-        handler (fn [token]
-                  (fn [return]
-                    (let [result (assoc {} token return)]
-                      (trace/trace ::layout (helpers/duration before (helpers/now)) result)
-                      (swap! cache assoc content result)
-                      (put! res (tt/re-wrap meta result))
-                      (close! res))))]
-    (trace/trace ::layout 0 request)
-    (if-let [e (get @cache content)]
-      (do (put! res (tt/re-wrap meta e))
-          (close! res))
-      (call-layout handler content))))
-
-(defn layout []
-  (let [in-chan  (chan (a/sliding-buffer 2))
-        out-chan (chan)]
-    (a/pipeline-async 1 out-chan layout-call in-chan)
-    (pipes/Pipethrough. in-chan (a/mult out-chan) nil nil)))
-
 ;; Exported symbols
 
 (def ui-symbols
   {'pipes/ui       ui
    'pipes/mouse    mouse
-   'pipes/keyboard keyboard
-   'pipes/layout   layout})
+   'pipes/keyboard keyboard})

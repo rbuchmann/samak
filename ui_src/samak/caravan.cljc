@@ -653,7 +653,7 @@
 (defn trace-dump
   ""
   []
-  (trace/init-tracer @rt-conn)
+  (trace/init-tracer @rt-conn {})
   (trace/dump))
 
 

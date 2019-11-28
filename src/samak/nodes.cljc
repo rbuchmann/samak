@@ -3,9 +3,9 @@
             [samak.pipes     :as pipes]
             [samak.tools     :refer [fail log]]
             [samak.trace     :refer [*db-id*]]
-            [samak.code-db :as db]))
+            [samak.code-db   :as db]))
 
-(def ^:dynamic *environment* {})
+(def ^:dynamic *manager* nil)
 (def ^:dynamic *builtins* {})
 
 
@@ -36,7 +36,7 @@
     (unresolved-name? value) (compile-error "Tried to eval unresolved name:"
                                    (str  "'" (second value) "'"))
     (ref? value)             (let [id (:db/id value)]
-                               (or (get *environment* id)
+                               (or ((:resolve *manager*) id)
                                    (compile-error "Referenced id " id " was undefined")))
     :default                 (compile-error "unknown token during evaluation: " (str value))))
 
@@ -67,14 +67,12 @@
                   pipes/instrument
                   pipes/transduction-pipe)))
         c (eval-node to)]
-    (if b
-      (pipes/link! (pipes/link! a b) c)
-      (pipes/link! a c))))
+    ((:link *manager*) a c b)))
 
 (defmethod eval-node ::fn-ref [{:keys [::fn]}]
-  (or (get *environment* (:db/id fn))
-      (when (= (::type fn) ::def) (eval-node fn))
-      (compile-error "Undefined reference " fn " in " *environment*)))
+  (or (when (= (::type fn) ::def) (eval-node fn))
+      ((:resolve *manager*) (:db/id fn))
+      (compile-error "Undefined reference " fn " in " *manager*)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
   (let [func (eval-node fn-expression)]
@@ -83,8 +81,8 @@
 (defmethod eval-node ::link [{:keys [::from ::to]}]
   (pipes/link! (eval-node from) (eval-node to)))
 
-(defn eval-env [env builtins ast db-id]
-  (binding [*environment* env
+(defn eval-env [manager builtins ast db-id]
+  (binding [*manager* manager
             *builtins* builtins
             *db-id* db-id]
     (eval-node ast)))

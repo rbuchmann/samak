@@ -22,6 +22,11 @@
    "(| in (-> inc inc) out)"
    "!f in 5"])
 
+(def tw
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (|> inc inc) out)"])
+
 (def tl2
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
