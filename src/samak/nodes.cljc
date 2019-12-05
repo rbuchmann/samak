@@ -62,7 +62,10 @@
   (let [a (eval-node from)
         b (when xf
             (binding [*db-id* (:db/id xf)]
-              (eval-node xf)))
+              (-> xf
+                  eval-node
+                  pipes/instrument
+                  pipes/transduction-pipe)))
         c (eval-node to)]
     (if b
       (pipes/link! (pipes/link! a b) c)

@@ -12,7 +12,7 @@
                       (api/keyword :foo)  (api/integer 42)})]
     (is (some? (db/parse-tree->db! (db/create-empty-db) [ast])))))
 
-(def builtins ['inc 'dec 'pipes/debug '|>])
+(def builtins ['inc 'dec 'pipes/debug '->])
 
 (defn make-example-db [load-example?]
   (let [db (db/create-empty-db)]
