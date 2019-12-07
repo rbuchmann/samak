@@ -121,12 +121,13 @@
                         :http-in http-in}
                 :tests {
                         :test-response {:when {\"http-in\" [{:type \"success\" :value {:id 42 :joke \"is on you\"}}]}
-                                     :then {\"ui-out\" [(|> (-> (incase (= (nth _ 4) [:ul]) :success))) (|> _)]}}
+                                        :then {\"ui-out\" [(incase (= (nth _ 4) [:ul]) :success)]}}
                         :test-init {:when {\"in\" [[]]}
-                                    :then {\"ui-out\" [(|> (incase (and (= :div (first _))
+                                    :then {\"ui-out\" [(incase (and (= :div (first _))
                                                                         (= 5 (count _)))
-                                                                   :success))]}}
+                                                                   :success)]}}
                         :test-event {:when {\"ui-in\" [{:data :change :event {:target {:value 42}}}
                                                        {:data :submit}]}
-                                     :then {\"http-out\" [(|> (incase (and (= \"http://api.icndb.com/jokes/42\" :-url))
-                                                                    :success))]}}}})"])
+                                     :then {\"http-out\" [(incase (and (= \"http://api.icndb.com/jokes/42\" :-url))
+                                                                    :success)]}}
+}})"])

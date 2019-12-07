@@ -151,9 +151,10 @@
         end))))
 
 (defn reductions* [f init]
-  (pipes/transduction-pipe (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
-                                         (tt/re-wrap (pipes/make-meta {:samak.pipes/source ::reductions})
-                                                     init))))
+  (pipes/transduction-pipe
+   (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
+                 (tt/re-wrap (pipes/make-meta {:samak.pipes/source ::reductions})
+                             init))))
 
 
 (def pipe-symbols

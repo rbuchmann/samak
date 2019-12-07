@@ -136,8 +136,7 @@
 (defn load-travel
   "loads a network given a source entity id from the database"
   [db id]
-  (let [
-        ast (load-by-id db id)
+  (let [ast (load-by-id db id)
         subs (mapv :db/id (find-links-from db id))
         pipes (mapv #(load-by-id db %1) subs)
         ends (mapv #(get-in %1 [:samak.nodes/to :samak.nodes/fn :db/id]) pipes)

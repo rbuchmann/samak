@@ -15,6 +15,8 @@
               [samak.tools           :as tools]
               [samak.trace           :as trace]
               [samak.nodes           :as nodes]
+              [samak.runtime.stores  :as stores]
+              [samak.runtime.servers :as servers]
               [clojure.string        :as str])]
    :cljs
    [(:require [clojure.string        :as s]
@@ -521,7 +523,7 @@
   ""
   [source connector sink]
   ;; (println (str "connect " source " with " connector " to " sink))
-  (let [fn (api/defexp (symbol connector) (api/fn-call (api/symbol '|>) [(api/symbol '_)]))
+  (let [fn (api/defexp (symbol connector) (api/symbol '_))
         fn-ast (single! fn)
         pipe (api/pipe (api/symbol (symbol source))
                        (api/symbol (symbol connector))
@@ -553,36 +555,37 @@
 
 (defn attach-assert
   ""
-  [verify source xf assert-fn]
+  [verify source-pipe xf-fn test-fn]
   (let [assert-name (str "assert-" (rand-int 1000000))
         assert-exp (api/defexp (symbol assert-name) (api/fn-call (api/symbol 'pipes/debug) []))
         assert-ast (single! assert-exp)]
     (add-node (symbol assert-name) assert-ast)
-    (let [source-pipe (rt/get-definition-by-name @rt-conn (symbol source))
-          xf-pipe (get (servers/get-defined (:server @rt-conn)) xf)
+    (let [xf-pipe (pipes/transduction-pipe (pipes/instrument xf-fn))
+          test-pipe (pipes/transduction-pipe (pipes/instrument test-fn))
           assert-pipe (rt/get-definition-by-name @rt-conn (symbol assert-name))
           verify-pipe (rt/get-definition-by-name @rt-conn (symbol verify))]
       (pipes/link! (pipes/link! source-pipe xf-pipe) assert-pipe)
-      (pipes/link! (pipes/link! assert-pipe assert-fn) verify-pipe))))
+      (pipes/link! (pipes/link! assert-pipe test-pipe) verify-pipe))))
 
 
 (defn add-pipe-net
   ""
   [verify config ast]
-  (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
-        xf (get-in ast [:samak.nodes/xf :samak.nodes/fn])
-        sink (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name])
-        test-ref (get config (str sink))]
-    (let [source-pipe (rt/get-definition-by-name @rt-conn (symbol source))
-          xf-pipe (get (servers/get-defined (:server @rt-conn)) (:db/id xf))
-          sink-pipe (rt/get-definition-by-name @rt-conn (symbol sink))]
-      (when test-ref
-        (println "  V" "Verifying pipe: " sink " with " test-ref)
-        (attach-assert verify source (:db/id xf) (first test-ref)))
-      (println "  V" "Adding pipe:" source "with [" (:db/id xf) "]" (:samak.nodes/name xf) "to" sink)
-      (if xf-pipe
-        (pipes/link! (pipes/link! source-pipe xf-pipe) sink-pipe)
-        (pipes/link! source-pipe sink-pipe)))))
+  (let [source (api/get-pipe-source-name ast)
+        xf (api/get-pipe-xf-fn ast)
+        sink (api/get-pipe-sink-name ast)
+        test-ref (get config (str sink))
+        source-pipe (rt/get-definition-by-name @rt-conn (symbol source))
+        xf-fn (get (servers/get-defined (:server @rt-conn)) (:db/id xf))
+        sink-pipe (rt/get-definition-by-name @rt-conn (symbol sink))]
+    (when test-ref
+      (println "  V" "Verifying pipe: " sink " with " test-ref)
+      (attach-assert verify source-pipe xf-fn (first test-ref)))
+    (println "  V" "Adding pipe:" source "with [" (:db/id xf) "]" (:samak.nodes/name xf) "to" sink)
+    (if xf-fn
+      (let [xf-pipe (pipes/transduction-pipe (pipes/instrument xf-fn))]
+        (pipes/link! (pipes/link! source-pipe xf-pipe) sink-pipe))
+      (pipes/link! source-pipe sink-pipe))))
 
 
 (defn setup-verify
@@ -607,7 +610,7 @@
         _ (println "  V Loading asts: " (s/join ", " nodes))
         asts (map #(load-ast @rt-conn %1) nodes)
         _ (println "  V" "Adding nodes: " (s/join ", " (map :samak.nodes/name asts)))
-        node-notify (map #(add-node (symbol (name-of-node %)) %) asts)
+        node-notify (doall (map #(add-node (symbol (name-of-node %)) %) asts))
         pipes (distinct (map :db/id (flatten (map :pipes (vals source)))))
         _ (println "  V" "Adding pipes: " (s/join ", " pipes))
         pipe-asts (map #(load-ast @rt-conn %1) pipes)]
@@ -813,6 +816,7 @@
             (case (:action call)
               :load (load-chuck caravan-out)
               :test (test-chuck caravan-out)
+              :trace (trace-dump)
               :insert (add-cell (:arguments call))
               :edit (edit-cell (:arguments call))
               :cut (cut-cell (:arguments call))

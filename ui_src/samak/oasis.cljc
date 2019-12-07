@@ -34,24 +34,10 @@
   [sym call in-spec out-spec & args]
   (defncall sym call args))
 
-(defn pipify
-  ""
-  [x]
-  (api/defexp (symbol (str "x-" (name x))) (api/fn-call (api/symbol '|>) [(api/symbol x)])))
-
 (defn pipe
   ""
   ([in out]
    (pipe in '_ out))
-  ([in x out]
-   (let [xfer (symbol (str "x-" (name x)))]
-     [(pipify x)
-      (api/pipe (api/symbol in)
-                (api/symbol xfer)
-                (api/symbol out))])))
-
-(defn red
-  ""
   ([in x out]
    (api/pipe (api/symbol in)
              (api/symbol x)
@@ -1145,7 +1131,7 @@
 
                (defncall 'is-kb-load '->
                  (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "l")]))
+                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "o")]))
 
                (defncall 'construct-load '->
                  (api/map {(api/keyword :command) (api/keyword :load)
@@ -1161,6 +1147,15 @@
                            (api/keyword :type) (api/keyword :immediate)
                            (api/keyword :data) (api/keyword :test)}))
 
+               (defncall 'is-kb-trace '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "l")]))
+
+               (defncall 'construct-trace '->
+                 (api/map {(api/keyword :command) (api/keyword :trace)
+                           (api/keyword :type) (api/keyword :immediate)
+                           (api/keyword :data) (api/keyword :trace)}))
+
                (defncall 'filter-menu '->
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-menu)
                                                     (api/symbol 'construct-menu)])
@@ -1168,6 +1163,8 @@
                                                     (api/symbol 'construct-load)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-test)
                                                     (api/symbol 'construct-test)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-trace)
+                                                    (api/symbol 'construct-trace)])
                  (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
                                                     (api/symbol 'ignore)]))
 
@@ -1525,6 +1522,15 @@
                 (api/map {(api/keyword :mode) (api/keyword :test)
                           (api/keyword :test) (api/keyword :none)}))
 
+              (defncall 'is-trace '->
+                (api/key-fn :command)
+                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :trace)]))
+
+              (defncall 'handle-trace '->
+                (api/key-fn :data)
+                (api/map {(api/keyword :mode) (api/keyword :trace)
+                          (api/keyword :trace) (api/keyword :none)}))
+
               (defncall 'is-mode-change '->
                 (api/key-fn :command)
                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :mode)]))
@@ -1556,6 +1562,10 @@
                                                    (api/symbol 'handle-menu)])
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-load)
                                                    (api/symbol 'handle-load)])
+                (api/fn-call (api/symbol 'incase) [(api/symbol 'is-test)
+                                                   (api/symbol 'handle-test)])
+                (api/fn-call (api/symbol 'incase) [(api/symbol 'is-trace)
+                                                   (api/symbol 'handle-trace)])
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mode-change)
                                                    (api/symbol 'handle-mode)])
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-activity-change)
@@ -2185,6 +2195,17 @@
                                                        (api/map {(api/keyword :action)
                                                                  (api/keyword :test)})})}))
 
+             (defncall 'should-trace '->
+               (api/key-fn :next)
+               (api/key-fn :data)
+               (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :trace)]))
+
+             (defncall 'trace '->
+               (api/map {(api/keyword :state) (api/key-fn :state)
+                         (api/keyword :next) (api/map {(api/keyword :call)
+                                                       (api/map {(api/keyword :action)
+                                                                 (api/keyword :trace)})})}))
+
              (defncall 'should-insert '->
                (api/key-fn :next)
                (api/symbol 'is-insert-state))
@@ -2240,10 +2261,14 @@
              (defncall 'handle-state 'pipes/reductions
                (api/fn-call (api/symbol '->)
                             [(api/symbol 'reset-call)
+                             ;; (api/fn-call (api/symbol 'spy) [(api/string "handle-state")])
+
                              (api/fn-call (api/symbol 'incase) [(api/symbol 'should-load)
                                                                 (api/symbol 'load)])
                              (api/fn-call (api/symbol 'incase) [(api/symbol 'should-test)
                                                                 (api/symbol 'test)])
+                             (api/fn-call (api/symbol 'incase) [(api/symbol 'should-trace)
+                                                                (api/symbol 'trace)])
                              (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-insert)
                                                                                                 (api/symbol 'is-editor-mode-insert)])
                                                                 (api/symbol 'insert-at-pos)])
@@ -2947,8 +2972,9 @@
 
              ;; render elements to hiccup
              (defncall 'render-elements '->
+               ;; (api/fn-call (api/symbol 'spy) [(api/string "vals1")])
                (api/fn-call (api/symbol 'vals) [(api/symbol '_)])
-               ;; (api/fn-call (api/symbol 'spy) [(api/string "vals")])
+               ;; (api/fn-call (api/symbol 'spy) [(api/string "vals2")])
                ;; (api/fn-call (api/symbol 'sort-by [(api/symbol '_)]))
                (api/fn-call (api/symbol 'map) [(api/key-fn :oasis.gui/element) (api/symbol '_)])
                (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :div) (api/map {(api/keyword :class) (api/string "fullscreen")})])
@@ -3063,8 +3089,10 @@
 (def network
   [              ;; networks
 
-              (red 'oasis-mouse 'mouse-reduce 'mouse-state)
-              (red 'oasis-mouse 'target-reduce 'target-events)
+              (pipe 'oasis-mouse 'mouse-reduce)
+              (pipe 'mouse-reduce 'mouse-state)
+              (pipe 'oasis-mouse 'target-reduce)
+              (pipe 'target-reduce 'target-events)
 
               (pipe 'target-events 'only-different 'hover-events)
               (pipe 'hover-events 'tag-hover 'hover-state)
@@ -3076,24 +3104,28 @@
               ;; (pipe 'oasis-kb 'log-keyboard)
 
               (pipe 'keyboard-filtered 'filter-view 'view-commands)
-              (red 'view-commands 'make-zoom 'zoom-events)
+              (pipe 'view-commands 'make-zoom)
+              (pipe 'make-zoom 'zoom-events)
               (pipe 'zoom-events 'view-events)
 
 
-              (red 'raw-events 'input-reduce 'reduced-events)
+              (pipe 'raw-events 'input-reduce)
+              (pipe 'input-reduce 'reduced-events)
               (pipe 'raw-events 'tag-events 'events)
 
 
               ;; (pipe 'oasis-ev 'filter-input 'raw-events)
               ;; (pipe 'oasis-ev 'filter-submit 'raw-events)
 
-              (pipe 'oasis-ui 'filter-resize 'events)
+              ;; (pipe 'oasis-ui 'filter-resize)
+              ;; (pipe 'filter-resize 'events)
 
               ;; (pipe 'select-events 'editor-commands)
 
               (pipe 'oasis-eval 'eval-events)
               (pipe 'eval-events 'log-events)
-              (red 'eval-events 'eval-reduce 'eval-raw)
+              (pipe 'eval-events 'eval-reduce)
+              (pipe 'eval-reduce 'eval-raw)
               (pipe 'eval-raw 'tag-eval 'eval-state)
 
               (pipe 'mouse-state 'filter-drag 'drag-events)
@@ -3108,32 +3140,37 @@
               (pipe 'editor-commands 'handle-commands 'editor-events)
               (pipe 'hover-state 'editor-events)
               (pipe 'scroll-state 'editor-events)
-              (red 'editor-events 'editor-state-reduce 'editor-cooked)
+              (pipe 'editor-events 'editor-state-reduce)
+              (pipe 'editor-state-reduce 'editor-cooked)
               (pipe 'editor-cooked 'tag-editor 'editor-state)
-              ;; (pipe 'editor-state 'log-editor)
+              (pipe 'editor-state 'log-editor)
 
               (pipe 'editor-commands 'filter-immediate 'editor-immediate)
               ;; (pipe 'editor-immediate 'log-command)
 
               (pipe 'mouse-state 'filter-scroll 'scroll-state)
               (pipe 'scroll-state 'construct-view 'view-deltas)
-              (red 'view-deltas 'view-delta 'view-events)
-              (red 'view-events 'view-reduce 'view-raw)
+              (pipe 'view-deltas 'view-delta)
+              (pipe 'view-delta 'view-events)
+              (pipe 'view-events 'view-reduce)
+              (pipe 'view-reduce 'view-raw)
               (pipe 'view-raw 'tag-view 'view-state)
 
 
-              (red 'editor-state 'state-reduce 'state)
-              (red 'loaded-state 'state-reduce 'state)
-              (red 'view-state 'state-reduce 'state)
-              (red 'drag-events 'state-reduce 'state)
-              (red 'hover-state 'state-reduce 'state)
-              (red 'mode-state 'state-reduce 'state)
-              (red 'events 'state-reduce 'state)
+              (pipe 'editor-state 'state-reduce)
+              (pipe 'loaded-state 'state-reduce)
+              (pipe 'view-state 'state-reduce)
+              (pipe 'drag-events 'state-reduce)
+              (pipe 'hover-state 'state-reduce)
+              (pipe 'mode-state 'state-reduce)
+              (pipe 'events 'state-reduce)
+              (pipe 'state-reduce 'state)
               ;; (pipe 'state 'log-state)
 
-              (red 'eval-state 'load-reduce 'load-state)
-              (red 'mode-state 'load-reduce 'load-state)
-              (red 'zoom-events 'load-reduce 'load-state)
+              (pipe 'mode-state 'load-reduce)
+              (pipe 'eval-state 'load-reduce)
+              (pipe 'zoom-events 'load-reduce)
+              (pipe 'load-reduce 'load-state)
               (pipe 'load-state 'filter-load 'loaded-state)
 
               (pipe 'loaded-state 'format-state 'oasis-layout)
@@ -3143,12 +3180,14 @@
 
               (pipe 'oasis-layout 'tag-layout 'layout-state)
               ;; (pipe 'layout-state 'log-layout)
-              (red 'layout-state 'state-reduce 'state)
+              (pipe 'layout-state 'state-reduce)
 
-              ;; (red 'select-events 'center-view 'view-events)
-              ;; (red 'layout-state 'center-view 'view-events)
+              ;; (pipe 'select-events 'center-view)
+              ;; (pipe 'layout-state 'center-view)
+              ;; (pipe 'center-view 'view-events)
 
-              (red 'editor-state 'mode-data 'mode-raw)
+              (pipe 'editor-state 'mode-data)
+              (pipe 'mode-data 'mode-raw)
               (pipe 'mode-raw 'tag-mode 'mode-state)
 
               (pipe 'editor-state 'editor-actions)
@@ -3156,7 +3195,8 @@
               (pipe 'mode-state 'editor-actions)
               (pipe 'events 'editor-actions)
 
-              (red 'editor-actions 'handle-state 'be-commands)
+              (pipe 'editor-actions 'handle-state)
+              (pipe 'handle-state 'be-commands)
               ;; (pipe 'be-commands 'log-command)
               (pipe 'be-commands 'filter-call 'caravan)
 
@@ -3165,27 +3205,33 @@
               (pipe 'state 'graph-drag 'svg-render)
               (pipe 'state 'graph-focus 'svg-render)
               (pipe 'state 'graph-dialog 'svg-render)
-              (red 'render 'elements-reduce 'reducer)
-              ;; (red 'render 'elements-reduce 'log-render)
+              (pipe 'render 'elements-reduce)
+              (pipe 'elements-reduce 'reducer)
 
               (pipe 'reducer 'render-elements 'oasis-ui)
+              ;; (pipe 'reducer 'render-elements 'log-render)
 
-              (red 'svg-render 'svg-elements-reduce 'svg-reduced)
+              (pipe 'svg-render 'svg-elements-reduce)
+              (pipe 'svg-elements-reduce 'svg-reduced)
               (pipe 'svg-reduced 'render-svg 'render)
 
               (pipe 'init 'source-menu-const 'source-menu-items)
-              (red 'source-menu-items 'source-menu-map 'source-menu)
+              (pipe 'source-menu-items 'source-menu-map)
+              (pipe 'source-menu-map 'source-menu)
               (pipe 'source-menu 'tag-items 'source-menu-events)
               (pipe 'hover-state 'source-menu-events)
-              (red 'source-menu-events 'reduce-menu-source 'source-menu-state)
+              (pipe 'source-menu-events 'reduce-menu-source)
+              (pipe 'reduce-menu-source 'source-menu-state)
               (pipe 'source-menu-state 'render-source-menu 'svg-render)
 
               (pipe 'init 'sink-menu-const 'sink-menu-items)
-              (red 'sink-menu-items 'sink-menu-map 'sink-menu)
+              (pipe 'sink-menu-items 'sink-menu-map)
+              (pipe 'sink-menu-map 'sink-menu)
               (pipe 'sink-menu 'tag-items 'sink-menu-events)
               (pipe 'hover-state 'sink-menu-events)
               (pipe 'events 'sink-menu-events)
-              (red 'sink-menu-events 'reduce-menu-sink 'sink-menu-state)
+              (pipe 'sink-menu-events 'reduce-menu-sink)
+              (pipe 'reduce-menu-sink 'sink-menu-state)
               (pipe 'sink-menu-state 'render-sink-menu 'svg-render)
 
               (pipe 'state 'render-action-menu 'svg-render)
@@ -3194,7 +3240,7 @@
               ;;                (pipe 'init 'repl 'render)
               (pipe 'init 'init-view 'view-events)
 
-              (pipe 'caravan 'log-caravan)
+              ;; (pipe 'caravan 'log-caravan)
    (api/defexp 'oasis-main (api/pipe (api/symbol 'oasis-init)
                                      (api/symbol 'init)))
    (api/defexp 'oasis (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'init)
@@ -3209,9 +3255,7 @@
                                                                   (api/map {(api/keyword :when) (api/map {(api/string "init")
                                                                                                           (api/vector [(api/integer 1)])})
                                                                             (api/keyword :then) (api/map {(api/string "oasis-ui")
-                                                                                                          (api/vector [(api/fn-call (api/symbol '|>) [(api/keyword :success)])])})})})
-                     ;; (api/keyword :network) (api/)
-                     }))
+                                                                                                          (api/vector [(api/keyword :success)])})})})}))
    ])
 
 

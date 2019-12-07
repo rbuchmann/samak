@@ -92,3 +92,15 @@
 (defn is-network?
   [node]
   (= (:samak.nodes/type node) :samak.nodes/network))
+
+(defn get-pipe-source-name
+  [ast]
+  (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name]))
+
+(defn get-pipe-sink-name
+  [ast]
+  (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name]))
+
+(defn get-pipe-xf-fn
+  [ast]
+  (get-in ast [:samak.nodes/xf :samak.nodes/fn]))
