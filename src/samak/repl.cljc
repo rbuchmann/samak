@@ -38,10 +38,12 @@
      [samak.runtime.stores :as stores])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
+(def ^:dynamic *default-timeout* 0)
 (def config {:tracer {:backend :none}})
 
 (def rt (atom (run/make-runtime core/samak-symbols nil)))
 (def trace (atom (trace/init-tracer rt (:tracer config))))
+
 (caravan/init @rt)
 
 (defn catch-errors [ast]
@@ -63,12 +65,10 @@
 
 (defn fire-event-into-named-pipe
   [pipe-name event]
-  (let [pipe (run/get-definition-by-name @rt (symbol pipe-name))]
-    (if (pipes/pipe? pipe)
-      (do (let [arg (edn/read-string event)]
-            (pipes/fire! pipe arg pipe-name))
-          {})
-      (println (str "could not find pipe " pipe-name)))))
+  (let [arg (edn/read-string event)
+        res (run/fire-into-named-pipe @rt (symbol pipe-name) arg *default-timeout*)]
+    (if (:error res)
+      (println (:error res)))))
 
 (defn eval-oasis
   ""

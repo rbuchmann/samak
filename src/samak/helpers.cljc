@@ -19,16 +19,27 @@
   []
   (time/now))
 
+
 (defn past
   ""
   [millis]
   (time/minus (now) (time/millis millis)))
+
+(defn future-ms
+  ""
+  [amount]
+  (time/from-now (time/millis amount)))
 
 
 (defn duration
   ""
   [from to]
   (time/in-millis (time/interval from to)))
+
+(defn past?
+  ""
+  [timeout]
+  (time/after? (now) timeout))
 
 
 (defn serialize-timestamp

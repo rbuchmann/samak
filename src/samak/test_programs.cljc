@@ -2,10 +2,10 @@
 
 
 (def t0
-  ["(def in (-> inc inc))"])
+  ["(def in (-> (inc _) (inc _)))"])
 
 (def t
-  ["(def in (-> inc inc))"
+  ["(def in (-> (inc _) (inc _)))"
    "(def out (pipes/log))"
    "(| in out)"
    "!f in 5"])
@@ -13,7 +13,7 @@
 (def tm
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in {:foo inc} out)"
+   "(| in {:foo (inc _)} out)"
    "!f in 5"])
 
 (def tl
@@ -30,13 +30,13 @@
 (def tl2
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in [:div id] out)"
+   "(| in [:div _] out)"
    "!f in 42"])
 
 (def tl3
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in (if (even? _) id ignore) out)"
+   "(| in (if (even? _) _ ignore) out)"
    "!f in 5"
    "!f in 6"])
 
