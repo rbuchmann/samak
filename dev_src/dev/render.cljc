@@ -101,15 +101,11 @@
     (recur)))
 
 (def renderer
-  ["(def ui (pipes/ui \"2\"))"
-   "(def events-out (pipes/to-ui))"
-   "(def mouse (pipes/mouse))"
-   "(def mouse-out (pipes/to-mouse))"
-   "(def kb (pipes/keyboard))"
-   "(def kb-out (pipes/to-keyboard))"
-   "(| ui events-out)"
-   "(| mouse mouse-out)"
-   "(| kb kb-out)"])
+  ["(def mod (modules/ui \"2\"))"
+   "(def ui ((-> mod :-sinks :-render) 42))"
+   "(| ((-> mod :-sources :-events) 42) (pipes/to-ui))"
+   "(| ((-> mod :-sources :-mouse) 42) (pipes/to-mouse))"
+   "(| ((-> mod :-sources :-keyboard) 42) (pipes/to-keyboard))"])
 
 (defn eval-render
   ""

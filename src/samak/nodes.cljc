@@ -75,11 +75,12 @@
 (defmethod eval-node ::pipe [{:keys [::from ::to ::xf] :as p}]
   (let [a (eval-node from)
         b (when xf
-            (binding [*db-id* (:db/id xf)]
-              (-> xf
-                  eval-node
-                  pipes/instrument
-                  pipes/transduction-pipe)))
+            (let [db-id (:db/id xf)]
+              (binding [*db-id* db-id]
+                (-> xf
+                    eval-node
+                    ((partial pipes/instrument db-id (:cancel? *manager*)))
+                    pipes/transduction-pipe))))
         c (eval-node to)]
     ((:link *manager*) a c b)))
 

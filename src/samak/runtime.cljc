@@ -7,6 +7,7 @@
      [samak.runtime.servers :as servers]
      [samak.helpers :as helpers]
      [samak.tools :refer [fail log]]
+     [samak.trace :as trace]
      [samak.pipes :as pipes]
      [samak.transduction-tools :as tt]
      [samak.nodes :as n]
@@ -19,6 +20,7 @@
      [samak.runtime.servers :as servers]
      [samak.helpers :as helpers]
      [samak.tools :refer [fail log]]
+     [samak.trace :as trace]
      [samak.pipes :as pipes]
      [samak.transduction-tools :as tt]
      [samak.nodes :as n]
@@ -28,6 +30,21 @@
 
 
 (def resolver (atom {}))
+(def cancel-conditions (atom {}))
+
+(defn cancel?
+  ""
+  [paket]
+  (let [cancel-id (:samak.pipes/cancel (:samak.pipes/meta paket))
+        cancel-cond (get @cancel-conditions cancel-id)
+        timeout (:timeout cancel-cond)
+        cancel (and timeout (helpers/past? timeout))]
+    cancel))
+
+(defn set-cancellation-condition
+  ""
+  [id condition]
+  (swap! cancel-conditions update id merge condition))
 
 (defn eval-all [server forms]
   (reduce (fn [server form]
@@ -99,7 +116,7 @@
   (let [c (pipes/pipe (chan))]
      {:id (str "rt-" (helpers/uuid))
       :store  (stores/make-local-store)
-      :server (servers/make-local-server {:resolve resolve-fn :link link-fn})
+      :server (servers/make-local-server {:resolve resolve-fn :link link-fn :cancel? cancel?})
       :broadcast c
       :scheduler (when scheduler (scheduler c))}))
 
@@ -195,3 +212,16 @@
 (defn get-definition-by-name [runtime sym]
   (let [id (-> runtime :store (stores/resolve-name sym))]
     (-> runtime :server servers/get-defined (get id))))
+
+(defn fire-into-named-pipe
+  ""
+  [rt pipe-name data timeout]
+  (let [pipe (get-definition-by-name rt pipe-name)]
+    (if (pipes/pipe? pipe)
+      (let [paket (pipes/make-paket data ::fire)
+            cancel-id (:samak.pipes/cancel (:samak.pipes/meta paket))]
+        (when (> timeout 0)
+          (set-cancellation-condition cancel-id {:timeout (helpers/future-ms timeout)}))
+        (trace/trace ::fire 0 paket)
+        (pipes/fire-raw! pipe paket))
+      {:error (str "could not find pipe " pipe-name)})))

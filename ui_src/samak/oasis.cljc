@@ -3039,9 +3039,7 @@
 
              (defncall 'svg-elements-reduce 'pipes/reductions
                (api/fn-call (api/symbol '->)
-                            [
-                             (api/fn-call (api/symbol 'spy) [(api/string "red")])
-                             (api/vector [(api/key-fn :state) (api/key-fn :next)])
+                            [(api/vector [(api/key-fn :state) (api/key-fn :next)])
                              (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])])
                (api/map {(api/keyword :graph) (api/vector [(api/keyword :g)])
                          (api/keyword :graph-focused) (api/vector [(api/keyword :g)])
@@ -3206,8 +3204,7 @@
               ;; (pipe 'oasis-ev 'filter-submit 'raw-events)
 
 
-              ;; (pipe 'oasis-ui 'filter-resize)
-              ;; (pipe 'filter-resize 'events)
+              (pipe 'oasis-ui 'filter-resize 'events)
 
               ;; (pipe 'select-events 'editor-commands)
 

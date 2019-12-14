@@ -21,3 +21,10 @@
                  (sut/eval-lines tests/test-builtin-modules)
                  (Thread/sleep 1000))]
     (is (str/includes? stdout "!!!"))))
+
+(deftest should-eval-example
+  (binding [sut/*default-timeout* 0]
+    (let [stdout (with-out-str
+                   (sut/eval-lines tests/tl)
+                   (Thread/sleep 100))]
+      (is (str/includes? stdout ":content 7")))))

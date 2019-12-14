@@ -194,9 +194,19 @@
                         (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
     (pipes/source c)))
 
+(defn ui-module
+  [id]
+  (let [render (ui id true)]
+    {:sources {:events render
+               :mouse (mouse id)
+               :keyboard (keyboard)}
+     :sinks {:render render}}))
+
+
 ;; Exported symbols
 
 (def ui-symbols
-  {'pipes/ui       ui
+  {'modules/ui     ui-module
+   'pipes/ui       ui
    'pipes/mouse    mouse
    'pipes/keyboard keyboard})
