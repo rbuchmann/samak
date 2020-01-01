@@ -65,12 +65,17 @@
   #?(:clj  (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
 
+(defn hex
+  []
+  #?(:clj (Integer/toHexString (rand-int 16))
+     :cljs (.toString (rand-int 16) 16)))
+
+
 (defn make-span
   ""
   []
-  (letfn [(hex [] (.toString (rand-int 16) 16))]
-    (str (hex) (hex) (hex) (hex)
-         (hex) (hex) (hex) (hex))))
+  (str (hex) (hex) (hex) (hex)
+       (hex) (hex) (hex) (hex)))
 
 (defn str-len
   ""
