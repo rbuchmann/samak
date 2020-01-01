@@ -1,5 +1,6 @@
 (ns samak.nodes
   (:require [samak.protocols :as p]
+            [samak.api       :as api]
             [samak.pipes     :as pipes]
             [samak.tools     :refer [fail log]]
             [samak.trace     :refer [*db-id*]]
@@ -40,6 +41,19 @@
                                    (compile-error "Referenced id " id " was undefined")))
     :default                 (compile-error "unknown token during evaluation: " (str value))))
 
+(defmethod eval-node ::module [{:keys [::definition] :as module}]
+  ;; (println "evaling module: " module)
+  ;; FIXME: also needs to make this stuff available for resolve?
+  (fn []
+    ;; FIXME
+    ;; needs to prep resolve magic when instanciating pipes, to select same runtime
+    ;; maybe simply do so explicitly
+    (.println *err* (str "about to eval module: " module))
+      (let [evaled (eval-node definition)]
+        (.println *err* (str "used module: " module "->" evaled))
+
+        evaled)))
+
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]
             (assoc a (::value mapkey) (eval-node mapvalue)))
@@ -58,7 +72,7 @@
 
 (defmethod eval-node ::def [{:keys [::rhs]}] (eval-node rhs))
 
-(defmethod eval-node ::pipe [{:keys [::from ::to ::xf]}]
+(defmethod eval-node ::pipe [{:keys [::from ::to ::xf] :as p}]
   (let [a (eval-node from)
         b (when xf
             (binding [*db-id* (:db/id xf)]
@@ -69,8 +83,8 @@
         c (eval-node to)]
     ((:link *manager*) a c b)))
 
-(defmethod eval-node ::fn-ref [{:keys [::fn]}]
-  (or (when (= (::type fn) ::def) (eval-node fn))
+(defmethod eval-node ::fn-ref [{:keys [::fn] :as f}]
+  (or (when (api/is-def? fn) (eval-node fn))
       ((:resolve *manager*) (:db/id fn))
       (compile-error "Undefined reference " fn " in " *manager*)))
 

@@ -47,7 +47,7 @@
            (fn [x] (tools/log x) x))))))
 
 (defn log
-  ([] (log nil))
+  ([] (log (rand-int 100000)))
   ([prefix]
    (let [log-chan (chan)]
      (go-loop []

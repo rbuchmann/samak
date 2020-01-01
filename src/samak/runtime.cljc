@@ -6,6 +6,7 @@
      [samak.runtime.stores  :as stores]
      [samak.runtime.servers :as servers]
      [samak.helpers :as helpers]
+     [samak.tools :refer [fail log]]
      [samak.pipes :as pipes]
      [samak.transduction-tools :as tt]
      [samak.nodes :as n]
@@ -17,6 +18,7 @@
      [samak.runtime.stores  :as stores]
      [samak.runtime.servers :as servers]
      [samak.helpers :as helpers]
+     [samak.tools :refer [fail log]]
      [samak.pipes :as pipes]
      [samak.transduction-tools :as tt]
      [samak.nodes :as n]
@@ -38,6 +40,7 @@
   [id]
   (let [defs (servers/get-defined (:server @resolver))
         fn (get defs id)]
+    ;; (println "found: " id fn)
     (if fn
       fn
       (println "not found: " id))))
@@ -82,22 +85,31 @@
   [from to xf]
   (let [a (replace-piped from "from")
         c (replace-piped to "to")]
+    (when (not a)
+      (fail "cant link from " from))
+    (when (not c)
+      (fail "cant link to " to))
     (if xf
       (pipes/link! (pipes/link! a xf) c)
       (pipes/link! a c))))
 
-(defn make-runtime
-  ([]
-   (make-runtime nil))
-  ([scheduler]
-   (let [c (pipes/pipe (chan))]
+(defn make-runtime-internal
+  ""
+  [scheduler]
+  (let [c (pipes/pipe (chan))]
      {:id (str "rt-" (helpers/uuid))
       :store  (stores/make-local-store)
       :server (servers/make-local-server {:resolve resolve-fn :link link-fn})
       :broadcast c
       :scheduler (when scheduler (scheduler c))}))
+
+(defn make-runtime
+  ([]
+   (make-runtime nil nil))
+  ([builtins]
+   (make-runtime builtins nil))
   ([builtins scheduler]
-   (let [runtime (-> (make-runtime scheduler)
+   (let [runtime (-> (make-runtime-internal scheduler)
                      (update :store stores/load-builtins! (keys builtins))
                      (update :server servers/load-builtins! builtins))
          rt2 (->> (keys builtins)
@@ -121,8 +133,8 @@
 
 ;; Applying the transformation and wrap network
 
-(defn wrap-network [network-name forms]
-  (map (partial api/network network-name) forms))
+;; (defn wrap-network [network-name forms]
+;;   (map (partial api/network network-name) forms))
 
 (defn rewrite-expression [network-name form]
   (->> form

@@ -15,10 +15,6 @@
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 
-(defn init
-  [config]
-  (println "init zipkin")
-  {:config config :buffer []})
 
 (defn handle
   ""
@@ -65,3 +61,8 @@
           (send-traces (:url (:config tracer)) (:buffer t))
           (assoc t :buffer []))))
     tracer))
+
+(defn init
+  [config]
+  (println "init zipkin")
+  {:trace-fn trace :config config :buffer []})

@@ -1,16 +1,18 @@
 (ns samak.helpers
-  #?
+  #?@
   (:clj
-   (:require
-    [clojure.data.json :as json]
-    [clj-time.core :as time]
-    [clj-time.format :as time-format]
-    [clj-time.coerce :as time-coerce])
+   [(:refer-clojure :exclude [uuid])
+    (:require
+     [clojure.data.json :as json]
+     [clj-time.core :as time]
+     [clj-time.format :as time-format]
+     [clj-time.coerce :as time-coerce])]
    :cljs
-   (:require
-    [cljs-time.core :as time]
-    [cljs-time.format :as time-format]
-    [cljs-time.coerce :as time-coerce])))
+   [(:refer-clojure :exclude [uuid])
+    (:require
+     [cljs-time.core :as time]
+     [cljs-time.format :as time-format]
+     [cljs-time.coerce :as time-coerce])]))
 
 (defn now
   ""
@@ -45,8 +47,6 @@
   ""
   [time]
   (time-format/unparse form time))
-
-(def form (time-format/formatters :date-time))
 
 (defn to-epoch
   ""

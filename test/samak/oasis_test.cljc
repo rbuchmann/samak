@@ -8,7 +8,8 @@
             [samak.runtime.stores         :as stores]
             [samak.runtime                :as runtime]
             [samak.core                   :as c]
-            [samak.utils          :as utils]
+            [samak.utils                  :as utils]
+            [samak.trace                  :as trace]
             #?@(:clj [[clojure.test       :as t :refer [is deftest]]
                       [clojure.spec.alpha :as s]
                       [clojure.core.async :as a :refer [<! chan go go-loop]]]
@@ -64,6 +65,7 @@
         rt (runtime/make-runtime syms)
         state (reduce (fn [s e] (runtime/eval-expression! s e)) rt (sut/start))]
     ;; (println (sut/store (:store rt)))
+    (trace/init-tracer rt {:backend :logging})
     (caravan/init state)
     (caravan/test-oasis c)
     (utils/test-async

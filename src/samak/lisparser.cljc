@@ -9,8 +9,9 @@
 (defn list->ast [l]
   (when-let [[f & args] (not-empty l)]
     (case f
-      def (let [[name-sym rhs] args] (api/defexp name-sym (form->ast rhs)))
-      |   (apply api/pipe (map form->ast args))
+      def       (let [[name-sym rhs] args] (api/defexp name-sym (form->ast rhs)))
+      defmodule (let [[name-sym rhs] args] (api/defmodule name-sym (form->ast rhs)))
+      |         (apply api/pipe (map form->ast args))
       (api/fn-call (form->ast f) (map form->ast args)))))
 
 (defn key-fn-or-keyword [k]

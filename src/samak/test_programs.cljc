@@ -19,13 +19,13 @@
 (def tl
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in (-> inc inc) out)"
+   "(| in (-> (inc _) (inc _)) out)"
    "!f in 5"])
 
 (def tw
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in (|> inc inc) out)"])
+   "(| in (-> (inc _) (inc _)) out)"])
 
 (def tl2
   ["(def in (pipes/debug))"
@@ -36,7 +36,7 @@
 (def tl3
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in (if even? id ignore) out)"
+   "(| in (if (even? _) id ignore) out)"
    "!f in 5"
    "!f in 6"])
 
@@ -83,6 +83,24 @@
                      }})"])
 
 ;; TODO Fix tests
+
+(def test-local-modules
+  ["(def in (pipes/debug))"
+   "(def bar-in (pipes/log))"
+   "(defmodule bar {:sinks {:log (pipes/log)}})"
+   "(| in ((-> (bar) :-sinks :-log) 42))"
+   "(| in ((-> (bar) :-sinks :-log) 42))"
+   "!f in \"!!!\""
+   ])
+
+
+(def test-builtin-modules
+  ["(def in (pipes/debug))"
+   "(def mod (modules/caravan))"
+   "(def a (-> mod :-sinks :-actions))"
+   "(| in (a 42))"
+   "!f in \"!!!\""
+   ])
 
 (def chuck
   ["(def in (pipes/debug))

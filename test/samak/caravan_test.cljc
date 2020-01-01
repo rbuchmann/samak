@@ -7,6 +7,7 @@
             [samak.runtime        :as rt]
             [samak.code-db        :as db]
             [samak.utils          :as utils]
+            [samak.trace          :as trace]
             #?(:clj [clojure.core.async :as a :refer [<! chan go go-loop]]
                :cljs [clojure.core.async :as a :refer [<! chan go go-loop]])
             #?(:clj [clojure.test :as t :refer [deftest is]]
@@ -184,6 +185,7 @@
                     core/samak-symbols)
         c (chan 1)
         rt (rt/make-runtime syms)]
+    ;; (trace/init-tracer rt {:backend :logging})
     (sut/init rt)
     (sut/test-chuck c)
     (utils/test-async

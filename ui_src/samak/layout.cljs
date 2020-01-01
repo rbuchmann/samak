@@ -55,6 +55,7 @@
                           re-wrap (tt/re-wrap meta result)]
                       (trace/trace ::layout (helpers/duration before (helpers/now)) re-wrap)
                       (swap! cache assoc content result)
+                      (when (= token :error) (println (str "layout error: " return)))
                       (put! res re-wrap)
                       (close! res))))]
     (trace/trace ::layout 0 request)

@@ -33,7 +33,10 @@
   (println "init tracer" config)
   (reset! rt rt-in)
   (when (= :zipkin (:backend config))
-      (reset! tracer (tracing/init config))))
+    (reset! tracer (tracing/init config)))
+  (when (= :logging (:backend config))
+    (let [pre (or (:prefix config) "TRACE -")]
+      (reset! tracer {:trace-fn (fn [t x] (println pre x) t)}))))
 
 
 (defn load-ast
@@ -81,7 +84,7 @@
     (println "assert failed:" event))
   (when @tracer
     (let [data (make-trace db-id duration event)]
-      (reset! tracer (tracing/trace @tracer (to-tracer data)))))
+      (reset! tracer ((:trace-fn @tracer) @tracer (to-tracer data)))))
    ;; (tools/log data)
    ;; (db/persist! *db* [(to-db data)])
   event)

@@ -67,7 +67,20 @@
                (defncall 'oasis-kb 'pipes/keyboard)
                (defncall 'oasis-layout 'pipes/layout)
                (defncall 'oasis-eval 'pipes/eval-notify)
-               (defncall 'caravan 'pipes/caravan)
+
+               (defncall 'm-caravan 'modules/caravan)
+               (defncall 'caravan-actions '->
+                 (api/symbol 'm-caravan)
+                 (api/fn-call (api/symbol 'spy) [(api/string "caravan source")])
+                 (api/key-fn :sinks)
+                 (api/fn-call (api/symbol 'spy) [(api/string "caravan source2")])
+                 (api/key-fn :actions)
+                 (api/fn-call (api/symbol 'spy) [(api/string "caravan source3")])
+                 )
+
+               (defncall 'caravan-commands (api/fn-call (api/symbol '->) [(api/symbol 'm-caravan)
+                                                                          (api/key-fn :sources)
+                                                                          (api/key-fn :caravan/commands)]))
 
                (defncall 'log 'pipes/log)
 
@@ -1309,7 +1322,7 @@
                                                     (api/map {(api/keyword :command) (api/keyword :activity)
                                                               (api/keyword :data) (api/keyword :scouting)})]))
 
-               (defncall 'caravan-commands '->
+               (defncall 'handle-caravan-command '->
                  (api/symbol 'construct-back))
 
                (defncall 'is-scroll '->
@@ -1840,7 +1853,7 @@
              (defncall 'filter-load 'except
                (api/fn-call (api/symbol '->) [
                                               (api/fn-call (api/symbol '->) [(api/key-fn :mode) (api/key-fn :mode)])
-                                              (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :load)])]))
+                                              (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :xload)])]))
 
 
               (defncall 'tag-layout '->
@@ -2210,7 +2223,7 @@
                (api/key-fn :next)
                (api/symbol 'is-insert-state))
 
-             (defncall 'is-editor-mode-insert '->
+             (defncall 'is-editor-activity-insert '->
                (api/key-fn :state)
                (api/key-fn :editor)
                (api/key-fn :activity)
@@ -2221,7 +2234,7 @@
                (api/key-fn :data)
                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :accept)]))
 
-             (defncall 'is-editor-mode-edit '->
+             (defncall 'is-editor-activity-edit '->
                (api/key-fn :state)
                (api/key-fn :editor)
                (api/key-fn :activity)
@@ -2258,6 +2271,16 @@
                                                  (api/fn-call (api/symbol 'dissoc) [(api/key-fn :state)
                                                                                     (api/keyword :call)])]))
 
+             (defncall 'action-at-pos '->
+               (api/fn-call (api/symbol 'incase) [(api/symbol 'should-fall)
+                                                  (api/symbol 'fall-at-pos)])
+               (api/fn-call (api/symbol 'incase) [(api/symbol 'should-leap)
+                                                  (api/symbol 'leap-at-pos)])
+               (api/fn-call (api/symbol 'incase) [(api/symbol 'should-indent)
+                                                  (api/symbol 'indent-at-pos)])
+               (api/fn-call (api/symbol 'incase) [(api/symbol 'should-cut)
+                                                  (api/symbol 'cut-at-pos)]))
+
              (defncall 'handle-state 'pipes/reductions
                (api/fn-call (api/symbol '->)
                             [(api/symbol 'reset-call)
@@ -2270,18 +2293,13 @@
                              (api/fn-call (api/symbol 'incase) [(api/symbol 'should-trace)
                                                                 (api/symbol 'trace)])
                              (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-insert)
-                                                                                                (api/symbol 'is-editor-mode-insert)])
+                                                                                                (api/symbol 'is-editor-activity-insert)])
                                                                 (api/symbol 'insert-at-pos)])
-                             (api/fn-call (api/symbol 'incase) [(api/symbol 'should-fall)
-                                                                (api/symbol 'fall-at-pos)])
-                             (api/fn-call (api/symbol 'incase) [(api/symbol 'should-leap)
-                                                                (api/symbol 'leap-at-pos)])
-                             (api/fn-call (api/symbol 'incase) [(api/symbol 'should-indent)
-                                                                (api/symbol 'indent-at-pos)])
-                             (api/fn-call (api/symbol 'incase) [(api/symbol 'should-cut)
-                                                                (api/symbol 'cut-at-pos)])
+                             (api/fn-call (api/symbol 'incase) [(api/symbol 'is-editor-activity-edit)
+                                                                (api/symbol 'action-at-pos)])
+
                              (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol 'and) [(api/symbol 'should-edit)
-                                                                                                (api/symbol 'is-editor-mode-edit)])
+                                                                                                (api/symbol 'is-editor-activity-edit)])
                                                                 (api/symbol 'edit-at-pos)])
                              (api/vector [(api/key-fn :state)
                                           (api/key-fn :next)])
@@ -2897,7 +2915,7 @@
              (defncall 'graph-dialog '->
                (api/map {(api/keyword :graph-dialog)
                          (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :editor) (api/key-fn :mode)])
-                                                                                      (api/keyword :load)])
+                                                                                      (api/keyword :xload)])
                                                         (api/symbol 'graph-loading)
                                                         (api/vector [(api/keyword :g)])])}))
 
@@ -3117,6 +3135,7 @@
               ;; (pipe 'oasis-ev 'filter-input 'raw-events)
               ;; (pipe 'oasis-ev 'filter-submit 'raw-events)
 
+
               ;; (pipe 'oasis-ui 'filter-resize)
               ;; (pipe 'filter-resize 'events)
 
@@ -3136,7 +3155,7 @@
               ;; (pipe 'drag-events 'log-mouse)
 
 
-              (pipe 'caravan 'caravan-commands 'editor-commands)
+              ;; (pipe 'caravan 'handle-caravan-command 'editor-commands)
               (pipe 'editor-commands 'handle-commands 'editor-events)
               (pipe 'hover-state 'editor-events)
               (pipe 'scroll-state 'editor-events)
@@ -3198,7 +3217,9 @@
               (pipe 'editor-actions 'handle-state)
               (pipe 'handle-state 'be-commands)
               ;; (pipe 'be-commands 'log-command)
-              (pipe 'be-commands 'filter-call 'caravan)
+              (api/pipe (api/symbol 'be-commands)
+                        (api/fn-call (api/symbol '|>) [(api/symbol 'filter-call)])
+                        (api/fn-call (api/symbol 'caravan-actions) [(api/integer 42)]))
 
               (pipe 'events 'svg-render)
               (pipe 'state 'graph 'svg-render)
@@ -3240,10 +3261,11 @@
               ;;                (pipe 'init 'repl 'render)
               (pipe 'init 'init-view 'view-events)
 
-              ;; (pipe 'caravan 'log-caravan)
+              (api/pipe (api/fn-call (api/symbol 'caravan-commands) [(api/integer 42)])
+                        (api/symbol 'log-caravan))
    (api/defexp 'oasis-main (api/pipe (api/symbol 'oasis-init)
                                      (api/symbol 'init)))
-   (api/defexp 'oasis (api/map {(api/keyword :source) (api/map {(api/keyword :main) (api/symbol 'init)
+   (api/defexp 'oasis (api/map {(api/keyword :sources) (api/map {(api/keyword :main) (api/symbol 'init)
 
                                                      ;; (api/keyword :mouse) (api/symbol 'oasis-mouse)
                                                      ;; (api/keyword :kb) (api/symbol 'oasis-kb)

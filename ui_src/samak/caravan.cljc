@@ -10,6 +10,7 @@
               [samak.runtime         :as rt]
               [samak.runtime.servers :as servers]
               [samak.pipes           :as pipes]
+              [samak.modules         :as modules]
               [samak.builtins        :as builtins]
               [samak.stdlib          :as std]
               [samak.tools           :as tools]
@@ -29,6 +30,7 @@
               [samak.runtime.servers :as servers]
               [samak.pipes           :as pipes]
               [samak.builtins        :as builtins]
+              [samak.modules         :as modules]
               [samak.stdlib          :as std]
               [samak.trace           :as trace]
               [samak.nodes           :as nodes]
@@ -561,31 +563,27 @@
         assert-ast (single! assert-exp)]
     (add-node (symbol assert-name) assert-ast)
     (let [xf-pipe (pipes/transduction-pipe (pipes/instrument xf-fn))
-          test-pipe (pipes/transduction-pipe (pipes/instrument test-fn))
           assert-pipe (rt/get-definition-by-name @rt-conn (symbol assert-name))
           verify-pipe (rt/get-definition-by-name @rt-conn (symbol verify))]
-      (pipes/link! (pipes/link! source-pipe xf-pipe) assert-pipe)
-      (pipes/link! (pipes/link! assert-pipe test-pipe) verify-pipe))))
+      (rt/link-fn source-pipe assert-pipe xf-pipe)
+      (rt/link-fn assert-pipe verify-pipe test-fn))))
 
 
 (defn add-pipe-net
   ""
   [verify config ast]
-  (let [source (api/get-pipe-source-name ast)
-        xf (api/get-pipe-xf-fn ast)
-        sink (api/get-pipe-sink-name ast)
-        test-ref (get config (str sink))
-        source-pipe (rt/get-definition-by-name @rt-conn (symbol source))
-        xf-fn (get (servers/get-defined (:server @rt-conn)) (:db/id xf))
-        sink-pipe (rt/get-definition-by-name @rt-conn (symbol sink))]
-    (when test-ref
-      (println "  V" "Verifying pipe: " sink " with " test-ref)
-      (attach-assert verify source-pipe xf-fn (first test-ref)))
-    (println "  V" "Adding pipe:" source "with [" (:db/id xf) "]" (:samak.nodes/name xf) "to" sink)
-    (if xf-fn
-      (let [xf-pipe (pipes/transduction-pipe (pipes/instrument xf-fn))]
-        (pipes/link! (pipes/link! source-pipe xf-pipe) sink-pipe))
-      (pipes/link! source-pipe sink-pipe))))
+  (let [source (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name])
+        xf (get-in ast [:samak.nodes/xf :samak.nodes/fn])
+        sink (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name])
+        test-ref (get config (str sink))]
+    (let [source-pipe (rt/get-definition-by-name @rt-conn (symbol source))
+          xf-pipe (get (servers/get-defined (:server @rt-conn)) (:db/id xf))
+          sink-pipe (rt/get-definition-by-name @rt-conn (symbol sink))]
+      (when test-ref
+        (println "  V" "Verifying pipe: " sink " with " test-ref)
+        (attach-assert verify source (:db/id xf) (first test-ref)))
+      (println "  V" "Adding pipe:" source "with [" (:db/id xf) "]" (:samak.nodes/name xf) "to" sink)
+      (rt/link-fn source-pipe sink-pipe xf-pipe))))
 
 
 (defn setup-verify
@@ -602,7 +600,7 @@
 (defn load-source
   ""
   [sym]
-  ;; (println "Loading source: " (str sym))
+  (println "Loading source: " (str sym))
   (let [source (rt/load-network @rt-conn sym)
         nodes (distinct (flatten (concat [sym]
                                          (map :xf (vals source))
@@ -613,7 +611,7 @@
         node-notify (doall (map #(add-node (symbol (name-of-node %)) %) asts))
         pipes (distinct (map :db/id (flatten (map :pipes (vals source)))))
         _ (println "  V" "Adding pipes: " (s/join ", " pipes))
-        pipe-asts (map #(load-ast @rt-conn %1) pipes)]
+        pipe-asts (doall (map #(load-ast @rt-conn %1) pipes))]
     [node-notify pipe-asts]))
 
 
@@ -772,8 +770,8 @@
   (run-testsuite c 'chuck {:timeout 3000}))
 
 (defn load-oasis
-   ""
-   [c]
+  ""
+  [c]
   (load-lib c 'oasis))
 
 (defn test-oasis
@@ -802,7 +800,8 @@
   ;;                                            std/pipe-symbols)))
   )
 
-(defn caravan-pipe
+
+(defn caravan-module
   ""
   []
   (let [caravan-in (chan)
@@ -814,7 +813,7 @@
           (do
             (tools/log "caravan: " call)
             (case (:action call)
-              :load (load-chuck caravan-out)
+              :load (load-oasis caravan-out)
               :test (test-chuck caravan-out)
               :trace (trace-dump)
               :insert (add-cell (:arguments call))
@@ -824,10 +823,13 @@
               :indent (indent-cell (:arguments call))
               (tools/log "actions unknown: " call))))
         (recur)))
-    (pipes/pipe caravan-in caravan-out ::caravan ::caravan)))
+    (let [foo {:sources {:commands (pipes/source caravan-out)}
+               :sinks {:actions (pipes/sink caravan-in)}}]
+      foo)))
 
 
 (def symbols
-  {'create-sink create-sink
-   'pipes/caravan caravan-pipe
-   'connect link})
+  (merge
+   {'create-sink create-sink
+    'connect link
+    'modules/caravan caravan-module}))
