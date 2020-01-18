@@ -136,6 +136,13 @@
          @db
          source)))
 
+(defn get-id-from-pipe
+  ""
+  [pipe]
+  (or (get-in pipe [:samak.nodes/fn :db/id])
+      (get-in pipe [:samak.nodes/fn-expression :samak.nodes/fn :db/id])))
+
+
 (defn load-travel
   "loads a network given a source entity id from the database"
   [db id loaded]
@@ -144,9 +151,8 @@
     (let [ast (load-by-id db id)
           subs (mapv :db/id (find-links-from db id))
           pipes (mapv #(load-by-id db %1) subs)
-          targets (mapv #(get-in %1 [:samak.nodes/to :samak.nodes/fn :db/id]) pipes)
-          xf (mapv #(or (get-in %1 [:samak.nodes/xf :samak.nodes/fn :db/id])
-                        (get-in %1 [:samak.nodes/xf :samak.nodes/fn-expression :samak.nodes/fn :db/id])) pipes)
+          targets (mapv #(get-id-from-pipe (:samak.nodes/to %)) pipes)
+          xf (mapv #(get-id-from-pipe (:samak.nodes/xf %)) pipes)
           rec (reduce (fn [{ends :ends pipes :pipes xf :xf} s]
                         (let [add (load-travel db s (conj loaded id))]
                           {:ends (into ends (:ends add))

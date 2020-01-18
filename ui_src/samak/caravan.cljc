@@ -743,31 +743,29 @@
                 bundle))
     (std/notify-source
      {::state ::done}
-     #(a/put! c (pipes/make-paket {::event ::load ::status ::done ::percent 100} ::caravan))))
+     #(a/put! c (pipes/make-paket {::event ::load ::status ::done ::percent 100} ::caravan)))))
 
-  (defn load-net
-    ""
-    [c]
-    (persist-net test-programs/tl6)
-    (load-lib c 'tl)))
+(defn load-net
+  ""
+  [c prog sym]
+  (persist-net prog)
+  (load-lib c sym))
 
 (defn test-net
   ""
-  [c]
-  (persist-net test-programs/tl6)
-  (run-testsuite  c 'tl))
+  [c prog sym]
+  (persist-net prog)
+  (run-testsuite c sym {:timeout 3000}))
 
 (defn load-chuck
   ""
   [c]
-  (persist-net test-programs/chuck)
-  (load-lib c 'chuck))
+  (load-net c test-programs/chuck 'chuck))
 
 (defn test-chuck
   ""
   [c]
-  (persist-net test-programs/chuck)
-  (run-testsuite c 'chuck {:timeout 3000}))
+  (test-net c test-programs/chuck 'chuck))
 
 (defn load-oasis
   ""

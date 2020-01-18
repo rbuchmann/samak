@@ -93,7 +93,6 @@
    "!f in \"!!!\""
    ])
 
-
 (def test-builtin-modules
   ["(def in (pipes/debug))"
    "(def mod (modules/caravan))"
@@ -101,6 +100,19 @@
    "(| in (a 42))"
    "!f in \"!!!\""
    ])
+
+(def test-builtin-modules-test
+  ["(def in (pipes/debug))"
+   "(def mod (modules/caravan))"
+   "(def a (-> mod :-sinks :-actions))"
+   "(| in (a 42))"
+   "(def bar {:source {:in in} :tests {:test {:when {\"in\" [[]]}
+                                    :then {\"a\" [(incase (and (= :div (first _))
+                                                                        (= 5 (count _)))
+                                                                   :success)]}}}})"
+   ;; "!f in \"!!!\""
+   ])
+
 
 (def chuck
   ["(def in (pipes/debug))

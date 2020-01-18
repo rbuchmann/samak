@@ -90,7 +90,7 @@
       (when-some [i (<! ui-in)]
         (trace/trace ::ui 0 i)
         (let [x (or (:samak.pipes/content i) i)]
-          (if true ;; (s/valid? ::hiccup x)
+          (if (s/valid? ::hiccup x)
             (when-let [node (js/document.getElementById (str "samak" n))]
               ;; (when n (.warn js/console (str "render " n " - " x)))
               (r/render (if events (transform-element x ui-out) x) node))
@@ -170,19 +170,28 @@
                       false)))
     (pipes/source c)))
 
+(defn convert-key-event
+  [event phase]
+  {:phase phase
+   :which (.-which event)
+   :key (.-key event)
+   :ctrl-key (.-ctrlKey event)
+   :meta-key (.-metaKey event)
+   :shift-key (.-shiftKey event)
+   :target (.-id (.-target event))
+   :type (.-tagName (.-target event))})
+
+
 (defn keyboard []
   (let [c (chan)]
     (set! (.-onkeypress js/document)
           (fn [e] (do (let [event (js->clj e :keywordize-keys true)]
-                        (put-meta! c {:which (.-which event)
-                                      :key (.-key event)
-                                      :ctrl-key (.-ctrlKey event)
-                                      :meta-key (.-metaKey event)
-                                      :shift-key (.-shiftKey event)
-                                      :target (.-id (.-target event))
-                                      :type (.-tagName (.-target event))}
-                                   ::keyboard)
-                       (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
+                        (put-meta! c (convert-key-event event :press) ::keyboard)
+                        (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
+    (set! (.-onkeyup js/document)
+          (fn [e] (do (let [event (js->clj e :keywordize-keys true)]
+                        (put-meta! c (convert-key-event event :up) ::keyboard)
+                        (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
     (pipes/source c)))
 
 ;; Exported symbols
