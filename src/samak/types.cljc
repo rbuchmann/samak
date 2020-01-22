@@ -57,32 +57,31 @@
 
 (defmulti node->type-fn ::n/type)
 
+(defmethod node->type-fn ::n/fn-ref [node]
+  (node->type-fn (::n/fn node)))
+
 (defn type-error [& args]
   (apply tools/fail "Type Error:" args))
 
+(defn type-annotation [node]
+  (if (= ::n/fn-ref (::n/type node))
+    (type-annotation (::n/fn node))
+    (::n/type-annotation node)))
+
 (defmulti builtin->type-fn (fn [node args] (::n/name node)))
 
-(defn type-with [node x]
-  ((node->type-fn node) x))
-
-(defmethod builtin->type-fn 'inc [_ [lens]]
-  (fn [input-type]
-    (let [transformed-input-type (check-with lens input-type)]
-      (if (subtype? transformed-input-type tnumber)
-        transformed-input-type
-        (type-error transformed-input-type "is not a number!")))))
-
-(defn produced-type [pipe])
-(defn consumed-type [pipe])
+(def builtin-type-fns {'inc identity})
 
 (defn typecheck-pipe [pipe-node]
-  (let [{:keys [::n/from ::n/to ::n/xf]} pipe-node
-        produced (produced-type from)
-        consumed (consumed-type to)
-        type-fn  (if (some? xf)
-                   (node->type-fn xf)
-                   identity)
-        transformed (type-fn produced)]
-    (if (subtype? transformed consumed)
+  (let [{:keys [::n/from
+                ::n/to
+                ::n/xf]} pipe-node
+        input-type       (type-annotation from)
+        output-type      (type-annotation to)
+        type-fn          (if (some? xf)
+                           (node->type-fn xf)
+                           identity)
+        transformed (type-fn input-type)]
+    (if (subtype? transformed output-type)
       true
-      (tools/fail transformed " is not a subtype of " consumed "!"))))
+      (tools/fail transformed " is not a subtype of " output-type "!"))))
