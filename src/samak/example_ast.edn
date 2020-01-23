@@ -1,32 +1,41 @@
 {:value
- #:samak.nodes{:type :samak.nodes/pipe,
-               :from
-               #:samak.nodes{:type :samak.nodes/fn-call,
-                             :fn-expression
-                             #:samak.nodes{:samak.nodes/type  :samak.nodes/builtin,
-                                           :samak.nodes/value pipes/log,
-                                           :name              pipes/log},
-                             :arguments []},
-               :to
-               #:samak.nodes{:type :samak.nodes/fn-call,
-                             :fn-expression
-                             #:samak.nodes{:type :samak.nodes/fn-ref,
-                                           :fn
-                                           {:samak.nodes/type  :samak.nodes/builtin,
-                                            :samak.nodes/value inc,
-                                            :name              inc}},
-                             :arguments
-                             [{:order 0,
-                               :samak.nodes/node
-                               #:samak.nodes{:type
-                                             :samak.nodes/fn-ref,
-                                             :fn
-                                             [:samak.nodes/name
-                                              _]}}]},
-               :xf
-               #:samak.nodes{:type :samak.nodes/fn-call,
-                             :fn-expression
-                             #:samak.nodes{:samak.nodes/type  :samak.nodes/builtin,
-                                           :samak.nodes/value pipes/debug,
-                                           :name              pipes/debug},
-                             :arguments []}}}
+ #:samak.nodes
+ {:type :samak.nodes/pipe
+  :from
+  #:samak.nodes
+  {:type      :samak.nodes/fn-call
+   :fn-expression
+   #:samak.nodes{:samak.nodes/type  :samak.nodes/builtin
+                 :samak.nodes/value pipes/debug
+                 :name              pipes/debug}
+   :arguments []
+   :type-annotation  #:samak.types{:output-type
+                                   #:samak.types{:name :samak.types/number}}}
+  :to
+  #:samak.nodes
+  {:type :samak.nodes/fn-call
+   :fn-expression
+   #:samak.nodes{:samak.nodes/type  :samak.nodes/builtin
+                 :samak.nodes/value pipes/log
+                 :name              pipes/log}
+   :arguments []
+   :type-annotation  #:samak.types{:input-type
+                                   #:samak.types{:name :samak.types/any}}}
+  :xf
+  #:samak.nodes
+  {:type :samak.nodes/fn-call
+   :fn-expression
+   #:samak.nodes{:type :samak.nodes/fn-ref
+                 :fn
+                 {:samak.nodes/type  :samak.nodes/builtin
+                  :samak.nodes/value inc
+                  :name              inc}}
+   :arguments
+   [{:order 0
+     :samak.nodes/node
+     #:samak.nodes{:type
+                   :samak.nodes/fn-ref
+                   :fn
+                   {:samak.nodes/type  :samak.nodes/builtin
+                    :samak.nodes/value identity
+                    :name              identity}}}]}}}

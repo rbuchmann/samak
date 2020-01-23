@@ -6,6 +6,11 @@
   (into {::name name}
         kv-pairs))
 
+(defn follow-refs [node]
+  (if (= ::n/fn-ref (::n/type node))
+    (follow-refs (::n/fn node))
+    node))
+
 (defn union [& subtypes]
   (make ::union
         ::subtypes (tools/ordered subtypes)))
@@ -41,6 +46,7 @@
 (def tnumber  (make ::number))
 (def tbool    (make ::bool))
 (def tkeyword (make ::keyword))
+(def tany     (make ::any))
 
 (defmulti subtype? (fn [a b]
                      (print "a: " a ", b: " b)
@@ -60,17 +66,22 @@
 (defmethod node->type-fn ::n/fn-ref [node]
   (node->type-fn (::n/fn node)))
 
+(defmethod node->type-fn ::n/fn-call [{:keys [n/fn-expression]} node]
+  (let [called (follow-refs (::n/fn-expression node))]))
+
 (defn type-error [& args]
   (apply tools/fail "Type Error:" args))
 
-(defn type-annotation [node]
-  (if (= ::n/fn-ref (::n/type node))
-    (type-annotation (::n/fn node))
-    (::n/type-annotation node)))
+(def type-annotation (comp ::n/type-annotation follow-refs))
 
 (defmulti builtin->type-fn (fn [node args] (::n/name node)))
 
-(def builtin-type-fns {'inc identity})
+(defmethod builtin->type-fn 'inc [node [lens]]
+  (fn [input-type]
+    (let [transformed (lens input-type)]
+      (if (subtype? transformed tnumber)
+        input-type
+        (type-error transformed "is not a subtype of number!")))))
 
 (defn typecheck-pipe [pipe-node]
   (let [{:keys [::n/from

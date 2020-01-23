@@ -13,7 +13,6 @@
        :clj (println msg))))
 
 
-
 (defn fail [& args]
   (let [msg (->> args (interpose " ") (apply str))]
     (throw
