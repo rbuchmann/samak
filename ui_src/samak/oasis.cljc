@@ -37,7 +37,7 @@
 (defn pipe
   ""
   ([in out]
-   (pipe in '_ out))
+   (api/pipe (api/symbol in) (api/symbol out)))
   ([in x out]
    (api/pipe (api/symbol in)
              (api/symbol x)
@@ -573,7 +573,7 @@
 
                (defncall 'get-action-position '->
                  (api/fn-call (api/symbol '->) [(api/key-fn :resize) (api/key-fn :height)])
-                 (api/fn-call (api/symbol '-) [(api/symbol '_) (api/integer 50)])
+                 (api/fn-call (api/symbol '-) [(api/symbol '_) (api/integer 150)])
                  (api/map {(api/keyword :y) (api/symbol '_)})
                  (api/symbol 'translate-str))
 
@@ -994,9 +994,9 @@
                  (api/symbol 'construct-cursor))
 
 
-               (defncall 'construct-mode '->
-                 (api/map {(api/keyword :command) (api/keyword :mode)
-                           (api/keyword :data) (api/symbol '_)}))
+               ;; (defncall 'construct-mode '->
+               ;;   (api/map {(api/keyword :command) (api/keyword :mode)
+               ;;             (api/keyword :data) (api/symbol '_)}))
 
                (defncall 'construct-activity '->
                  (api/map {(api/keyword :command) (api/keyword :activity)
@@ -2091,12 +2091,16 @@
                 (api/fn-call (api/symbol 'map) [(api/symbol 'merge-defs) (api/symbol '_)])
                 (api/fn-call (api/symbol 'map) [(api/symbol 'format-def) (api/symbol '_)]))
 
-              (defncall 'extract-connection '->
-                (api/vector [(api/map {(api/keyword :from) (api/key-fn :caravan/source)
+             (defncall 'extract-connection '->
+               (api/fn-call (api/symbol 'if) [(api/key-fn :caravan/func)
+                                              (api/vector [(api/map {(api/keyword :from) (api/key-fn :caravan/source)
 
-                                       (api/keyword :to) (api/key-fn :caravan/func)})
-                             (api/map {(api/keyword :from) (api/key-fn :caravan/func)
-                                       (api/keyword :to) (api/key-fn :caravan/sink)})]))
+                                                                     (api/keyword :to) (api/key-fn :caravan/func)})
+                                                           (api/map {(api/keyword :from) (api/key-fn :caravan/func)
+                                                                     (api/keyword :to) (api/key-fn :caravan/sink)})])
+                                              (api/vector [(api/map {(api/keyword :from) (api/key-fn :caravan/source)
+
+                                                                     (api/keyword :to) (api/key-fn :caravan/sink)})])]))
 
 
               (defncall 'format-pipes '->
@@ -2111,7 +2115,8 @@
                 (api/map {(api/keyword :defs) (api/symbol 'filter-nodes)
                           (api/keyword :pipes) (api/symbol 'filter-connections)
                           (api/keyword :context) (api/key-fn :context)})
-                (api/map {(api/keyword :id) (api/string "root")
+               (api/map {(api/keyword :id) (api/string "root")
+                         (api/keyword :layoutOptions) (api/map {(api/string "elk.algorithm") (api/string "layered")})
                           (api/keyword :children) (api/symbol 'format-defs)
                           (api/keyword :edges) (api/symbol 'format-pipes)}))
 
@@ -2430,21 +2435,8 @@
                (api/fn-call (api/symbol 'remove) [(api/key-fn :type) (api/symbol '_)]))
 
 
-             (defncall 'is-func-selected '->
-               (api/key-fn :editor)
-               (api/key-fn :selected))
-
-             (defncall 'construct-selected-action '->
-               (api/key-fn :next)
-               (api/fn-call (api/symbol 'incase)  [(api/symbol 'is-func-selected)
-                                                   (api/vector [(api/string "WS navigate")
-                                                                (api/string "F insert")
-                                                                (api/string "D indent")
-                                                                (api/string "Shift-WS Swap")
-                                                                (api/string "X cut")])]))
              (defncall 'construct-key-actions '->
-               (api/vector [(api/symbol 'construct-selected-action)
-                            (api/string "+- zoom")])
+               (api/vector [(api/string "+- zoom")])
                (api/fn-call (api/symbol 'remove) [(api/key-fn :editor) (api/symbol '_)]))
 
              (defncall 'add-nav-actions '->
@@ -2472,10 +2464,27 @@
                (api/key-fn :activity)
                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :edit)]))
 
+             (defncall 'add-focus-actions '->
+               (api/fn-call (api/symbol 'spy) [(api/string "focus")])
+               (api/fn-call (api/symbol 'assoc-in) [(api/symbol '_)
+                                                    (api/vector [(api/keyword :next)
+                                                                 (api/keyword :actions)])
+                                                    (api/vector [(api/string "WS navigate")
+                                                                 (api/string "F insert")
+                                                                 (api/string "D indent")
+                                                                 (api/string "Shift-WS Swap")
+                                                                 (api/string "X cut")
+                                                                 (api/string "Q back")])]))
+
+             (defncall 'is-change-focus '->
+               (api/key-fn :editor)
+               (api/key-fn :mode)
+               (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :focus)]))
 
              (defncall 'mode-data 'pipes/reductions
                (api/fn-call (api/symbol '->)
                             [
+               ;; (api/fn-call (api/symbol 'spy) [(api/string "mode")])
 
                              (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '->) [(api/key-fn :next) (api/symbol 'is-change-insert)])
                                                                 (api/symbol 'add-insert-actions)])
@@ -2483,6 +2492,8 @@
                                                                 (api/symbol 'add-nav-actions)])
                              (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '->) [(api/key-fn :next) (api/symbol 'is-change-edit)])
                                                                 (api/symbol 'add-edit-actions)])
+                             (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '->) [(api/key-fn :next) (api/symbol 'is-change-focus)])
+                                                                (api/symbol 'add-focus-actions)])
 
                              (api/fn-call (api/symbol 'assoc-in) [(api/symbol '_)
                                                                   (api/vector [(api/keyword :next)
@@ -2897,16 +2908,24 @@
                (api/fn-call (api/symbol 'map) [(api/symbol 'graph-node) (api/symbol '_)])
                (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g)]) (api/symbol '_)]))
 
+             (defncall 'graph-coords 'str
+               (api/key-fn :x)
+               (api/string " ")
+               (api/key-fn :y))
+
+             (defncall 'bends '->
+               (api/fn-call (api/symbol 'str) [(api/string "L ") (api/symbol 'graph-coords)]))
+
              (defncall 'graph-connection '->
                (api/key-fn :sections)
                (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
                (api/vector [(api/keyword :g)
-                            (api/vector [(api/keyword :line)
-                                         (api/map {(api/keyword :style) (api/map {(api/keyword :stroke) (api/string "darkgrey")})
-                                                   (api/keyword :x1) (api/fn-call (api/symbol '->)[(api/key-fn :startPoint) (api/key-fn :x)])
-                                                   (api/keyword :y1) (api/fn-call (api/symbol '->)[(api/key-fn :startPoint) (api/key-fn :y)])
-                                                   (api/keyword :x2) (api/fn-call (api/symbol '->)[(api/key-fn :endPoint) (api/key-fn :x)])
-                                                   (api/keyword :y2) (api/fn-call (api/symbol '->)[(api/key-fn :endPoint) (api/key-fn :y)])})])]))
+                            (api/vector [(api/keyword :path)
+                                         (api/map {(api/keyword :style) (api/map {(api/keyword :stroke) (api/string "darkgrey")
+                                                                                  (api/keyword :fill) (api/string "transparent")})
+                                                   (api/keyword :d) (api/fn-call (api/symbol 'str) [(api/string "M ") (api/fn-call (api/symbol '->) [(api/key-fn :startPoint) (api/symbol 'graph-coords)])
+                                                                                                    (api/fn-call (api/symbol 'str-join) [(api/string " ") (api/fn-call (api/symbol 'map) [(api/symbol 'bends) (api/key-fn :bendPoints)])])
+                                                                                                    (api/string " L ") (api/fn-call (api/symbol '->) [(api/key-fn :endPoint) (api/symbol 'graph-coords)])])})])]))
 
              (defncall 'graph-connections '->
                (api/key-fn :layout)
@@ -3199,10 +3218,8 @@
               (pipe 'input-reduce 'reduced-events)
               (pipe 'raw-events 'tag-events 'events)
 
-
               ;; (pipe 'oasis-ev 'filter-input 'raw-events)
               ;; (pipe 'oasis-ev 'filter-submit 'raw-events)
-
 
               (pipe 'oasis-ui 'filter-resize 'events)
 
@@ -3232,7 +3249,7 @@
               (pipe 'editor-events 'editor-state-reduce)
               (pipe 'editor-state-reduce 'editor-cooked)
               (pipe 'editor-cooked 'tag-editor 'editor-state)
-              (pipe 'editor-state 'log-editor)
+              ;; (pipe 'editor-state 'log-editor)
 
               (pipe 'editor-commands 'filter-immediate 'editor-immediate)
               ;; (pipe 'editor-immediate 'log-command)
@@ -3339,7 +3356,7 @@
 
                                                      (api/keyword :mouse) (api/symbol 'oasis-mouse)
                                                      (api/keyword :kb) (api/symbol 'oasis-kb)
-                                                     ;; (api/keyword :eval) (api/symbol 'oasis-eval)
+                                                     (api/keyword :eval) (api/symbol 'oasis-eval)
                                                      (api/keyword :layout) (api/symbol 'oasis-layout)
                                                      })
                      ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
