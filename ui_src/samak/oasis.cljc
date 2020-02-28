@@ -112,7 +112,10 @@
                   (api/keyword :pipe-fill) (api/string "#292824")
                   (api/keyword :pipe-glow) (api/string "#6684e1")
                   (api/keyword :pipe-stroke) (api/string "#a6a28c")
-                  (api/keyword :pipe-drag) (api/string "orange")
+                  (api/keyword :pipe-drag) (api/string "#b65611")
+                  (api/keyword :edge-in) (api/string "#6684e1")
+                  (api/keyword :edge-out) (api/string "#b65611")
+                  (api/keyword :edge-neutral) (api/string "#a6a28c")
                   (api/keyword :graph-background) (api/string "#20201d")
                   (api/keyword :shadow-flood) (api/string "#292824")
                   (api/keyword :menu-entry-bg) (api/string "#999580")
@@ -573,7 +576,7 @@
 
                (defncall 'get-action-position '->
                  (api/fn-call (api/symbol '->) [(api/key-fn :resize) (api/key-fn :height)])
-                 (api/fn-call (api/symbol '-) [(api/symbol '_) (api/integer 150)])
+                 (api/fn-call (api/symbol '-) [(api/symbol '_) (api/integer 50)])
                  (api/map {(api/keyword :y) (api/symbol '_)})
                  (api/symbol 'translate-str))
 
@@ -1739,7 +1742,7 @@
                                                                                                                               (api/integer 300)])])
                          (api/keyword :height) (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '->) [(api/key-fn :def) (api/symbol 'detect-pipe-node)])
                                                                               (api/integer 100)
-                                                                              (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '>) [(api/key-fn :context) (api/integer 1)])
+                                                                              (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '>) [(api/key-fn :context) (api/key-fn :zoom) (api/integer 1)])
                                                                                                              (api/fn-call (api/symbol '->) [(api/key-fn :def) (api/symbol 'calc-def-height)])
                                                                                                              (api/integer 30)])])
                          (api/keyword :size) (api/fn-call (api/symbol '->) [(api/key-fn :def) (api/fn-call (api/symbol 'if) [(api/symbol 'detect-pipe-node)
@@ -2057,6 +2060,8 @@
 
               (defncall 'format-pipe '->
                 (api/map {(api/keyword :id) (api/symbol 'pipe-name)
+                          (api/keyword :from) (api/key-fn :from)
+                          (api/keyword :to) (api/key-fn :to)
                           (api/keyword :source) (api/fn-call (api/symbol 'str)
                                                              [(api/string "d/")
                                                               (api/key-fn :from)])
@@ -2102,16 +2107,14 @@
 
                                                                      (api/keyword :to) (api/key-fn :caravan/sink)})])]))
 
-
-              (defncall 'format-pipes '->
-                (api/key-fn :pipes)
-                (api/fn-call (api/symbol 'mapcat) [(api/symbol 'extract-connection) (api/symbol '_)])
-                (api/fn-call (api/symbol 'map) [(api/symbol 'format-pipe) (api/symbol '_)]))
+             (defncall 'format-pipes '->
+               (api/fn-call (api/symbol 'mapcat) [(api/symbol 'extract-connection) (api/key-fn :pipes)])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'format-pipe) (api/symbol '_)]))
 
              (defncall 'format-state '->
                (api/map {(api/keyword :eval) (api/fn-call (api/symbol '->) [(api/key-fn :eval)
                                                                             (api/fn-call (api/symbol 'vals) [(api/symbol '_)])])
-                         (api/keyword :context) (api/key-fn :zoom)})
+                         (api/keyword :context) (api/symbol '_)})
                 (api/map {(api/keyword :defs) (api/symbol 'filter-nodes)
                           (api/keyword :pipes) (api/symbol 'filter-connections)
                           (api/keyword :context) (api/key-fn :context)})
@@ -2916,24 +2919,57 @@
              (defncall 'bends '->
                (api/fn-call (api/symbol 'str) [(api/string "L ") (api/symbol 'graph-coords)]))
 
+             (defncall 'is-incoming '->
+               (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :name)])
+                                             (api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :to)])]))
+
+             (defncall 'is-outgoing '->
+               (api/fn-call (api/symbol 'and) [(api/key-fn :edge)
+                                               (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :name)])
+                                                                             (api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :from)])])]))
+
+             (defncall 'get-edge-color '->
+               (api/fn-call (api/symbol 'incase) [(api/symbol 'is-incoming)
+                                                  (api/fn-call (api/symbol '->) [(api/keyword :edge-in) (api/symbol 'get-color)])])
+               (api/fn-call (api/symbol 'incase) [(api/symbol 'is-outgoing)
+                                                  (api/fn-call (api/symbol '->) [(api/keyword :edge-out) (api/symbol 'get-color)])])
+               (api/fn-call (api/symbol 'incase) [(api/key-fn :edge)
+                                                  (api/fn-call (api/symbol '->) [(api/keyword :edge-neutral) (api/symbol 'get-color)])]))
+
              (defncall 'graph-connection '->
-               (api/key-fn :sections)
-               (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
                (api/vector [(api/keyword :g)
                             (api/vector [(api/keyword :path)
-                                         (api/map {(api/keyword :style) (api/map {(api/keyword :stroke) (api/string "darkgrey")
+                                         (api/map {(api/keyword :style) (api/map {(api/keyword :stroke) (api/symbol 'get-edge-color)
+                                                                                  (api/keyword :stroke-width) (api/integer 3)
                                                                                   (api/keyword :fill) (api/string "transparent")})
-                                                   (api/keyword :d) (api/fn-call (api/symbol 'str) [(api/string "M ") (api/fn-call (api/symbol '->) [(api/key-fn :startPoint) (api/symbol 'graph-coords)])
-                                                                                                    (api/fn-call (api/symbol 'str-join) [(api/string " ") (api/fn-call (api/symbol 'map) [(api/symbol 'bends) (api/key-fn :bendPoints)])])
-                                                                                                    (api/string " L ") (api/fn-call (api/symbol '->) [(api/key-fn :endPoint) (api/symbol 'graph-coords)])])})])]))
+                                                   (api/keyword :d) (api/fn-call (api/symbol 'str) [(api/string "M ") (api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :section) (api/key-fn :startPoint) (api/symbol 'graph-coords)])
+                                                                                                    (api/fn-call (api/symbol 'str-join) [(api/string " ") (api/fn-call (api/symbol 'map) [(api/symbol 'bends) (api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :section) (api/key-fn :bendPoints)])])])
+                                                                                                    (api/string " L ") (api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :section) (api/key-fn :endPoint) (api/symbol 'graph-coords)])])})])]))
+
+             (defncall 'merge-connection '->
+               (api/map {(api/keyword :edge) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
+                         (api/keyword :context) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
+
+             (defncall 'build-edge '->
+               (api/map {(api/keyword :from) (api/key-fn :from)
+                         (api/keyword :to) (api/key-fn :to)
+                         (api/keyword :section) (api/fn-call (api/symbol '->) [(api/key-fn :sections)
+                                                                              (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])])}))
+
+             (defncall 'prepare-edges '->
+               (api/fn-call (api/symbol 'map) [(api/symbol 'build-edge)
+                                               (api/fn-call (api/symbol '->) [(api/key-fn :layout)
+                                                                                (api/key-fn :edges)])]))
 
              (defncall 'graph-connections '->
-               (api/key-fn :layout)
-               (api/key-fn :edges)
+               (api/fn-call (api/symbol 'myzip) [(api/symbol 'prepare-edges)
+                                                 (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :layout)
+                                                                                                                   (api/key-fn :edges)
+                                                                                                                   (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
+                                                                                    (api/key-fn :context)])])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'merge-connection) (api/symbol '_)])
                (api/fn-call (api/symbol 'map) [(api/symbol 'graph-connection) (api/symbol '_)])
                (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g)]) (api/symbol '_)]))
-
-
              (defncall 'build-context '->
                (api/map {(api/keyword :editor) (api/key-fn :editor)
                          (api/keyword :mouse) (api/key-fn :mouse)
@@ -3274,6 +3310,7 @@
               ;; (pipe 'state 'log-state)
 
               (pipe 'mode-state 'load-reduce)
+              (pipe 'hover-state 'load-reduce)
               (pipe 'eval-state 'load-reduce)
               (pipe 'zoom-events 'load-reduce)
               (pipe 'load-reduce 'load-state)
