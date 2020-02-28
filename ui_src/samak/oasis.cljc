@@ -505,6 +505,7 @@
 
 
                (defncall 'render-source-menu '->
+                 (api/key-fn :source-menu)
                  (api/map {(api/keyword :items) (api/key-fn :items)
                            (api/keyword :context) (api/map {(api/keyword :hover) (api/key-fn :hover)
                                                             (api/keyword :resize) (api/key-fn :resize)})})
@@ -532,6 +533,7 @@
                  (api/symbol 'translate-str))
 
                (defncall 'render-sink-menu '->
+                 (api/key-fn :sink-menu)
                  (api/map {(api/keyword :items) (api/key-fn :items)
                            (api/keyword :context) (api/map {(api/keyword :hover) (api/key-fn :hover)
                                                             (api/keyword :resize) (api/key-fn :resize)})})
@@ -681,12 +683,18 @@
                (defncall 'tag-items '->
                  (api/map {(api/keyword :items) (api/symbol '_)}))
 
+               (defncall 'tag-menu-source '->
+                 (api/map {(api/keyword :source-menu) (api/symbol '_)}))
+
                (defncall 'reduce-menu-source 'pipes/reductions
                  (api/fn-call (api/symbol '->)
                               [(api/vector [(api/key-fn :state) (api/key-fn :next)])
                                (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])])
                  (api/map {(api/keyword :items) (api/vector [])
                            (api/keyword :hover) (api/map {})}))
+
+               (defncall 'tag-sink-menu '->
+                 (api/map {(api/keyword :sink-menu) (api/symbol '_)}))
 
                (defncall 'reduce-menu-sink 'pipes/reductions
                  (api/fn-call (api/symbol '->)
@@ -3350,6 +3358,8 @@
               (pipe 'state 'graph-drag 'svg-render)
               (pipe 'state 'graph-focus 'svg-render)
               (pipe 'state 'graph-dialog 'svg-render)
+              (pipe 'state 'render-sink-menu 'svg-render)
+              (pipe 'state 'render-source-menu 'svg-render)
               (pipe 'render 'elements-reduce)
               (pipe 'elements-reduce 'reducer)
 
@@ -3367,7 +3377,7 @@
               (pipe 'hover-state 'source-menu-events)
               (pipe 'source-menu-events 'reduce-menu-source)
               (pipe 'reduce-menu-source 'source-menu-state)
-              (pipe 'source-menu-state 'render-source-menu 'svg-render)
+              (pipe 'source-menu-state 'tag-menu-source 'state-reduce)
 
               (pipe 'init 'sink-menu-const 'sink-menu-items)
               (pipe 'sink-menu-items 'sink-menu-map)
@@ -3377,7 +3387,7 @@
               (pipe 'events 'sink-menu-events)
               (pipe 'sink-menu-events 'reduce-menu-sink)
               (pipe 'reduce-menu-sink 'sink-menu-state)
-              (pipe 'sink-menu-state 'render-sink-menu 'svg-render)
+              (pipe 'sink-menu-state 'tag-sink-menu 'state-reduce)
 
               (pipe 'state 'render-action-menu 'svg-render)
 
