@@ -236,6 +236,9 @@
                (defncall 'tag-events '->
                  (api/map {(api/keyword :events) (api/symbol '_)}))
 
+               (defncall 'only-resize '->
+                 (api/map {(api/keyword :resize) (api/key-fn :resize)}))
+
                (defncall 'is-complete 'and
                  (api/key-fn :input)
                  (api/key-fn :submit))
@@ -1915,7 +1918,23 @@
                               (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)]) ])
                 (api/map {}))
 
+             (defncall 'state-dedupe 'pipes/reductions
+                (api/fn-call (api/symbol '->)
+                             [
+                              (api/fn-call (api/symbol 'spy) [(api/string "dedupe")])
+
+                              (api/map {(api/keyword :dupe) (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '=) [(api/key-fn :state) (api/key-fn :next)]) (api/keyword :dupe) (api/keyword :unique)])
+                                        (api/keyword :out) (api/fn-call (api/symbol 'into) [(api/map {}) (api/vector [(api/key-fn :state) (api/key-fn :next)])])}) ])
+                (api/map {}))
+
+             (defncall 'filter-state '->
+               (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '=) [(api/key-fn :dupe) (api/keyword :unique)])
+                                              (api/key-fn :out)
+                                              (api/symbol 'drop)]))
+
               (defncall 'state 'pipes/debug ;; (api/keyword :oasis.spec/state)
+                )
+              (defncall 'condensed-state 'pipes/debug ;; (api/keyword :oasis.spec/state)
                 )
               (defncall 'load-state 'pipes/debug ;; (api/keyword :oasis.spec/state)
                 )
@@ -3111,7 +3130,7 @@
                          (api/keyword :action-menu) (api/vector [(api/keyword :g)])
                          (api/keyword :graph-drag) (api/vector [(api/keyword :g)])
                          (api/keyword :graph-dialog) (api/vector [(api/keyword :g)])
-                         }))
+                         (api/keyword :resize) (api/map {})}))
 
              (defncall 'reducer 'pipes/debug ;; (api/keyword :oasis.spec/gui)
                )
@@ -3210,7 +3229,6 @@
              ;; render SVG components
              (defncall 'svg-render 'pipes/debug)
              (defncall 'render-svg '->
-               ;; (api/fn-call (api/symbol 'spy) [(api/string "render")])
                (api/map {(api/keyword :svg)
                          (api/map {(api/keyword :oasis.gui/order)
                                    (api/integer 2)
@@ -3315,7 +3333,9 @@
               (pipe 'mode-state 'state-reduce)
               (pipe 'events 'state-reduce)
               (pipe 'state-reduce 'state)
-              ;; (pipe 'state 'log-state)
+              (pipe 'state 'state-dedupe)
+              (pipe 'state-dedupe 'filter-state 'condensed-state)
+              ;; (pipe 'state-dedupe 'filter-state 'log-state)
 
               (pipe 'mode-state 'load-reduce)
               (pipe 'hover-state 'load-reduce)
@@ -3353,13 +3373,13 @@
                         (api/symbol 'filter-call)
                         (api/fn-call (api/symbol 'caravan-actions) [(api/integer 42)]))
 
-              (pipe 'events 'svg-render)
-              (pipe 'state 'graph 'svg-render)
-              (pipe 'state 'graph-drag 'svg-render)
-              (pipe 'state 'graph-focus 'svg-render)
-              (pipe 'state 'graph-dialog 'svg-render)
-              (pipe 'state 'render-sink-menu 'svg-render)
-              (pipe 'state 'render-source-menu 'svg-render)
+              (pipe 'condensed-state 'only-resize 'svg-render)
+              (pipe 'condensed-state 'graph 'svg-render)
+              (pipe 'condensed-state 'graph-drag 'svg-render)
+              (pipe 'condensed-state 'graph-focus 'svg-render)
+              (pipe 'condensed-state 'graph-dialog 'svg-render)
+              (pipe 'condensed-state 'render-sink-menu 'svg-render)
+              (pipe 'condensed-state 'render-source-menu 'svg-render)
               (pipe 'render 'elements-reduce)
               (pipe 'elements-reduce 'reducer)
 
