@@ -1920,17 +1920,23 @@
 
              (defncall 'state-dedupe 'pipes/reductions
                 (api/fn-call (api/symbol '->)
-                             [
-                              (api/fn-call (api/symbol 'spy) [(api/string "dedupe")])
-
-                              (api/map {(api/keyword :dupe) (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '=) [(api/key-fn :state) (api/key-fn :next)]) (api/keyword :dupe) (api/keyword :unique)])
-                                        (api/keyword :out) (api/fn-call (api/symbol 'into) [(api/map {}) (api/vector [(api/key-fn :state) (api/key-fn :next)])])}) ])
-                (api/map {}))
+                             [(api/map {(api/keyword :next) (api/key-fn :next)
+                                        (api/keyword :state) (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :state)])
+                                        (api/keyword :key) (api/fn-call (api/symbol 'first) [(api/fn-call (api/symbol 'keys) [(api/key-fn :next)])])})
+                              (api/map {(api/keyword :next) (api/key-fn :next)
+                                        (api/keyword :state) (api/key-fn :state)
+                                        (api/keyword :existing) (api/fn-call (api/symbol 'lookup) [(api/key-fn :state) (api/key-fn :key) (api/keyword :not-found)])})
+                              (api/map {(api/keyword :dupe) (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '=) [(api/key-fn :existing) (api/key-fn :next)])
+                                                                                           (api/keyword :dupe)
+                                                                                           (api/keyword :unique)])
+                                        (api/keyword :state) (api/fn-call (api/symbol 'into) [(api/map {}) (api/vector [(api/key-fn :state) (api/key-fn :next)])])})])
+                (api/map {(api/keyword :state) (api/map {})}))
 
              (defncall 'filter-state '->
                (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '=) [(api/key-fn :dupe) (api/keyword :unique)])
-                                              (api/key-fn :out)
-                                              (api/symbol 'drop)]))
+                                              (api/key-fn :state)
+                                              (api/fn-call (api/symbol '->) [(api/fn-call (api/symbol 'spy) [(api/string "DROP")])
+                                                                             (api/symbol 'ignore)])]))
 
               (defncall 'state 'pipes/debug ;; (api/keyword :oasis.spec/state)
                 )
@@ -3141,7 +3147,6 @@
              (defncall 'render-elements '->
                ;; (api/fn-call (api/symbol 'spy) [(api/string "vals1")])
                (api/fn-call (api/symbol 'vals) [(api/symbol '_)])
-               ;; (api/fn-call (api/symbol 'spy) [(api/string "vals2")])
                ;; (api/fn-call (api/symbol 'sort-by [(api/symbol '_)]))
                (api/fn-call (api/symbol 'map) [(api/key-fn :oasis.gui/element) (api/symbol '_)])
                (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :div) (api/map {(api/keyword :class) (api/string "fullscreen")})])
@@ -3325,17 +3330,17 @@
               (pipe 'view-raw 'tag-view 'view-state)
 
 
-              (pipe 'editor-state 'state-reduce)
-              (pipe 'loaded-state 'state-reduce)
-              (pipe 'view-state 'state-reduce)
-              (pipe 'drag-events 'state-reduce)
-              (pipe 'hover-state 'state-reduce)
-              (pipe 'mode-state 'state-reduce)
-              (pipe 'events 'state-reduce)
-              (pipe 'state-reduce 'state)
-              (pipe 'state 'state-dedupe)
-              (pipe 'state-dedupe 'filter-state 'condensed-state)
-              ;; (pipe 'state-dedupe 'filter-state 'log-state)
+              (pipe 'editor-state 'state-dedupe)
+              (pipe 'loaded-state 'state-dedupe)
+              (pipe 'view-state 'state-dedupe)
+              (pipe 'drag-events 'state-dedupe)
+              (pipe 'hover-state 'state-dedupe)
+              (pipe 'mode-state 'state-dedupe)
+              (pipe 'events 'state-dedupe)
+              (pipe 'state-dedupe 'filter-state 'state)
+              (pipe 'state 'state-reduce)
+              (pipe 'state-reduce 'condensed-state)
+              ;; (pipe 'state-dedupe 'log-state)
 
               (pipe 'mode-state 'load-reduce)
               (pipe 'hover-state 'load-reduce)
@@ -3351,7 +3356,7 @@
 
               (pipe 'oasis-layout 'tag-layout 'layout-state)
               ;; (pipe 'layout-state 'log-layout)
-              (pipe 'layout-state 'state-reduce)
+              (pipe 'layout-state 'state-dedupe)
 
               ;; (pipe 'select-events 'center-view)
               ;; (pipe 'layout-state 'center-view)
@@ -3409,7 +3414,7 @@
               (pipe 'reduce-menu-sink 'sink-menu-state)
               (pipe 'sink-menu-state 'tag-sink-menu 'state-reduce)
 
-              (pipe 'state 'render-action-menu 'svg-render)
+              (pipe 'condensed-state 'render-action-menu 'svg-render)
 
               (pipe 'init 'header 'render)
               ;;                (pipe 'init 'repl 'render)
