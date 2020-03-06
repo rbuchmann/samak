@@ -1,15 +1,12 @@
 (ns samak.runtime-test
   (:require [samak.runtime         :as sut]
             #?(:clj [clojure.test  :as t :refer [deftest is]]
-
                :cljs [cljs.test    :as t :include-macros true])
             [samak.code-db         :as db]
             [samak.stdlib          :as std]
             [samak.runtime.stores  :as stores]
             [samak.runtime.servers :as servers]
             [datascript.core       :as d]))
-
-(def r (sut/make-runtime))
 
 
 (def def-node

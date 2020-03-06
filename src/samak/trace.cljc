@@ -2,14 +2,16 @@
   #?(:clj
      (:require [clojure.spec.alpha   :as s]
                [clojure.walk         :as w]
-               [samak.helpers        :as helper]
+               [samak.zipkin         :as tracing]
                [samak.trace-db       :as db]
+               [samak.helpers        :as helper]
                [samak.tools          :as tools]
                [samak.api            :as api]
                [samak.runtime.stores :as store])
      :cljs
      (:require [cljs.spec.alpha :as s]
                [clojure.walk :as w]
+               [samak.zipkin :as tracing]
                [samak.trace-db :as db]
                [samak.helpers :as helper]
                [samak.runtime.stores :as store]
@@ -20,30 +22,22 @@
 (def ^:dynamic *code* nil)
 
 (def ^:dynamic *db* (db/create-empty-db))
-(def ^:dynamic *rt* (atom {}))
+(def rt (atom {}))
+
+(def tracer (atom nil))
+
 
 (defn init-tracer
   ""
-  [rt]
-  (reset! *rt* rt))
+  [rt-in config]
+  (println "init tracer" config)
+  (reset! rt rt-in)
+  (when (= :zipkin (:backend config))
+    (reset! tracer (tracing/init config)))
+  (when (= :logging (:backend config))
+    (let [pre (or (:prefix config) "TRACE -")]
+      (reset! tracer {:trace-fn (fn [t x] (println pre x) t)}))))
 
-
-(defn make-trace
-  ""
-  [db-id duration event]
-  (merge {:samak.trace/node db-id
-          :samak.trace/level :trace
-          :samak.trace/duration duration
-          :samak.trace/timestamp (helper/serialize-timestamp (helper/now))}
-         (if (map? event) event {:value event})))
-
-(defn trace
-  ""
-  [db-id duration event]
-  (let [data (make-trace db-id duration event)]
-    ;; (tools/log data)
-    ;; (db/persist! *db* [data])
-    event))
 
 (defn load-ast
   "loads an ast given by its entity id from the database"
@@ -59,19 +53,49 @@
   ""
   [node]
   (if (number? node)
-    (let [ast (load-ast (:store @*rt*) node)]
+    (let [ast (load-ast (:store @rt) node)]
       (if (api/is-def? ast)
         (str "(" node ") " (:samak.nodes/name ast))
         (str ast)))
     node))
+
+(defn make-trace
+  ""
+  [db-id duration event]
+  (merge {:samak.trace/runtime (:id @rt)
+          :samak.trace/node db-id
+          :samak.trace/level :trace
+          :samak.trace/duration duration
+          :samak.trace/timestamp (helper/past duration)}
+         (if (map? event) event {:value event})))
+
+(defn to-db
+  [data]
+  (update data :samak.trace/timestamp helper/serialize-timestamp))
+
+(defn to-tracer
+  [data]
+  (update data :samak.trace/node node-as-str))
+
+(defn trace
+  ""
+  [db-id duration event]
+  (if-not (:samak.pipes/uuid (:samak.pipes/meta event))
+    (println "assert failed:" event))
+  (when @tracer
+    (let [data (make-trace db-id duration event)]
+      (reset! tracer ((:trace-fn @tracer) @tracer (to-tracer data)))))
+   ;; (tools/log data)
+   ;; (db/persist! *db* [(to-db data)])
+  event)
 
 
 (defn trace-to-string
   ""
   [trace]
   (let [id (:samak.pipes/uuid (:samak.pipes/meta trace))]
-    (str "[" id "] "
-       (helper/print-timestamp (:samak.trace/timestamp trace)) " - " (:samak.trace/duration trace) "ms: "
+    (str "*" (:samak.trace/runtime trace) "* [" id "] "
+       (helper/print-ISO (:samak.trace/timestamp trace)) " - " (:samak.trace/duration trace) "ms: "
        (node-as-str (:samak.trace/node trace)) " - "
        (let [c (str (:samak.pipes/content trace))]
          (helper/substring c 100)))))

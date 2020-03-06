@@ -47,7 +47,7 @@
            (fn [x] (tools/log x) x))))))
 
 (defn log
-  ([] (log nil))
+  ([] (log (rand-int 100000)))
   ([prefix]
    (let [log-chan (chan)]
      (go-loop []
@@ -147,13 +147,15 @@
                     :state content-state})
             duration  (helpers/duration before (helpers/now))
             end (tt/re-wrap meta-info-nxt res)]
+        (when-not meta-info-nxt (println "wrapper" res))
         (trace/trace db-id duration end)
         end))))
 
 (defn reductions* [f init]
-  (pipes/transduction-pipe (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
-                                         (tt/re-wrap (pipes/make-meta {:samak.pipes/source ::reductions})
-                                                     init))))
+  (pipes/transduction-pipe
+   (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
+                 (tt/re-wrap (pipes/make-meta {:samak.pipes/source ::reductions})
+                             init))))
 
 
 (def pipe-symbols

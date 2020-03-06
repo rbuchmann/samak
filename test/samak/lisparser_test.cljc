@@ -5,5 +5,7 @@
                :cljs [cljs.test :as t :include-macros true :refer [deftest is]])))
 
 (deftest should-parse-def
-  (is (= [(api/defexp 'a (api/integer 1))] (:value (sut/parse-all "(def a 1)"))))
-  )
+  (is (= [(api/defexp 'a (api/integer 1))] (:value (sut/parse-all "(def a 1)")))))
+
+(deftest should-parse-defmodule
+  (is (= [(api/defmodule 'a (api/map {}))] (:value (sut/parse-all "(defmodule a {})")))))

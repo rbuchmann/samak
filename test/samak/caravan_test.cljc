@@ -5,8 +5,10 @@
             [samak.oasis          :as oasis]
             [samak.core           :as core]
             [samak.runtime        :as rt]
+            [samak.test-programs   :as test-programs]
             [samak.code-db        :as db]
             [samak.utils          :as utils]
+            [samak.trace          :as trace]
             #?(:clj [clojure.core.async :as a :refer [<! chan go go-loop]]
                :cljs [clojure.core.async :as a :refer [<! chan go go-loop]])
             #?(:clj [clojure.test :as t :refer [deftest is]]
@@ -169,7 +171,7 @@
         c (chan 1)
         rt (rt/make-runtime syms)
         _ (sut/init rt)
-        _ (sut/test-net c)]
+        _ (sut/test-net c test-programs/tl6 'tl)]
     (utils/test-async
       (go
         (let [val (<! c)]
@@ -184,8 +186,26 @@
                     core/samak-symbols)
         c (chan 1)
         rt (rt/make-runtime syms)]
+    ;; (trace/init-tracer rt {:backend :logging})
     (sut/init rt)
     (sut/test-chuck c)
+    (utils/test-async
+     (go
+       (let [[raw port] (a/alts! [c (a/timeout 300000)])
+             val (if (= port c) raw :timeout-overall)]
+         (println (str "\ntraces: "))
+         (sut/trace-dump)
+         (is (= :success val)))))))
+
+(deftest should-test-modules
+  (let [syms (merge {'pipes/ui    pipes/debug
+                     'pipes/http  pipes/debug}
+                    core/samak-symbols)
+        c (chan 1)
+        rt (rt/make-runtime syms)]
+    ;; (trace/init-tracer rt {:backend :logging})
+    (sut/init rt)
+    (sut/test-net c test-programs/test-builtin-modules-test 'bar)
     (utils/test-async
      (go
        (let [[raw port] (a/alts! [c (a/timeout 300000)])

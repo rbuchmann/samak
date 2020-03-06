@@ -2,10 +2,10 @@
 
 
 (def t0
-  ["(def in (-> inc inc))"])
+  ["(def in (-> (inc _) (inc _)))"])
 
 (def t
-  ["(def in (-> inc inc))"
+  ["(def in (-> (inc _) (inc _)))"
    "(def out (pipes/log))"
    "(| in out)"
    "!f in 5"])
@@ -13,25 +13,30 @@
 (def tm
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in {:foo inc} out)"
+   "(| in {:foo (inc _)} out)"
    "!f in 5"])
 
 (def tl
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in (-> inc inc) out)"
+   "(| in (-> (inc _) (inc _)) out)"
    "!f in 5"])
+
+(def tw
+  ["(def in (pipes/debug))"
+   "(def out (pipes/log))"
+   "(| in (-> (inc _) (inc _)) out)"])
 
 (def tl2
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in [:div id] out)"
+   "(| in [:div _] out)"
    "!f in 42"])
 
 (def tl3
   ["(def in (pipes/debug))"
    "(def out (pipes/log))"
-   "(| in (if even? id ignore) out)"
+   "(| in (if (even? _) _ ignore) out)"
    "!f in 5"
    "!f in 6"])
 
@@ -79,6 +84,36 @@
 
 ;; TODO Fix tests
 
+(def test-local-modules
+  ["(def in (pipes/debug))"
+   "(def bar-in (pipes/log))"
+   "(defmodule bar {:sinks {:log (pipes/log)}})"
+   "(| in ((-> (bar) :-sinks :-log) 42))"
+   "(| in ((-> (bar) :-sinks :-log) 42))"
+   "!f in \"!!!\""
+   ])
+
+(def test-builtin-modules
+  ["(def in (pipes/debug))"
+   "(def mod (modules/caravan))"
+   "(def a (-> mod :-sinks :-actions))"
+   "(| in (a 42))"
+   "!f in \"!!!\""
+   ])
+
+(def test-builtin-modules-test
+  ["(def in (pipes/debug))"
+   "(def mod (modules/caravan))"
+   "(def a (-> mod :-sinks :-actions))"
+   "(| in (a 42))"
+   "(def bar {:source {:in in} :tests {:test {:when {\"in\" [[]]}
+                                    :then {\"a\" [(incase (and (= :div (first _))
+                                                                        (= 5 (count _)))
+                                                                   :success)]}}}})"
+   ;; "!f in \"!!!\""
+   ])
+
+
 (def chuck
   ["(def in (pipes/debug))
    (def ui-in (pipes/ui))
@@ -121,12 +156,13 @@
                         :http-in http-in}
                 :tests {
                         :test-response {:when {\"http-in\" [{:type \"success\" :value {:id 42 :joke \"is on you\"}}]}
-                                     :then {\"ui-out\" [(|> (-> (incase (= (nth _ 4) [:ul]) :success))) (|> _)]}}
+                                        :then {\"ui-out\" [(incase (= (nth _ 4) [:ul]) :success)]}}
                         :test-init {:when {\"in\" [[]]}
-                                    :then {\"ui-out\" [(|> (incase (and (= :div (first _))
+                                    :then {\"ui-out\" [(incase (and (= :div (first _))
                                                                         (= 5 (count _)))
-                                                                   :success))]}}
+                                                                   :success)]}}
                         :test-event {:when {\"ui-in\" [{:data :change :event {:target {:value 42}}}
                                                        {:data :submit}]}
-                                     :then {\"http-out\" [(|> (incase (and (= \"http://api.icndb.com/jokes/42\" :-url))
-                                                                    :success))]}}}})"])
+                                     :then {\"http-out\" [(incase (and (= \"http://api.icndb.com/jokes/42\" :-url))
+                                                                    :success)]}}
+}})"])

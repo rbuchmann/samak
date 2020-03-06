@@ -21,9 +21,9 @@
 (deftest should-generate-pipe-ast
   (is (= valid-pipe (sut/pipe (sut/symbol 'a) (sut/symbol 'b)))))
 
-;; (deftest should-generate-compose-ast
-;;   (is (= valid-pipe (sut/compose [(sut/symbol 'a) (sut/symbol 'b)]))))
-
-#_(deftest should-generate-valid-map
-  (is (s/valid? :samak.spec/map (sut/map {(api/keyword :foo) (api/integer 1)})))
+(deftest should-define-module
+  (is (sut/is-module? (sut/defmodule 'test-1 (api/map {(api/keyword :sources) (api/map {(api/keyword :foo) (api/symbol 'foo)})
+                                                       (api/keyword :sinks) (api/map {(api/keyword :bar) (api/symbol 'bar)})
+                                                       (api/keyword :tests) (api/map {})
+                                                       }))))
   )

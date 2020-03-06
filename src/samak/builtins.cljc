@@ -145,6 +145,9 @@
    (min   [& args])
    (odd?  [x])
    (even? [x])
+
+   ;; random functions
+   (rand-int [x])
    ))
 
 

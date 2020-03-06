@@ -91,6 +91,8 @@
   [specific]
   (merge {::created (help/now)
           ::span (help/make-span)
+          ::parent (help/make-span)
+          ::cancel (help/uuid)
           ::uuid (help/uuid)} specific))
 
 (defn make-paket
@@ -132,8 +134,11 @@
     (a/tap source sink)
     (composite-pipe from to)))
 
-(defn instrument [f]
-  (tt/instrumentation-xf (p/eval-as-fn f) trace/*db-id*))
+(defn instrument [db-id cancel? f]
+  (tt/instrumentation-xf (p/eval-as-fn f) db-id cancel?))
+
+(defn cancel [cancel? f]
+  (tt/cancel-xf (p/eval-as-fn f) cancel?))
 
 (defn to-depgraph [edges]
   ; If there is an edge from a->b, then b depends on a

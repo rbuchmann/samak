@@ -13,6 +13,8 @@
                                            :db/isComponent true}
                            :rhs           {:db/valueType   :db.type/ref
                                            :db/isComponent true}
+                           :definition    {:db/valueType   :db.type/ref
+                                           :db/isComponent true}
                            :mapkv-pairs   {:db/cardinality :db.cardinality/many
                                            :db/isComponent true
                                            :db/valueType   :db.type/ref}
@@ -28,6 +30,7 @@
                            :to            {:db/isComponent true
                                            :db/valueType   :db.type/ref}
                            :name          {:db/unique :db.unique/identity}
+                           :module-name   {:db/unique :db.unique/identity}
                            :node          {:db/isComponent true
                                            :db/valueType   :db.type/ref}})
 
@@ -133,35 +136,44 @@
          @db
          source)))
 
+(defn get-id-from-pipe
+  ""
+  [pipe]
+  (or (get-in pipe [:samak.nodes/fn :db/id])
+      (get-in pipe [:samak.nodes/fn-expression :samak.nodes/fn :db/id])))
+
+
 (defn load-travel
   "loads a network given a source entity id from the database"
-  [db id]
-  (let [
-        ast (load-by-id db id)
-        subs (mapv :db/id (find-links-from db id))
-        pipes (mapv #(load-by-id db %1) subs)
-        ends (mapv #(get-in %1 [:samak.nodes/to :samak.nodes/fn :db/id]) pipes)
-        xf (mapv #(or (get-in %1 [:samak.nodes/xf :samak.nodes/fn :db/id])
-                      (get-in %1 [:samak.nodes/xf :samak.nodes/fn-expression :samak.nodes/fn :db/id])) pipes)
-        rec (reduce (fn [{ends :ends pipes :pipes xf :xf} s]
-                      (let [add (load-travel db s)]
-                        {:ends (into ends (:ends add))
-                         :xf (into xf (:xf add))
-                         :pipes (into pipes (:pipes add))}))
-                    {:ends [] :pipes [] :xf []}
-                    ends)]
-    {:ends (into ends (:ends rec))
-     :xf (into xf (:xf rec))
-     :pipes (into pipes (:pipes rec))}))
+  [db id loaded]
+  (if (contains? loaded id)
+    ;; (println "!!!!!!!!!!!!!!!!!!!!!")
+    ;; FIXME
+    {}
+    (let [ast (load-by-id db id)
+          subs (mapv :db/id (find-links-from db id))
+          pipes (mapv #(load-by-id db %1) subs)
+          targets (mapv #(get-id-from-pipe (:samak.nodes/to %)) pipes)
+          xf (mapv #(get-id-from-pipe (:samak.nodes/xf %)) pipes)
+          rec (reduce (fn [{ends :ends pipes :pipes xf :xf} s]
+                        (let [add (load-travel db s (conj loaded id))]
+                          {:ends (into ends (:ends add))
+                           :xf (into xf (:xf add))
+                           :pipes (into pipes (:pipes add))}))
+                      {:ends #{} :pipes pipes :xf xf}
+                      targets)]
+      {:ends (set (into targets (:ends rec)))
+       :xf (into xf (:xf rec))
+       :pipes (into pipes (:pipes rec))})))
 
 
 (defn load-network
   "loads the specified network from the database"
   [db net]
-  (let [loaded (load-travel db net)]
-    {net {:ends (sort (distinct (:ends loaded)))
+  (let [loaded (load-travel db net #{})]
+    {net {:ends (sort (:ends loaded))
           :xf (sort (distinct (remove nil? (:xf loaded))))
-          :pipes (:pipes loaded)}}))
+          :pipes (distinct (:pipes loaded))}}))
 
 (defn load-dependencies [db id]
   (d/q '[:find [?x ...]

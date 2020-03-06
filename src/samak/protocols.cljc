@@ -1,5 +1,11 @@
 (ns samak.protocols
+  (:refer-clojure :exclude [resolve])
   (:require [samak.tools :as t]))
+
+(defprotocol NetworkManager
+  (add-server [this server])
+  (resolve [this id])
+  (link [this from to xf]))
 
 (defprotocol SamakCallable
   (to-samak-fn [this]))
