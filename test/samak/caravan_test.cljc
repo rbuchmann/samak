@@ -191,16 +191,14 @@
     (sut/test-chuck c)
     (utils/test-async
      (go
-       (let [[raw port] (a/alts! [c (a/timeout 300000)])
+       (let [[raw port] (a/alts! [c (a/timeout 30000)])
              val (if (= port c) raw :timeout-overall)]
          (println (str "\ntraces: "))
          (sut/trace-dump)
          (is (= :success val)))))))
 
-(deftest should-test-modules
-  (let [syms (merge {'pipes/ui    pipes/debug
-                     'pipes/http  pipes/debug}
-                    core/samak-symbols)
+(deftest should-test-builtin-modules
+  (let [syms core/samak-symbols
         c (chan 1)
         rt (rt/make-runtime syms)]
     ;; (trace/init-tracer rt {:backend :logging})
@@ -208,7 +206,22 @@
     (sut/test-net c test-programs/test-builtin-modules-test 'bar)
     (utils/test-async
      (go
-       (let [[raw port] (a/alts! [c (a/timeout 300000)])
+       (let [[raw port] (a/alts! [c (a/timeout 30000)])
+             val (if (= port c) raw :timeout-overall)]
+         (println (str "\ntraces: "))
+         (sut/trace-dump)
+         (is (= :success val)))))))
+
+(deftest should-test-local-modules
+  (let [syms core/samak-symbols
+        c (chan 1)
+        rt (rt/make-runtime syms)]
+    ;; (trace/init-tracer rt {:backend :logging})
+    (sut/init rt)
+    (sut/test-net c test-programs/test-local-modules-test 'bar)
+    (utils/test-async
+     (go
+       (let [[raw port] (a/alts! [c (a/timeout 30000)])
              val (if (= port c) raw :timeout-overall)]
          (println (str "\ntraces: "))
          (sut/trace-dump)

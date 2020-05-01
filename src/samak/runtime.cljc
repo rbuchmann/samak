@@ -53,14 +53,15 @@
           server forms))
 
 (defn resolve-fn
-  ""
-  [id]
-  (let [defs (servers/get-defined (:server @resolver))
-        fn (get defs id)]
-    ;; (println "found: " id fn)
-    (if fn
-      fn
-      (println "not found: " id))))
+  ([id]
+   (resolve-fn @resolver id))
+  ([rt id]
+   (let [defs (servers/get-defined (:server rt))
+         fn (get defs id)]
+     ;; (println "found: " id fn)
+     (if fn
+       fn
+       (println "not found: " id)))))
 
 (defn wrap-out
   ""
@@ -195,19 +196,38 @@
   [{store :store :as rt} id]
   (stores/load-network store id))
 
+(defn get-id-from-source-val
+  [entry]
+  (let [val (:samak.nodes/mapvalue entry)
+        fn (if (:samak.nodes/fn-expression val) (:samak.nodes/fn-expression val) val)]
+    (get-in fn [:samak.nodes/fn :db/id])))
+
+
+(defn load-sources-from-bundle
+  ""
+  [defns]
+  (let [kv (:samak.nodes/mapkv-pairs defns)
+        sources (:samak.nodes/mapkv-pairs (:samak.nodes/mapvalue (first kv))) ;; FIXME, move to db?
+        value (map get-id-from-source-val sources)]
+    value))
+
+
 (defn load-bundle
   "loads the definition of a bundle"
   [{store :store :as rt} sym]
   (let [defns (load-by-sym rt sym)
-        kv (get-in defns [:samak.nodes/rhs :samak.nodes/mapkv-pairs])
-        sources (:samak.nodes/mapkv-pairs (:samak.nodes/mapvalue (first kv))) ;; FIXME, move to db?
-        value (map #(get-in %1 [:samak.nodes/mapvalue :samak.nodes/fn :db/id]) sources)]
+        value (load-sources-from-bundle (if (= (:samak.nodes/type defns) :samak.nodes/def)
+                                          (:samak.nodes/rhs defns)
+                                          (:samak.nodes/definition defns)))]
     value))
 
 
 (defn eval-expression! [{:keys [store server] :as rt} form]
   (let [new-server (store-and-eval! rt (rewrite-expression "user" form))]
     (assoc rt :server new-server)))
+
+(defn resolve-name [runtime sym]
+  (-> runtime :store (stores/resolve-name sym)))
 
 (defn get-definition-by-name [runtime sym]
   (let [id (-> runtime :store (stores/resolve-name sym))]

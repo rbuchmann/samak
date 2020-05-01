@@ -19,12 +19,6 @@
 
 ;; (def rt (runtime/make-runtime c/samak-symbols))
 
-#_(deftest should-be-oasis
-  (is (some #(and (= (:samak.nodes/type %) :samak.nodes/def)
-                  (= (:samak.nodes/name %) 'oasis))
-            (sut/start))))
-
-
 #_(deftest should-define
   (let [code (repl/eval-multi-exp repl/base-symbols [sut/get-val])
         func (get code 'get-val)]
@@ -52,25 +46,42 @@
       (is (= 'oasis (:samak.nodes/name oasis)))
       (is (s/valid? :samak.spec/toplevel-exp oasis)))))
 
-(deftest should-test-oasis
-  (let [syms (merge c/samak-symbols
-                    c/ui-mock-symbols
-                    {'pipes/ui       pipes/debug
-                     'pipes/http     pipes/debug
-                     'pipes/mouse    pipes/debug
-                     'pipes/keyboard pipes/debug
-                     'pipes/layout   pipes/debug}
-                    )
+;; (deftest should-test-oasis
+;;   (let [syms (merge c/samak-symbols
+;;                     c/ui-mock-symbols
+;;                     {'pipes/ui       pipes/debug
+;;                      'pipes/http     pipes/debug
+;;                      'pipes/mouse    pipes/debug
+;;                      'pipes/keyboard pipes/debug
+;;                      'pipes/layout   pipes/debug}
+;;                     )
+;;         c (chan 1)
+;;         rt (runtime/make-runtime syms)
+;;         state (reduce (fn [s e] (runtime/eval-expression! s e)) rt (sut/start))]
+;;     ;; (println (sut/store (:store rt)))
+;;     (trace/init-tracer rt {:backend :logging})
+;;     (caravan/init state)
+;;     (caravan/test-oasis c)
+;;     (utils/test-async
+;;      (go
+;;        (let [[raw port] (a/alts! [c (a/timeout 30000)])
+;;              val (if (= port c) raw :timeout-overall)]
+;;          (println (str "\ntraces: "))
+;;          (caravan/trace-dump)
+;;          (is (= :success val)))))))
+
+(deftest should-test-oasis-ui
+  (let [syms (merge {'pipes/ui (fn [_] (pipes/debug))}
+                    c/samak-symbols)
         c (chan 1)
         rt (runtime/make-runtime syms)
-        state (reduce (fn [s e] (runtime/eval-expression! s e)) rt (sut/start))]
-    ;; (println (sut/store (:store rt)))
+        state (reduce (fn [s e] (runtime/eval-expression! s e)) rt (sut/start-ui))]
     (trace/init-tracer rt {:backend :logging})
-    (caravan/init state)
-    (caravan/test-oasis c)
+    (caravan/init rt)
+    (caravan/run-testsuite c 'oasis-ui {:timeout 3000})
     (utils/test-async
      (go
-       (let [[raw port] (a/alts! [c (a/timeout 30000)])
+       (let [[raw port] (a/alts! [c (a/timeout 300000)])
              val (if (= port c) raw :timeout-overall)]
          (println (str "\ntraces: "))
          (caravan/trace-dump)

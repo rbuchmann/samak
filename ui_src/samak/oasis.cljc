@@ -62,8 +62,7 @@
 (s/def :oasis.spec/mouse-event (s/keys :req-un [:samak.mouse/type]))
 (s/def :oasis.spec/mouse-state (s/keys :req-un [:samak.mouse/type]))
 
-(def oasis1   [(defncall 'oasis-ui 'pipes/ui (api/integer 2))
-               (defncall 'oasis-mouse 'pipes/mouse (api/integer 2))
+(def oasis1   [(defncall 'oasis-mouse 'pipes/mouse (api/integer 2))
                (defncall 'oasis-kb 'pipes/keyboard)
                (defncall 'oasis-layout 'pipes/layout)
                (defncall 'oasis-eval 'pipes/eval-notify)
@@ -362,8 +361,6 @@
 
                ;; repl
 
-               (defncall 'oasis-init 'pipes/debug)
-               (defncall 'init 'pipes/debug)
                (defmap 'repl
                  {(api/keyword :repl)
                   (api/map {(api/keyword :oasis.gui/order)
@@ -3121,10 +3118,6 @@
 
              ;; reduce elements to latest version of GUI element
 
-             (defncall 'elements-reduce 'pipes/reductions
-               (api/fn-call (api/symbol 'into) [(api/key-fn :state) (api/key-fn :next)])
-               (api/map {}))
-
              (defncall 'svg-elements-reduce 'pipes/reductions
                (api/fn-call (api/symbol '->)
                             [(api/vector [(api/key-fn :state) (api/key-fn :next)])
@@ -3138,19 +3131,7 @@
                          (api/keyword :graph-dialog) (api/vector [(api/keyword :g)])
                          (api/keyword :resize) (api/map {})}))
 
-             (defncall 'reducer 'pipes/debug ;; (api/keyword :oasis.spec/gui)
-               )
-             (defncall 'render 'pipes/debug ;; (api/keyword :oasis.spec/render)
-               )
-
              ;; render elements to hiccup
-             (defncall 'render-elements '->
-               ;; (api/fn-call (api/symbol 'spy) [(api/string "vals1")])
-               (api/fn-call (api/symbol 'vals) [(api/symbol '_)])
-               ;; (api/fn-call (api/symbol 'sort-by [(api/symbol '_)]))
-               (api/fn-call (api/symbol 'map) [(api/key-fn :oasis.gui/element) (api/symbol '_)])
-               (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :div) (api/map {(api/keyword :class) (api/string "fullscreen")})])
-                                                (api/symbol '_)]))
 
              (defncall 'svg-reduced 'pipes/debug  ;; (api/keyword :oasis.spec/render)
                )
@@ -3252,13 +3233,23 @@
                                                 (api/key-fn :graph-dialog)
                                                 ])})}))
 
-  (defncall 'init-view '->
-    (api/map {(api/keyword :zoom) (api/integer 1)
-              (api/keyword :x) (api/integer 150)
-              (api/keyword :y) (api/integer 50)}))])
-(def oasis (into oasis1 (into oasis2 oasis3)))
+             (defncall 'init-view '->
+     (api/fn-call (api/symbol 'spy) [(api/string "INIT !!!!!!!!!!!!!!!!!!!")])
+               (api/map {(api/keyword :zoom) (api/integer 1)
+                         (api/keyword :x) (api/integer 150)
+                         (api/keyword :y) (api/integer 50)}))
 
-(def network
+             (defncall 'm-caravan-actions 'caravan-actions (api/integer 42))
+             ])
+
+(def oasis-core-defs
+  [(defncall 'oasis-core-init 'pipes/debug)
+   (defncall 'oasis-core-out 'pipes/debug)
+   (api/defmodule 'oasis-core (api/map {(api/keyword :sources) (api/map {(api/keyword :init) (api/symbol 'oasis-core-init)})
+                                        (api/keyword :sinks) (api/map {(api/keyword :svg-elems) (api/symbol 'oasis-core-out)})}))])
+
+
+(def oasis-core-net
   [              ;; networks
 
               (pipe 'oasis-mouse 'mouse-reduce)
@@ -3288,7 +3279,7 @@
               ;; (pipe 'oasis-ev 'filter-input 'raw-events)
               ;; (pipe 'oasis-ev 'filter-submit 'raw-events)
 
-              (pipe 'oasis-ui 'filter-resize 'events)
+              (pipe 'oasis-ui-out 'filter-resize 'events)
 
               ;; (pipe 'select-events 'editor-commands)
 
@@ -3376,7 +3367,7 @@
               ;; (pipe 'be-commands 'log-command)
               (api/pipe (api/symbol 'be-commands)
                         (api/symbol 'filter-call)
-                        (api/fn-call (api/symbol 'caravan-actions) [(api/integer 42)]))
+                        (api/symbol 'm-caravan-actions))
 
               (pipe 'condensed-state 'only-resize 'svg-render)
               (pipe 'condensed-state 'graph 'svg-render)
@@ -3385,17 +3376,12 @@
               (pipe 'condensed-state 'graph-dialog 'svg-render)
               (pipe 'condensed-state 'render-sink-menu 'svg-render)
               (pipe 'condensed-state 'render-source-menu 'svg-render)
-              (pipe 'render 'elements-reduce)
-              (pipe 'elements-reduce 'reducer)
-
-              (pipe 'reducer 'render-elements 'oasis-ui)
-              ;; (pipe 'reducer 'render-elements 'log-render)
 
               (pipe 'svg-render 'svg-elements-reduce)
               (pipe 'svg-elements-reduce 'svg-reduced)
-              (pipe 'svg-reduced 'render-svg 'render)
+              (pipe 'svg-reduced 'render-svg 'oasis-core-out)
 
-              (pipe 'init 'source-menu-const 'source-menu-items)
+              (pipe 'oasis-core-init 'source-menu-const 'source-menu-items)
               (pipe 'source-menu-items 'source-menu-map)
               (pipe 'source-menu-map 'source-menu)
               (pipe 'source-menu 'tag-items 'source-menu-events)
@@ -3404,7 +3390,7 @@
               (pipe 'reduce-menu-source 'source-menu-state)
               (pipe 'source-menu-state 'tag-menu-source 'state-reduce)
 
-              (pipe 'init 'sink-menu-const 'sink-menu-items)
+              (pipe 'oasis-core-init 'sink-menu-const 'sink-menu-items)
               (pipe 'sink-menu-items 'sink-menu-map)
               (pipe 'sink-menu-map 'sink-menu)
               (pipe 'sink-menu 'tag-items 'sink-menu-events)
@@ -3416,29 +3402,108 @@
 
               (pipe 'condensed-state 'render-action-menu 'svg-render)
 
-              (pipe 'init 'header 'render)
+              ;; (pipe 'init 'header 'render)
               ;;                (pipe 'init 'repl 'render)
-              (pipe 'init 'init-view 'view-events)
+              (pipe 'oasis-core-init 'init-view 'view-events)
 
               (api/pipe (api/fn-call (api/symbol 'caravan-commands) [(api/integer 42)])
                         (api/symbol 'log-caravan))
+
+   ])
+
+(def oasis-ui-defs
+  [
+   (defncall 'oasis-ui-in 'pipes/debug)
+   (defncall 'oasis-ui-out 'pipes/ui (api/integer 2))
+   (defncall 'render 'pipes/debug ;; (api/keyword :oasis.spec/render)
+     )
+   (defncall 'reducer 'pipes/debug ;; (api/keyword :oasis.spec/gui)
+     )
+   (defncall 'elements-reduce 'pipes/reductions
+     (api/fn-call (api/symbol 'into) [(api/key-fn :state) (api/key-fn :next)])
+     (api/map {}))
+   (defncall 'render-elements '->
+     ;; (api/fn-call (api/symbol 'spy) [(api/string "vals1")])
+     (api/fn-call (api/symbol 'vals) [(api/symbol '_)])
+     ;; (api/fn-call (api/symbol 'sort-by [(api/symbol '_)]))
+     (api/fn-call (api/symbol 'map) [(api/key-fn :oasis.gui/element) (api/symbol '_)])
+     (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :div) (api/map {(api/keyword :class) (api/string "fullscreen")})])
+                                      (api/symbol '_)]))
+
+   (api/defmodule 'oasis-ui (api/map {(api/keyword :sources) (api/map {(api/keyword :render) (api/symbol 'oasis-ui-in)})
+                                    (api/keyword :tests) (api/map {(api/keyword :t1) (api/map {(api/keyword :when) (api/map {(api/string "oasis-ui-in") (api/vector [(api/map {(api/keyword :header)
+                                                                                                                                                                               (api/map {(api/keyword :oasis.gui/order)
+                                                                                                                                                                                         (api/integer 1)
+                                                                                                                                                                                         (api/keyword :oasis.gui/element)
+                                                                                                                                                                                         (api/vector [(api/keyword :h1)
+                                                                                                                                                                                                      (api/string "사막 Oasis")])})})])})
+                                                                                               (api/keyword :then) (api/map {(api/string "oasis-ui-out")
+                                                                                                                             (api/vector [(api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/keyword :div)
+                                                                                                                                                                                                           (api/fn-call (api/symbol 'first) [(api/symbol '_)])])
+                                                                                                                                                                             (api/keyword :success)])])})})})}))
+   ])
+
+(def oasis-ui-net
+  [(pipe 'oasis-ui-in 'render)
+   (pipe 'render 'elements-reduce)
+   (pipe 'elements-reduce 'reducer)
+
+   (pipe 'reducer 'render-elements 'oasis-ui-out)
+   ;; (pipe 'reducer 'render-elements 'log-render)
+   ])
+
+(def oasis-module-defs
+  [(defncall 'm-ui '->
+     (api/symbol 'oasis-ui))
+   (defncall 'm-render-fn '->
+     (api/symbol 'm-ui)
+     (api/key-fn :sources)
+     (api/key-fn :render))
+   (defncall 'm-render 'm-render-fn)
+
+   (defncall 'm-core '->
+     (api/symbol 'oasis-core))
+   (defncall 'm-elems-fn '->
+     (api/symbol 'm-core)
+     (api/key-fn :sinks)
+     (api/key-fn :svg-elems))
+   (defncall 'm-elems 'm-elems-fn)
+   (defncall 'm-init-fn '->
+     (api/symbol 'm-core)
+     (api/key-fn :sources)
+     (api/key-fn :init))
+   (defncall 'm-init 'm-init-fn)
+
+   (defncall 'oasis-init 'pipes/debug)
+   (defncall 'init 'pipes/debug)
    (api/defexp 'oasis-main (api/pipe (api/symbol 'oasis-init)
                                      (api/symbol 'init)))
    (api/defexp 'oasis (api/map {(api/keyword :sources) (api/map {(api/keyword :main) (api/symbol 'init)
 
-                                                     (api/keyword :mouse) (api/symbol 'oasis-mouse)
-                                                     (api/keyword :kb) (api/symbol 'oasis-kb)
-                                                     (api/keyword :eval) (api/symbol 'oasis-eval)
-                                                     (api/keyword :layout) (api/symbol 'oasis-layout)
-                                                     })
-                     ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
-                                   (api/keyword :tests) (api/map {(api/keyword ::test)
-                                                                  (api/map {(api/keyword :when) (api/map {(api/string "init")
-                                                                                                          (api/vector [(api/integer 1)])})
-                                                                            (api/keyword :then) (api/map {(api/string "oasis-ui")
-                                                                                                          (api/vector [(api/keyword :success)])})})})}))
-   ])
+                                                                 (api/keyword :mouse) (api/symbol 'oasis-mouse)
+                                                                 (api/keyword :kb) (api/symbol 'oasis-kb)
+                                                                 (api/keyword :eval) (api/symbol 'oasis-eval)
+                                                                 (api/keyword :layout) (api/symbol 'oasis-layout)
+                                                                 })
+                                ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
+                                (api/keyword :tests) (api/map {(api/keyword ::test)
+                                                               (api/map {(api/keyword :when) (api/map {(api/string "init")
+                                                                                                       (api/vector [(api/integer 1)])})
+                                                                         (api/keyword :then) (api/map {(api/string "oasis-ui-out")
+                                                                                                       (api/vector [(api/keyword :success)])})})})}))])
 
+(def oasis-module-net
+  [
+   (pipe 'init 'header 'm-render)
+   (pipe 'init 'm-init)
+   (pipe 'm-elems 'm-render)])
+
+
+(defn start-ui []
+  (into oasis-ui-defs (flatten oasis-ui-net)))
+
+(def network (concat oasis-module-net oasis-ui-net oasis-core-net))
+(def oasis (into oasis1 (into oasis2 (into oasis3 (into oasis-core-defs (into oasis-ui-defs oasis-module-defs))))))
 
 (defn start []
   (into oasis (flatten network)))
