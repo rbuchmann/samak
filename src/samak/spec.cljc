@@ -33,9 +33,18 @@
                                            :samak.nodes/name
                                            :samak.nodes/rhs]))
 
+(s/def :samak.spec/definition (s/keys :opt [:samak.nodes/sinks
+                                            :samak.nodes/sources
+                                            :samak.nodes/tests]))
+
+
+(s/def :samak.spec/module (s/keys :req [:samak.nodes/type
+                                        :samak.nodes/name
+                                        :samak.nodes/definition]))
+
 (defmulti toplevel-exp :samak.nodes/type)
 (defmethod toplevel-exp :samak.nodes/def [_] :samak.spec/eval-node)
 (defmethod toplevel-exp :samak.nodes/pipe [_] :samak.spec/pipe)
-
+(defmethod toplevel-exp :samak.nodes/module [_] :samak.spec/module)
 
 (s/def :samak.spec/toplevel-exp (s/multi-spec toplevel-exp :samak.nodes/type))

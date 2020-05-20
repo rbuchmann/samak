@@ -44,15 +44,16 @@
 (defmethod eval-node ::module [{:keys [::definition] :as module}]
   ;; (println "evaling module: " module)
   ;; FIXME: also needs to make this stuff available for resolve?
-  (fn []
+
+    (fn []
     ;; FIXME
     ;; needs to prep resolve magic when instanciating pipes, to select same runtime
     ;; maybe simply do so explicitly
-    (.println *err* (str "about to eval module: " module))
-      (let [evaled (eval-node definition)]
-        (.println *err* (str "used module: " module "->" evaled))
 
-        evaled)))
+        (println  (str "about to eval module: " module))
+        (let [evaled (eval-node definition)]
+          (println (str "used module: " module "->" evaled))
+          evaled)))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]
@@ -91,7 +92,9 @@
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
   (let [func (eval-node fn-expression)]
-    (apply (p/eval-as-fn func) (eval-reordered arguments))))
+    (try (apply (p/eval-as-fn func) (eval-reordered arguments))
+         (catch clojure.lang.ArityException ex
+           (compile-error "wrong args: " (eval-reordered arguments) " for fn " func " -> " ex)))))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]
   (pipes/link! (eval-node from) (eval-node to)))
