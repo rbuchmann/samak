@@ -1,4 +1,5 @@
 (ns samak.pipes
+  (:refer-clojure :exclude [uuid])
   #?
   (:clj
    (:require
@@ -24,6 +25,7 @@
 ;; Pipes and flow control
 
 (defprotocol Pipe
+  (uuid [this])
   (in-port [this])
   (out-port [this])
   (in-spec [this])
@@ -35,20 +37,24 @@
 (defprotocol CleanupRequired
   (clean-up [this]))
 
-(defrecord Sink [ch in-spec]
+(defrecord Sink [ch in-spec uuid]
   Pipe
+  (uuid [_] uuid)
   (in-port [_] ch)
   (in-spec [_] in-spec)
   (out-port [_] nil)
   (out-spec [_] nil))
 
 (defn sink
-  ([ch] (sink ch nil))
+  ([ch] (sink ch nil (help/uuid)))
   ([ch spec]
-   (Sink. ch in-spec)))
+   (Sink. ch in-spec (help/uuid)))
+  ([ch spec uuid]
+   (Sink. ch in-spec uuid)))
 
-(defrecord Source [ch out-spec]
+(defrecord Source [ch out-spec uuid]
   Pipe
+  (uuid [_] uuid)
   (in-port [_] nil)
   (in-spec [_] nil)
   (out-port [_] ch)
@@ -57,32 +63,37 @@
 (defn source
   ([ch] (source ch nil))
   ([ch out-spec]
-  (Source. (a/mult ch) out-spec)))
+   (Source. (a/mult ch) out-spec (help/uuid)))
+  ([ch out-spec uuid]
+  (Source. (a/mult ch) out-spec uuid)))
 
-(defrecord Pipethrough [in out in-spec out-spec]
+(defrecord Pipethrough [in out in-spec out-spec uuid]
   Pipe
+  (uuid [_] uuid)
   (in-port [_] in)
   (in-spec [_] in-spec)
   (out-port [_] out)
   (out-spec [_] out-spec))
 
 (defn pipe
-  ([ch] (pipe ch nil nil))
-  ([ch in-spec out-spec]
-   (Pipethrough. ch (a/mult ch) in-spec out-spec))
-  ([in out] (pipe in out nil nil))
-  ([in out in-spec out-spec]
-   (Pipethrough. in (a/mult out) in-spec out-spec)))
+  ([ch] (pipe ch nil nil (help/uuid)))
+  ([ch uuid] (pipe ch nil nil uuid))
+  ([ch in-spec out-spec uuid]
+   (Pipethrough. ch (a/mult ch) in-spec out-spec uuid))
+  ([in out uuid] (pipe in out nil nil uuid))
+  ([in out in-spec out-spec uuid]
+   (Pipethrough. in (a/mult out) in-spec out-spec uuid)))
 
 
-(defn transduction-pipe [xf]
-  (pipe (chan 1 xf)))
+(defn transduction-pipe
+  ([xf] (transduction-pipe xf nil))
+  ([xf uuid] (pipe (chan 1 xf) uuid)))
 
 (defn async-pipe [xf in-spec out-spec]
   (let [in-chan  (chan)
         out-chan (chan)]
     (a/pipeline-async 1 out-chan xf in-chan)
-    (Pipethrough. in-chan (a/mult out-chan) in-spec out-spec)))
+    (Pipethrough. in-chan (a/mult out-chan) in-spec out-spec (help/uuid))))
 
 (def ports (juxt in-port out-port))
 
@@ -108,6 +119,7 @@
 (defn fire-raw!
   "put a raw event into the given pipe. should be used for testing only."
   [pipe event]
+  (println "pipe fire" pipe)
   (put! (in-port pipe) event))
 
 
@@ -159,17 +171,18 @@
   [state spec paket]
   (let [x (::content paket)]
   (when (not (s/valid? spec x))
-    (println "spec error in state " state)
+    (println "spec error in state" state)
     (let [reason (s/explain spec x)]
-      (println reason)
+      (println "reason for" x ":" reason)
       reason)))
   paket)
 
 (defn checked-pipe
   ""
-  [pipe in-spec out-spec]
-  (let [in-checked (transduction-pipe (map #(check-values "in" in-spec %)))
-        out-checked (transduction-pipe (map #(check-values "out" out-spec %)))]
+  [pipe in-spec out-spec uuid]
+  (println "checked setup:" uuid (help/uuid))
+  (let [in-checked (transduction-pipe (map #(check-values (str uuid "-in") in-spec %)))
+        out-checked (transduction-pipe (map #(check-values (str uuid "-out") out-spec %)))]
     (link! in-checked pipe)
     (link! pipe out-checked)
-    (Pipethrough. (in-port in-checked) (out-port out-checked) in-spec out-spec)))
+    (Pipethrough. (in-port in-checked) (out-port out-checked) in-spec out-spec uuid)))

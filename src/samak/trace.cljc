@@ -39,24 +39,16 @@
       (reset! tracer {:trace-fn (fn [t x] (println pre x) t)}))))
 
 
-(defn load-ast
-  "loads an ast given by its entity id from the database"
-  [rt id]
-  (w/postwalk (fn [form]
-                (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
-                                  (:db/id form))]
-                 (store/load-by-id rt sub-id)
-                 form))
-              (store/load-by-id rt id)))
-
 (defn node-as-str
   ""
   [node]
   (if (number? node)
-    (let [ast (load-ast (:store @rt) node)]
+    (let [ast (store/load-by-id (:store @rt) node)]
       (if (api/is-def? ast)
         (str "(" node ") " (:samak.nodes/name ast))
-        (str ast)))
+        (if (api/is-def? (:samak.nodes/fn ast))
+          (str "(" node ") " (:samak.nodes/name (:samak.nodes/fn ast)))
+          (str ast))))
     node))
 
 (defn make-trace

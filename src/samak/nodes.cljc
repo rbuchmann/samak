@@ -86,14 +86,14 @@
     ((:link *manager*) a c b)))
 
 (defmethod eval-node ::fn-ref [{:keys [::fn] :as f}]
-  (or (when (api/is-def? fn) (eval-node fn))
-      ((:resolve *manager*) (:db/id fn))
+  (or ((:resolve *manager*) (:db/id fn))
+      (when (api/is-def? fn) (eval-node fn))
       (compile-error "Undefined reference " fn " in " *manager*)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
   (let [func (eval-node fn-expression)]
     (try (apply (p/eval-as-fn func) (eval-reordered arguments))
-         (catch clojure.lang.ArityException ex
+         (catch #?(:clj clojure.lang.ArityException :cljs js/Error) ex
            (compile-error "wrong args: " (eval-reordered arguments) " for fn " func " -> " ex)))))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]

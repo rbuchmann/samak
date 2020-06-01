@@ -20,7 +20,7 @@
 (defn make-worker
   ""
   [url]
-  (println "returning workder")
+  (println "returning worker")
   (js/Worker. url))
 
 (def elk (js/ELK. (clj->js {"workerFactory" make-worker
@@ -68,7 +68,7 @@
   (let [in-chan  (chan (a/sliding-buffer 1))
         out-chan (chan)]
     (a/pipeline-async 1 out-chan layout-call in-chan)
-    (pipes/Pipethrough. in-chan (a/mult out-chan) nil nil)))
+    (pipes/Pipethrough. in-chan (a/mult out-chan) nil nil (helpers/uuid))))
 
 (def layout-symbols
   {'pipes/layout layout})

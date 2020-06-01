@@ -1,23 +1,25 @@
 (ns ^:figwheel-no-load samak.oasis
   #?@
-   (:clj
-    [(:require
-      [clojure.spec.alpha :as s]
-      [samak.api :as api]
-      [samak.code-db :as db]
-      [samak.nodes :as n]
-      [samak.pipes :as pipes]
-      samak.spec
-      [samak.stdlib :as std])]
-    :cljs
-    [(:require
-      [cljs.spec.alpha :as s]
-      [samak.api :as api]
-      [samak.code-db :as db]
-      [samak.nodes :as n]
-      [samak.pipes :as pipes]
-      samak.spec
-      [samak.stdlib :as std])]))
+  (:clj
+   [(:require
+     [clojure.spec.alpha :as s]
+     [samak.api :as api]
+     [samak.code-db :as db]
+     [samak.nodes :as n]
+     [samak.pipes :as pipes]
+     [samak.runtime.stores :as stores]
+     samak.spec
+     [samak.stdlib :as std])]
+   :cljs
+   [(:require
+     [cljs.spec.alpha :as s]
+     [samak.api :as api]
+     [samak.code-db :as db]
+     [samak.nodes :as n]
+     [samak.pipes :as pipes]
+     [samak.runtime.stores :as stores]
+     samak.spec
+     [samak.stdlib :as std])]))
 
 (defn defncall
   ([sym fn-name]
@@ -85,65 +87,6 @@
                (defncall 'log-hover 'pipes/log (api/string "hover: "))
                (defncall 'log-keyboard 'pipes/log (api/string "keyboard: "))
                (defncall 'log-caravan 'pipes/log (api/string "caravan: "))
-
-               ;; dark theme based on base16-atelierdune-dark
-               ;; (http://atelierbram.github.io/syntax-highlighting/atelier-schemes/dune)
-               (defmap 'get-color
-                 {(api/keyword :cell-active) (api/string "#4d4a41")
-                  (api/keyword :cell-edit) (api/string "#6684e1")
-                  (api/keyword :cell-seclight) (api/string "#999580")
-                  (api/keyword :cell-background) (api/string "#292824")
-                  (api/keyword :cell-content) (api/string "#e8e4cf")
-                  (api/keyword :cell-active-content) (api/string "#fefbec")
-                  (api/keyword :cell-dividers) (api/string "#6e6b5e")
-                  (api/keyword :cell-type-fill) (api/string "#6e6b5e")
-                  (api/keyword :cell-type-stroke) (api/string "#20201d")
-                  (api/keyword :cell-counter-stroke) (api/string "#6e6b5e")
-                  (api/keyword :node-selected) (api/string "#6684e1")
-                  (api/keyword :node-bg) (api/string "#292824")
-                  (api/keyword :node-name-stroke) (api/string "#e8e4cf")
-                  (api/keyword :node-gutter) (api/string "#292824")
-                  (api/keyword :element-highlight-stroke) (api/string "#6684e1")
-                  (api/keyword :pipe-fill) (api/string "#292824")
-                  (api/keyword :pipe-glow) (api/string "#6684e1")
-                  (api/keyword :pipe-stroke) (api/string "#a6a28c")
-                  (api/keyword :pipe-drag) (api/string "#b65611")
-                  (api/keyword :edge-in) (api/string "#6684e1")
-                  (api/keyword :edge-out) (api/string "#b65611")
-                  (api/keyword :edge-neutral) (api/string "#a6a28c")
-                  (api/keyword :graph-background) (api/string "#20201d")
-                  (api/keyword :shadow-flood) (api/string "#292824")
-                  (api/keyword :menu-entry-bg) (api/string "#999580")
-                  (api/keyword :menu-entry-active-bg) (api/string "#a6a28c")
-                  (api/keyword :menu-entry-text) (api/string "#fefbec")
-                  (api/keyword :menu-bar-bg) (api/string "#6e6b5e")
-                  (api/keyword :menu-bar-text) (api/string "#a6a28c")
-                  })
-
-               (defmap 'get-font
-                 {(api/string "str") (api/string "serif")})
-
-               (defmap 'get-syntax-color
-                 {(api/keyword :caravan/str) (api/map {(api/keyword :cell-content) (api/string "#60ac39")
-                                                       (api/keyword :cell-active-content) (api/string "#60ac39")})
-                  (api/keyword :caravan/kw) (api/map {(api/keyword :cell-content) (api/string "#b65611")
-                                                      (api/keyword :cell-active-content) (api/string "#b65611")})
-                  (api/keyword :caravan/int) (api/map {(api/keyword :cell-content) (api/string "#1fad83")
-                                                       (api/keyword :cell-active-content) (api/string "#1fad83")})
-                  (api/keyword :caravan/float) (api/map {(api/keyword :cell-content) (api/string "#1fad83")
-                                                         (api/keyword :cell-active-content) (api/string "#1fad83")})
-                  (api/keyword :caravan/acc) (api/map {(api/keyword :cell-content) (api/string "#ae9513")
-                                                       (api/keyword :cell-active-content) (api/string "#ae9513")})
-                  (api/keyword :caravan/func) (api/map {(api/keyword :cell-content) (api/string "#6684e1")
-                                                        (api/keyword :cell-active-content) (api/string "#6684e1")})
-                  (api/keyword :caravan/table) (api/map {(api/keyword :cell-content) (api/string "#d43552")
-                                                         (api/keyword :cell-active-content) (api/string "#d43552")})
-                  (api/keyword :caravan/list) (api/map {(api/keyword :cell-content) (api/string "#b854d4")
-                                                        (api/keyword :cell-active-content) (api/string "#b854d4")})})
-
-               (defncall 'config-color '->
-                 (api/symbol 'get-color))
-
 
                (defncall 'get-event-val '->
                  (api/key-fn :event)
@@ -257,95 +200,6 @@
 
                ;; helpers
 
-               (defncall 'translate-str 'str
-                 (api/string "translate(")
-                 (api/fn-call (api/symbol 'or) [(api/key-fn :x) (api/integer 0)])
-                 (api/string ",")
-                 (api/fn-call (api/symbol 'or) [(api/key-fn :y) (api/integer 0)])
-                 (api/string ")"))
-
-               (defncall 'translate-graph-str 'str
-                 (api/string "matrix(")
-                 (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol 'nth) [(api/key-fn :matrix) (api/integer 0)])
-                                               (api/key-fn :zoom)])
-                 (api/string ",")
-                 (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol 'nth) [(api/key-fn :matrix) (api/integer 1)])
-                                               (api/key-fn :zoom)])
-                 (api/string ",")
-                 (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol 'nth) [(api/key-fn :matrix) (api/integer 2)])
-                                               (api/key-fn :zoom)])
-                 (api/string ",")
-                 (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol 'nth) [(api/key-fn :matrix) (api/integer 3)])
-                                               (api/key-fn :zoom)])
-                 (api/string ",")
-                 (api/key-fn :x)
-                 (api/string ",")
-                 (api/key-fn :y)
-                 (api/string ")"))
-
-               (defncall 'translate-dialog '->
-                 (api/map {(api/keyword :x)
-                           (api/integer 150)
-                           (api/keyword :y)
-                           (api/integer 50)
-                           (api/keyword :zoom)
-                           (api/float 1.5)
-                           (api/keyword :matrix)
-                           (api/vector [(api/float  1.0)
-                                        (api/float  0.0)
-                                        (api/float  0.0)
-                                        (api/float  1.0)])})
-                 (api/symbol 'translate-graph-str))
-
-               (defncall 'translate-func '->
-                 (api/fn-call (api/symbol 'into) [(api/symbol '_)
-                                                  (api/map {(api/keyword :zoom)
-                                                            (api/float 1.5)
-                                                            ;; (api/keyword :x)
-                                                            ;; (api/integer 150)
-                                                            ;; (api/keyword :y)
-                                                            ;; (api/integer -60)
-                                                            (api/keyword :matrix)
-                                                            (api/vector [(api/float 1.0)
-                                                                         (api/float 0.0)
-                                                                         (api/float 0.0)
-                                                                         (api/float 1.0)])})])
-                 (api/symbol 'translate-graph-str))
-
-               (defncall 'translate-blur '->
-                 (api/fn-call (api/symbol 'into) [(api/symbol '_)
-                                                  (api/map {(api/keyword :zoom)
-                                                            (api/float 2.0)
-                                                            (api/keyword :x)
-                                                            (api/fn-call (api/symbol '-) [(api/key-fn :x) (api/integer 100)])
-                                                            ;; (api/keyword :y)
-                                                            ;; (api/integer -50)
-                                                            (api/keyword :matrix)
-                                                            (api/vector [(api/float 1.0)
-                                                                         (api/float 0.0)
-                                                                         (api/float 0.0)
-                                                                         (api/float 1.0)])})])
-                 (api/symbol 'translate-graph-str))
-
-               (defncall 'translate-graph '->
-                 (api/fn-call (api/symbol 'assoc) [(api/symbol '_) (api/keyword :matrix)
-                                                   (api/vector [(api/float  1.0)
-                                                                (api/float -0.5)
-                                                                (api/float  1.0)
-                                                                (api/float  0.5)])])
-                 (api/symbol 'translate-graph-str))
-
-               (defncall 'translate-ident '->
-                 (api/fn-call (api/symbol 'into) [(api/symbol '_)
-                                                  (api/map {(api/keyword :zoom)
-                                                            (api/float 1.0)
-                                                            (api/keyword :matrix)
-                                                            (api/vector [(api/float 1.0)
-                                                                         (api/float 0.0)
-                                                                         (api/float 0.0)
-                                                                         (api/float 1.0)])})])
-                 (api/symbol 'translate-graph-str))
-
                (defncall 'fn-name-from-select '->
                  (api/fn-call (api/symbol 'str-split) [(api/symbol '_) (api/string "/")]) ;; func/
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-valid-target)
@@ -363,339 +217,6 @@
                                          (api/vector [(api/keyword :input) (api/map {(api/keyword :on-change) (api/keyword :change)
                                                                                      (api/keyword :id) (api/string "input/repl")
                                                                                      (api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "auto")})})])])})})
-
-               (defncall 'header '->
-                 (api/map {(api/keyword :header)
-                           (api/map {(api/keyword :oasis.gui/order)
-                                     (api/integer 1)
-                                     (api/keyword :oasis.gui/element)
-                                     (api/vector [(api/keyword :h1)
-                                                  (api/string "사막 Oasis")])})}))
-
-               (defncall 'calculate-y '->
-                 (api/fn-call (api/symbol '*) [(api/integer 100) (api/key-fn :position)])
-                 (api/fn-call (api/symbol '+) [(api/integer 10) (api/symbol '_)]))
-
-               (defncall 'menu-transform '->
-                 (api/key-fn :item)
-                 (api/map {(api/keyword :x) (api/integer 50)
-                           (api/keyword :y) (api/symbol 'calculate-y)})
-                 (api/symbol 'translate-str))
-
-               (defncall 'animate-sink '->
-                 (api/vector [(api/vector [(api/keyword :animate)
-                                           (api/map {(api/keyword :attributeName) (api/string "stroke")
-                                                     (api/keyword :values) (api/string "#999580;#6684e1;#6684e1;#6684e1;#999580")
-                                                     (api/keyword :dur) (api/string "3s")
-                                                     (api/keyword :repeatCount) (api/string "indefinite")})])
-                              (api/vector [(api/keyword :animate)
-                                           (api/map {(api/keyword :attributeName) (api/string "r")
-                                                     (api/keyword :values) (api/string "43;37;37;37;35")
-                                                     (api/keyword :dur) (api/string "3s")
-                                                     (api/keyword :repeatCount) (api/string "indefinite")})])]))
-
-               (defncall 'animate-source '->
-                 (api/vector [(api/vector [(api/keyword :animate)
-                                           (api/map {(api/keyword :attributeName) (api/string "stroke")
-                                                     (api/keyword :values) (api/string "#999580;#6684e1;#6684e1;#6684e1;#999580")
-                                                     (api/keyword :dur) (api/string "3s")
-                                                     (api/keyword :repeatCount) (api/string "indefinite")})])
-                              (api/vector [(api/keyword :animate)
-                                           (api/map {(api/keyword :attributeName) (api/string "r")
-                                                     (api/keyword :values) (api/string "35;37;37;37;43")
-                                                     (api/keyword :dur) (api/string "3s")
-                                                     (api/keyword :repeatCount) (api/string "indefinite")})])]))
-
-               (defncall 'is-hovered-entry '->
-                 (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :item)
-                                                             (api/vector [(api/key-fn :type) (api/key-fn :name)])])
-                              (api/fn-call (api/symbol '->) [(api/key-fn :context)
-                                                             (api/key-fn :hover)
-                                                             (api/key-fn :current)
-                                                             (api/vector [(api/key-fn :type) (api/key-fn :name)])])])
-                 (api/fn-call (api/symbol '->) [(api/fn-call (api/symbol 'distinct) [(api/symbol '_)])
-                                                (api/fn-call (api/symbol 'count) [(api/symbol '_)])
-                                                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 1)])]))
-
-               (defncall 'is-entry-sink '->
-                 (api/key-fn :item)
-                 (api/key-fn :type)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "sink")]))
-
-               (defncall 'get-animation-style '->
-                 (api/fn-call (api/symbol 'if) [(api/symbol 'is-hovered-entry)
-                                                (api/fn-call (api/symbol 'if) [(api/symbol 'is-entry-sink)
-                                                                               (api/symbol 'animate-sink)
-                                                                               (api/symbol 'animate-source)])
-                                                (api/string "")]))
-
-               (defncall 'get-entry-bg '->
-                 (api/fn-call (api/symbol 'if) [(api/symbol 'is-hovered-entry)
-                                                (api/keyword :menu-entry-active-bg)
-                                                (api/keyword :menu-entry-bg)]))
-
-               (defncall 'render-menu-entry '->
-                 (api/vector [(api/keyword :g)
-                              (api/map {(api/keyword :transform) (api/symbol 'menu-transform)})
-                              (api/vector [(api/keyword :circle)
-                                           (api/map {(api/keyword :cx) (api/integer 0)
-                                                     (api/keyword :cy) (api/integer 45)
-                                                     (api/keyword :r) (api/integer 40)
-                                                     (api/keyword :style) (api/map {(api/keyword :filter) (api/string "url(#shadow)")
-                                                                                    (api/keyword :pointer-events) (api/string "all")})
-                                                     (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :menu-entry-bg)
-                                                                                                        (api/symbol 'get-color)])
-                                                     (api/keyword :stroke) (api/fn-call (api/symbol '->) [(api/keyword :menu-entry-text)
-                                                                                                          (api/symbol 'get-color)])})])
-                              (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :circle)
-                                                                            (api/map {(api/keyword :cx) (api/integer 0)
-                                                                                      (api/keyword :cy) (api/integer 45)
-                                                                                      (api/keyword :r) (api/integer 35)
-                                                                                      (api/keyword :stroke-width) (api/integer 2)
-                                                                                      (api/keyword :stroke) (api/fn-call (api/symbol '->) [(api/keyword :element-highlight-stroke)
-                                                                                                                                           (api/symbol 'get-color)])
-                                                                                      (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/symbol 'get-entry-bg)
-                                                                                                                                         (api/symbol 'get-color)])})])
-                                                               (api/symbol 'get-animation-style)])
-                              (api/vector [(api/keyword :text)
-                                           (api/map {(api/keyword :height) (api/integer 20)
-                                                     (api/keyword :width) (api/string "100%")
-                                                     (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :menu-entry-text) (api/symbol 'get-color)])
-                                                     (api/keyword :text-anchor) (api/keyword :middle)
-                                                     (api/keyword :x) (api/integer 0)
-                                                     (api/keyword :y) (api/integer 35)
-                                                     (api/keyword :dy) (api/integer 14)})
-                                           (api/fn-call (api/symbol '->) [(api/key-fn :item)
-                                                                          (api/key-fn :name)])])
-                              (api/vector [(api/keyword :circle)
-                                           (api/map {(api/keyword :id) (api/fn-call (api/symbol '->) [(api/key-fn :item)
-                                                                                                      (api/key-fn :id)])
-                                                     (api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "all")})
-                                                     (api/keyword :cx) (api/integer 0)
-                                                     (api/keyword :cy) (api/integer 45)
-                                                     (api/keyword :r) (api/integer 40)
-                                                     (api/keyword :fill-opacity) (api/integer 0)})])]))
-
-               (defncall 'get-menu-fill '->
-                 (api/keyword :menu-bar-bg)
-                 (api/symbol 'config-color))
-
-               (defncall 'get-menu-fg '->
-                 (api/keyword :menu-bar-text)
-                 (api/symbol 'config-color))
-
-
-               (defncall 'tag-item-context '->
-                 (api/map {(api/keyword :item) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
-                           (api/keyword :context) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
-
-               (defncall 'get-menu-items '->
-                 (api/key-fn :items)
-                 (api/fn-call (api/symbol 'map) [(api/symbol 'tag-item-context) (api/symbol '_)])
-                 (api/fn-call (api/symbol 'map) [(api/symbol 'render-menu-entry) (api/symbol '_)])
-                 (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g)]) (api/symbol '_)])
-                 )
-
-
-               (defncall 'render-source-menu '->
-                 (api/key-fn :source-menu)
-                 (api/map {(api/keyword :items) (api/key-fn :items)
-                           (api/keyword :context) (api/map {(api/keyword :hover) (api/key-fn :hover)
-                                                            (api/keyword :resize) (api/key-fn :resize)})})
-                 (api/map {(api/keyword :items) (api/fn-call (api/symbol 'myzip) [(api/key-fn :items)
-                                                   (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol 'count) [(api/key-fn :items)])
-                                                                                      (api/key-fn :context)])])
-                           (api/keyword :context) (api/key-fn :context)})
-                 (api/vector [(api/keyword :g)
-                              (api/vector [(api/keyword :rect)
-                                           (api/map {(api/keyword :id) (api/string "menu/source")
-                                                     (api/keyword :height) (api/string "100%")
-                                                     (api/keyword :width) (api/integer 100)
-                                                     (api/keyword :stroke) (api/symbol 'get-menu-fg)
-                                                     (api/keyword :style) (api/map {(api/keyword :filter) (api/string "url(#shadow)")
-                                                                                    (api/keyword :pointer-events) (api/string "all")})
-                                                     (api/keyword :fill-opacity) (api/float 0.8)
-                                                     (api/keyword :fill) (api/symbol 'get-menu-fill)})])
-                              (api/symbol 'get-menu-items)])
-                 (api/map {(api/keyword :source-menu) (api/symbol '_)}))
-
-               (defncall 'get-sink-position '->
-                 (api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :resize) (api/key-fn :width)])
-                 (api/fn-call (api/symbol '-) [(api/symbol '_) (api/integer 100)])
-                 (api/map {(api/keyword :x) (api/symbol '_)})
-                 (api/symbol 'translate-str))
-
-               (defncall 'render-sink-menu '->
-                 (api/key-fn :sink-menu)
-                 (api/map {(api/keyword :items) (api/key-fn :items)
-                           (api/keyword :context) (api/map {(api/keyword :hover) (api/key-fn :hover)
-                                                            (api/keyword :resize) (api/key-fn :resize)})})
-                 (api/map {(api/keyword :items) (api/fn-call (api/symbol 'myzip) [(api/key-fn :items)
-                                                   (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol 'count) [(api/key-fn :items)])
-                                                                                      (api/key-fn :context)])])
-                           (api/keyword :context) (api/key-fn :context)})
-                 (api/vector [(api/keyword :g)
-                              (api/map {(api/keyword :transform) (api/symbol 'get-sink-position)})
-                              (api/vector [(api/keyword :rect)
-                                           (api/map {(api/keyword :id) (api/string "menu/sink")
-                                                     (api/keyword :height) (api/string "100%")
-                                                     (api/keyword :width) (api/integer 100)
-                                                     (api/keyword :stroke) (api/symbol 'get-menu-fg)
-                                                     (api/keyword :style) (api/map {(api/keyword :filter) (api/string "url(#leftshadow)")
-                                                                                    (api/keyword :pointer-events) (api/string "all")})
-                                                     (api/keyword :fill-opacity) (api/float 0.8)
-                                                     (api/keyword :fill) (api/symbol 'get-menu-fill)})])
-                              (api/symbol 'get-menu-items)])
-                 (api/map {(api/keyword :sink-menu) (api/symbol '_)}))
-
-               (defncall 'get-menu-state '->
-                 (api/vector [(api/string "mode: ")
-                              (api/fn-call (api/symbol '->) [(api/key-fn :editor)
-                                                             (api/key-fn :mode)])
-                              (api/string "/")
-                              (api/fn-call (api/symbol '->) [(api/key-fn :editor)
-                                                             (api/key-fn :activity)])])
-                 (api/fn-call (api/symbol 'str-join) [(api/string " ") (api/symbol '_)]))
-
-               (defncall 'render-menu-action '->
-                 ;; (api/fn-call (api/symbol 'spy) [(api/string "render action")])
-                 (api/symbol '_))
-
-               (defncall 'get-menu-actions '->
-                 (api/fn-call (api/symbol '->) [(api/key-fn :mode)
-                                                (api/key-fn :actions)
-                                                (api/fn-call (api/symbol 'map) [(api/symbol 'render-menu-action) (api/symbol '_)])])
-                 (api/fn-call (api/symbol 'str-join) [(api/string ", ") (api/symbol '_)])
-                 (api/vector [(api/string "type: ") (api/symbol '_)])
-                 (api/fn-call (api/symbol 'str-join) [(api/string "") (api/symbol '_)]))
-
-               (defncall 'get-action-position '->
-                 (api/fn-call (api/symbol '->) [(api/key-fn :resize) (api/key-fn :height)])
-                 (api/fn-call (api/symbol '-) [(api/symbol '_) (api/integer 50)])
-                 (api/map {(api/keyword :y) (api/symbol '_)})
-                 (api/symbol 'translate-str))
-
-               (defncall 'render-action-menu '->
-                 (api/map {(api/keyword :action-menu)
-                           (api/vector [(api/keyword :g)
-                                        (api/map {(api/keyword :transform) (api/symbol 'get-action-position)})
-                                        (api/vector [(api/keyword :rect)
-                                                     (api/map {(api/keyword :id) (api/string "menu/action")
-                                                               (api/keyword :height) (api/integer 50)
-                                                               (api/keyword :width) (api/string "100%")
-                                                               (api/keyword :stroke) (api/symbol 'get-menu-fg)
-                                                               (api/keyword :style) (api/map {(api/keyword :filter) (api/string "url(#upshadow)")
-                                                                                              (api/keyword :pointer-events) (api/string "all")})
-                                                               (api/keyword :fill-opacity) (api/float 0.8)
-                                                               (api/keyword :fill) (api/symbol 'get-menu-fill)})])
-                                        (api/vector [(api/keyword :text)
-                                                     (api/map {(api/keyword :height) (api/integer 20)
-                                                               (api/keyword :width) (api/string "100%")
-                                                               (api/keyword :text-anchor) (api/keyword :middle)
-                                                               (api/keyword :x) (api/integer 600)
-                                                               (api/keyword :y) (api/integer 5)
-                                                               (api/keyword :dy) (api/integer 14)})
-                                                     (api/fn-call (api/symbol '->)
-                                                                  [(api/vector [(api/string "state: ")
-                                                                                (api/symbol 'get-menu-state)])
-                                                                   (api/fn-call (api/symbol 'str-join) [(api/string "") (api/symbol '_)])])])
-                                        (api/vector [(api/keyword :text)
-                                                     (api/map {(api/keyword :height) (api/integer 20)
-                                                               (api/keyword :width) (api/string "100%")
-                                                               (api/keyword :text-anchor) (api/keyword :middle)
-                                                               (api/keyword :x) (api/integer 600)
-                                                               (api/keyword :y) (api/integer 25)
-                                                               (api/keyword :dy) (api/integer 14)})
-                                                     (api/fn-call (api/symbol '->)
-                                                                  [(api/vector [(api/string "actions: ")
-                                                                                (api/symbol 'get-menu-actions)])
-                                                                   (api/fn-call (api/symbol 'str-join) [(api/string "") (api/symbol '_)])])])])}))
-
-               (defncall 'source-menu 'pipes/debug)
-               (defncall 'source-menu-items 'pipes/debug)
-               (defncall 'source-menu-events 'pipes/debug)
-               (defncall 'source-menu-state 'pipes/debug)
-
-
-               (defncall 'source-menu-const '->
-                 (api/vector [(api/string "debug")
-                              (api/string "ui")
-                              (api/string "http")])
-                 (api/symbol 'many))
-
-               (defncall 'sink-menu 'pipes/debug)
-               (defncall 'sink-menu-items 'pipes/debug)
-               (defncall 'sink-menu-events 'pipes/debug)
-               (defncall 'sink-menu-state 'pipes/debug)
-
-               (defncall 'sink-menu-const '->
-                 (api/vector [(api/string "debug")
-                              (api/string "log")
-                              (api/string "ui")
-                              (api/string "http")])
-                 (api/symbol 'many))
-
-               (defncall 'map-menu-item '->
-                 (api/map {(api/keyword :position)
-                           (api/key-fn :count)
-                           (api/keyword :name)
-                           (api/key-fn :name)
-                           (api/keyword :type)
-                           (api/key-fn :type)
-                           (api/keyword :id)
-                           (api/fn-call (api/symbol 'str) [(api/key-fn :type)
-                                                           (api/string "/")
-                                                           (api/key-fn :name)])}))
-
-               (defncall 'source-menu-map 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/vector [(api/key-fn :state)
-                                            (api/fn-call (api/symbol '->) [(api/map {(api/keyword :count)
-                                                                                     (api/fn-call (api/symbol 'count) [(api/key-fn :state)])
-                                                                                     (api/keyword :type)
-                                                                                     (api/string "source")
-                                                                                     (api/keyword :name)
-                                                                                     (api/key-fn :next)})
-                                                                           (api/symbol 'map-menu-item)])])
-                               (api/fn-call (api/symbol 'flatten) [(api/symbol '_)])])
-                 (api/vector []))
-
-               (defncall 'sink-menu-map 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/vector [(api/key-fn :state)
-                                            (api/fn-call (api/symbol '->) [(api/map {(api/keyword :count)
-                                                                                     (api/fn-call (api/symbol 'count) [(api/key-fn :state)])
-                                                                                     (api/keyword :type)
-                                                                                     (api/string "sink")
-                                                                                     (api/keyword :name)
-                                                                                     (api/key-fn :next)})
-                                                                           (api/symbol 'map-menu-item)])])
-                               (api/fn-call (api/symbol 'flatten) [(api/symbol '_)])])
-                 (api/vector []))
-
-               (defncall 'tag-items '->
-                 (api/map {(api/keyword :items) (api/symbol '_)}))
-
-               (defncall 'tag-menu-source '->
-                 (api/map {(api/keyword :source-menu) (api/symbol '_)}))
-
-               (defncall 'reduce-menu-source 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/vector [(api/key-fn :state) (api/key-fn :next)])
-                               (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])])
-                 (api/map {(api/keyword :items) (api/vector [])
-                           (api/keyword :hover) (api/map {})}))
-
-               (defncall 'tag-sink-menu '->
-                 (api/map {(api/keyword :sink-menu) (api/symbol '_)}))
-
-               (defncall 'reduce-menu-sink 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/vector [(api/key-fn :state) (api/key-fn :next)])
-                               (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])])
-                 (api/map {(api/keyword :items) (api/vector [])
-                           (api/keyword :hover) (api/map {})
-                           (api/keyword :resize) (api/map {})}))
 
                (defncall 'is-mouse-move '->
                  (api/key-fn :next)
@@ -1900,6 +1421,93 @@
                           (api/keyword :hovered) (api/map {})
                           (api/keyword :hover) (api/vector [])}))
 
+             (defncall 'source-menu 'pipes/debug)
+             (defncall 'source-menu-items 'pipes/debug)
+             (defncall 'source-menu-events 'pipes/debug)
+             (defncall 'source-menu-state 'pipes/debug)
+
+
+             (defncall 'source-menu-const '->
+               (api/vector [(api/string "debug")
+                            (api/string "ui")
+                            (api/string "http")])
+               (api/symbol 'many))
+
+             (defncall 'sink-menu 'pipes/debug)
+             (defncall 'sink-menu-items 'pipes/debug)
+             (defncall 'sink-menu-events 'pipes/debug)
+             (defncall 'sink-menu-state 'pipes/debug)
+
+             (defncall 'sink-menu-const '->
+               (api/vector [(api/string "debug")
+                            (api/string "log")
+                            (api/string "ui")
+                            (api/string "http")])
+               (api/symbol 'many))
+
+             (defncall 'map-menu-item '->
+               (api/map {(api/keyword :position)
+                         (api/key-fn :count)
+                         (api/keyword :name)
+                         (api/key-fn :name)
+                         (api/keyword :type)
+                         (api/key-fn :type)
+                         (api/keyword :id)
+                         (api/fn-call (api/symbol 'str) [(api/key-fn :type)
+                                                         (api/string "/")
+                                                         (api/key-fn :name)])}))
+
+             (defncall 'source-menu-map 'pipes/reductions
+               (api/fn-call (api/symbol '->)
+                            [(api/vector [(api/key-fn :state)
+                                          (api/fn-call (api/symbol '->) [(api/map {(api/keyword :count)
+                                                                                   (api/fn-call (api/symbol 'count) [(api/key-fn :state)])
+                                                                                   (api/keyword :type)
+                                                                                   (api/string "source")
+                                                                                   (api/keyword :name)
+                                                                                   (api/key-fn :next)})
+                                                                         (api/symbol 'map-menu-item)])])
+                             (api/fn-call (api/symbol 'flatten) [(api/symbol '_)])])
+               (api/vector []))
+
+             (defncall 'sink-menu-map 'pipes/reductions
+               (api/fn-call (api/symbol '->)
+                            [(api/vector [(api/key-fn :state)
+                                          (api/fn-call (api/symbol '->) [(api/map {(api/keyword :count)
+                                                                                   (api/fn-call (api/symbol 'count) [(api/key-fn :state)])
+                                                                                   (api/keyword :type)
+                                                                                   (api/string "sink")
+                                                                                   (api/keyword :name)
+                                                                                   (api/key-fn :next)})
+                                                                         (api/symbol 'map-menu-item)])])
+                             (api/fn-call (api/symbol 'flatten) [(api/symbol '_)])])
+               (api/vector []))
+
+             (defncall 'tag-items '->
+               (api/map {(api/keyword :items) (api/symbol '_)}))
+
+             (defncall 'tag-menu-source '->
+               (api/map {(api/keyword :source-menu) (api/symbol '_)}))
+
+             (defncall 'reduce-menu-source 'pipes/reductions
+               (api/fn-call (api/symbol '->)
+                            [(api/vector [(api/key-fn :state) (api/key-fn :next)])
+                             (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])])
+               (api/map {(api/keyword :items) (api/vector [])
+                         (api/keyword :hover) (api/map {})}))
+
+             (defncall 'tag-sink-menu '->
+               (api/map {(api/keyword :sink-menu) (api/symbol '_)}))
+
+             (defncall 'reduce-menu-sink 'pipes/reductions
+               (api/fn-call (api/symbol '->)
+                            [(api/vector [(api/key-fn :state) (api/key-fn :next)])
+                             (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])])
+               (api/map {(api/keyword :items) (api/vector [])
+                         (api/keyword :hover) (api/map {})
+                         (api/keyword :resize) (api/map {})}))
+
+
               ;; global state
 
               (defncall 'load-state 'pipes/debug ;; (api/keyword :oasis.spec/state)
@@ -1925,119 +1533,6 @@
               (defncall 'layout-state 'pipes/debug ;; (api/keyword :oasis.spec/state)
                 )
 
-
-              ;; cell handling
-
-              (defncall 'func-id 'str
-                (api/string "func/")
-                (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)]))
-
-
-              (defncall 'is-same '->
-                (api/fn-call (api/symbol 'distinct) [(api/symbol '_)])
-                (api/fn-call (api/symbol 'count) [(api/symbol '_)])
-                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 1)]))
-
-
-              (defncall 'is-selected '->
-                (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :selected)])
-                             (api/symbol 'func-id)])
-                (api/symbol 'is-same))
-
-              (defncall 'is-hovered '->
-                (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :name)])
-                             (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)])])
-                (api/symbol 'is-same))
-
-
-              (defncall 'cell-y '->
-                (api/fn-call (api/symbol '*) [(api/integer 20)
-                                              (api/key-fn :counter)])
-                (api/fn-call (api/symbol '+) [(api/integer 10)
-                                              (api/symbol '_)]))
-
-              (defncall 'cell-x '->
-                (api/fn-call (api/symbol '*) [(api/integer 15)
-                                              (api/key-fn :level)]))
-
-              (defncall 'cell-pos '->
-                (api/map {(api/keyword :x)
-                          (api/integer 0)
-                          (api/keyword :y)
-                          (api/symbol 'cell-y)})
-                (api/symbol 'translate-str))
-
-              (defncall 'line-pos '->
-                (api/map {(api/keyword :x)
-                          (api/integer 0)
-                          (api/keyword :y)
-                          (api/integer -15)})
-                (api/symbol 'translate-str))
-
-
-              (defncall 'text-pos '->
-                (api/map {(api/keyword :x)
-                          (api/symbol 'cell-x)
-                          (api/keyword :y)
-                          (api/integer 0)})
-                (api/symbol 'translate-str))
-
-              (defncall 'counter-pos '->
-                (api/map {(api/keyword :x)
-                          (api/integer 10)
-                          (api/keyword :y)
-                          (api/integer 0)})
-                (api/symbol 'translate-str))
-
-              (defncall 'type-pos '->
-                (api/map {(api/keyword :x)
-                          (api/fn-call (api/symbol '+)  [(api/integer 190)
-                                                         ;; (api/symbol 'cell-x)
-                                                         (api/integer 10)])
-                          (api/keyword :y)
-                          (api/integer 0)})
-                (api/symbol 'translate-str))
-
-              (defncall 'is-marked-cell '->
-                (api/fn-call (api/symbol '-) [(api/fn-call (api/symbol '->) [(api/key-fn :context)
-                                                                             (api/key-fn :mark)])
-                                              (api/fn-call (api/symbol '->) [(api/key-fn :exp)
-                                                                             (api/key-fn :counter)])])
-                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 0)]))
-
-              (defncall 'is-active-cell '->
-                (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '->) [(api/key-fn :context)
-                                                                               (api/key-fn :selected)])
-                                                (api/symbol 'is-marked-cell)]))
-
-              (defncall 'is-edited-cell '->
-                ;; (api/fn-call (api/symbol 'spy) [(api/string "edited")])
-                (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '->) [(api/key-fn :context)
-                                                                               (api/key-fn :activity)
-                                                                               (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :edit)])])
-                                                (api/fn-call (api/symbol '->) [(api/key-fn :context)
-                                                                               (api/key-fn :selected)])
-                                                (api/symbol 'is-marked-cell)]))
-
-              (defncall 'is-active-branch '->
-                (api/key-fn :exp)
-                (api/key-fn :counter)
-                (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '>) [(api/symbol '_) (api/integer 100)])
-                                                (api/fn-call (api/symbol '<) [(api/symbol '_) (api/integer 101)])]))
-
-              (defncall 'get-fill '->
-                (api/fn-call (api/symbol 'incase) [(api/symbol 'is-edited-cell)
-                                                   (api/fn-call (api/symbol '->) [(api/keyword :cell-edit)
-                                                                                  (api/symbol 'get-color)])])
-                (api/fn-call (api/symbol 'incase) [(api/symbol 'is-active-cell)
-                                                   (api/fn-call (api/symbol '->) [(api/keyword :cell-active)
-                                                                                  (api/symbol 'get-color)])])
-                (api/fn-call (api/symbol 'incase) [(api/symbol 'is-active-branch)
-                                                   (api/fn-call (api/symbol '->) [(api/keyword :cell-seclight)
-                                                                                  (api/symbol 'get-color)])])
-                (api/fn-call (api/symbol 'incase) [(api/key-fn :exp)
-                                                   (api/fn-call (api/symbol '->) [(api/keyword :cell-background)
-                                                                                  (api/symbol 'get-color)])]))
 
               (defncall 'make-cell '->
                 (api/symbol '_))
@@ -2135,9 +1630,6 @@
                 (api/key-fn :state)
                 (api/key-fn :editor)
                 (api/key-fn :mark))
-             ])
-
-(def oasis3 [
 
              (defncall 'map-choice-to-type '->
                (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :first)])
@@ -2516,161 +2008,552 @@
 
 (def oasis-core-defs
   [(defncall 'oasis-core-init 'pipes/debug)
+   (defncall 'oasis-kb 'pipes/debug)
+   (defncall 'oasis-mouse 'pipes/debug)
    (defncall 'oasis-core-out 'pipes/debug)
-   (api/defmodule 'oasis-core (api/map {(api/keyword :sources) (api/map {(api/keyword :init) (api/symbol 'oasis-core-init)})
+   (api/defmodule 'oasis-core (api/map {;;(api/keyword :depends) (api/map {(api/keyword :caravan) (api/symbol 'modules/caravan)})
+                                        (api/keyword :sources) (api/map {;; (api/keyword :caravan) (api/symbol 'm-caravan)
+                                                                         (api/keyword :eval) (api/symbol 'oasis-eval)
+                                                                         (api/keyword :layout) (api/symbol 'oasis-layout)
+                                                                         (api/keyword :init) (api/symbol 'oasis-core-init)
+                                                                         (api/keyword :kb) (api/symbol 'oasis-kb)
+                                                                         (api/keyword :mouse) (api/symbol 'oasis-mouse)
+                                                                         (api/keyword :state) (api/symbol 'oasis-core-out)})
                                         (api/keyword :sinks) (api/map {(api/keyword :state) (api/symbol 'oasis-core-out)})}))])
 
 
 (def oasis-core-net
   [              ;; networks
 
-              (pipe 'oasis-mouse 'mouse-reduce)
-              (pipe 'mouse-reduce 'mouse-state)
-              (pipe 'oasis-mouse 'target-reduce)
-              (pipe 'target-reduce 'target-events)
+   (pipe 'oasis-mouse 'mouse-reduce)
+   (pipe 'mouse-reduce 'mouse-state)
+   (pipe 'oasis-mouse 'target-reduce)
+   (pipe 'target-reduce 'target-events)
 
-              (pipe 'target-events 'only-different 'hover-events)
-              (pipe 'hover-events 'tag-hover 'hover-state)
+   (pipe 'target-events 'only-different 'hover-events)
+   (pipe 'hover-events 'tag-hover 'hover-state)
 
-              (pipe 'oasis-kb 'filter-key-input 'keyboard-filtered)
-              (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
-              (pipe 'keyboard-filtered 'filter-menu 'editor-commands)
-              ;; (pipe 'keyboard-filtered 'log-keyboard)
-              ;; (pipe 'oasis-kb 'log-keyboard)
+   (pipe 'oasis-kb 'filter-key-input 'keyboard-filtered)
+   (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
+   (pipe 'keyboard-filtered 'filter-menu 'editor-commands)
+   ;; (pipe 'keyboard-filtered 'log-keyboard)
 
-              (pipe 'keyboard-filtered 'filter-view 'view-commands)
-              (pipe 'view-commands 'make-zoom)
-              (pipe 'make-zoom 'zoom-events)
-              (pipe 'zoom-events 'view-events)
-              (pipe 'view-commands 'view-deltas)
+   (pipe 'keyboard-filtered 'filter-view 'view-commands)
+   (pipe 'view-commands 'make-zoom)
+   (pipe 'make-zoom 'zoom-events)
+   (pipe 'zoom-events 'view-events)
+   (pipe 'view-commands 'view-deltas)
 
-              (pipe 'raw-events 'input-reduce)
-              (pipe 'input-reduce 'reduced-events)
-              (pipe 'raw-events 'tag-events 'events)
+   (pipe 'raw-events 'input-reduce)
+   (pipe 'input-reduce 'reduced-events)
+   (pipe 'raw-events 'tag-events 'events)
 
-              ;; (pipe 'oasis-ev 'filter-input 'raw-events)
-              ;; (pipe 'oasis-ev 'filter-submit 'raw-events)
+   ;; (pipe 'oasis-ev 'filter-input 'raw-events)
+   ;; (pipe 'oasis-ev 'filter-submit 'raw-events)
 
-              (pipe 'oasis-ui-out 'filter-resize 'events)
+   ;; (pipe 'oasis-ui-out 'filter-resize 'events)
 
-              ;; (pipe 'select-events 'editor-commands)
+   ;; (pipe 'select-events 'editor-commands)
 
-              (pipe 'oasis-eval 'eval-events)
+   (pipe 'oasis-eval 'eval-events)
 
-              ;; (pipe 'eval-events 'log-events)
-              (pipe 'eval-events 'eval-reduce)
-              (pipe 'eval-reduce 'eval-raw)
-              (pipe 'eval-raw 'tag-eval 'eval-state)
+   ;; (pipe 'eval-events 'log-events)
+   (pipe 'eval-events 'eval-reduce)
+   (pipe 'eval-reduce 'eval-raw)
+   (pipe 'eval-raw 'tag-eval 'eval-state)
 
-              (pipe 'mouse-state 'filter-drag 'drag-events)
+   (pipe 'mouse-state 'filter-drag 'drag-events)
 
-              (pipe 'drag-events 'filter-drag-end-or-start 'drag-state) ;; FIXME reduce
-              ;; (pipe 'drag-state 'log-mouse)
-              (pipe 'drag-state 'interpret-drag 'editor-commands)
-              ;; (pipe 'drag-events 'log-mouse)
+   (pipe 'drag-events 'filter-drag-end-or-start 'drag-state) ;; FIXME reduce
+   ;; (pipe 'drag-state 'log-mouse)
+   (pipe 'drag-state 'interpret-drag 'editor-commands)
+   ;; (pipe 'drag-events 'log-mouse)
 
-              (api/pipe (api/fn-call (api/symbol 'caravan-commands) [(api/integer 42)])
-                        (api/symbol 'handle-caravan-command)
-                        (api/symbol 'editor-commands))
-              ;; (pipe 'caravan 'handle-caravan-command 'editor-commands)
-              (pipe 'editor-commands 'handle-commands 'editor-events)
-              (pipe 'hover-state 'editor-events)
-              (pipe 'scroll-state 'editor-events)
-              (pipe 'editor-events 'editor-state-reduce)
-              (pipe 'editor-state-reduce 'editor-cooked)
-              (pipe 'editor-cooked 'tag-editor 'editor-state)
-              ;; (pipe 'editor-state 'log-editor)
+   (api/pipe (api/fn-call (api/symbol 'caravan-commands) [(api/integer 42)])
+             (api/symbol 'handle-caravan-command)
+             (api/symbol 'editor-commands))
+   ;; (pipe 'caravan 'handle-caravan-command 'editor-commands)
+   (pipe 'editor-commands 'handle-commands 'editor-events)
+   (pipe 'hover-state 'editor-events)
+   (pipe 'scroll-state 'editor-events)
+   (pipe 'editor-events 'editor-state-reduce)
+   (pipe 'editor-state-reduce 'editor-cooked)
+   (pipe 'editor-cooked 'tag-editor 'editor-state)
+   ;; (pipe 'editor-state 'log-editor)
 
-              (pipe 'editor-commands 'filter-immediate 'editor-immediate)
-              ;; (pipe 'editor-immediate 'log-command)
+   (pipe 'editor-commands 'filter-immediate 'editor-immediate)
+   ;; (pipe 'editor-immediate 'log-command)
 
-              (pipe 'mouse-state 'filter-scroll 'scroll-state)
-              (pipe 'scroll-state 'construct-view 'view-deltas)
-              (pipe 'view-deltas 'view-delta)
-              (pipe 'view-delta 'view-events)
-              (pipe 'view-events 'view-reduce)
-              (pipe 'view-reduce 'view-raw)
-              (pipe 'view-raw 'tag-view 'view-state)
+   (pipe 'mouse-state 'filter-scroll 'scroll-state)
+   (pipe 'scroll-state 'construct-view 'view-deltas)
+   (pipe 'view-deltas 'view-delta)
+   (pipe 'view-delta 'view-events)
+   (pipe 'view-events 'view-reduce)
+   (pipe 'view-reduce 'view-raw)
+   (pipe 'view-raw 'tag-view 'view-state)
 
+   (pipe 'oasis-core-init 'source-menu-const 'source-menu-items)
+   (pipe 'source-menu-items 'source-menu-map)
+   (pipe 'source-menu-map 'source-menu)
+   (pipe 'source-menu 'tag-items 'source-menu-events)
+   (pipe 'hover-state 'source-menu-events)
+   (pipe 'source-menu-events 'reduce-menu-source)
+   (pipe 'reduce-menu-source 'source-menu-state)
+   (pipe 'source-menu-state 'tag-menu-source 'state-dedupe)
 
-              (pipe 'editor-state 'state-dedupe)
-              (pipe 'loaded-state 'state-dedupe)
-              (pipe 'view-state 'state-dedupe)
-              (pipe 'drag-events 'state-dedupe)
-              (pipe 'hover-state 'state-dedupe)
-              (pipe 'mode-state 'state-dedupe)
-              (pipe 'events 'state-dedupe)
-              (pipe 'state-dedupe 'filter-state 'oasis-core-out)
+   (pipe 'oasis-core-init 'sink-menu-const 'sink-menu-items)
+   (pipe 'sink-menu-items 'sink-menu-map)
+   (pipe 'sink-menu-map 'sink-menu)
+   (pipe 'sink-menu 'tag-items 'sink-menu-events)
+   (pipe 'hover-state 'sink-menu-events)
+   (pipe 'events 'sink-menu-events)
+   (pipe 'sink-menu-events 'reduce-menu-sink)
+   (pipe 'reduce-menu-sink 'sink-menu-state)
+   (pipe 'sink-menu-state 'tag-sink-menu 'state-dedupe)
 
-              (pipe 'mode-state 'load-reduce)
-              (pipe 'hover-state 'load-reduce)
-              (pipe 'eval-state 'load-reduce)
-              (pipe 'zoom-events 'load-reduce)
-              (pipe 'load-reduce 'load-state)
-              (pipe 'load-state 'filter-load 'loaded-state)
+   (pipe 'editor-state 'state-dedupe)
+   (pipe 'loaded-state 'state-dedupe)
+   (pipe 'view-state 'state-dedupe)
+   (pipe 'drag-events 'state-dedupe)
+   (pipe 'hover-state 'state-dedupe)
+   (pipe 'mode-state 'state-dedupe)
+   (pipe 'events 'state-dedupe)
+   (pipe 'state-dedupe 'filter-state 'oasis-core-out)
 
-              (pipe 'loaded-state 'format-state 'oasis-layout)
-              ;; (pipe 'eval-state 'format-state 'log-layout)
+   (pipe 'mode-state 'load-reduce)
+   (pipe 'hover-state 'load-reduce)
+   (pipe 'eval-state 'load-reduce)
+   (pipe 'zoom-events 'load-reduce)
+   (pipe 'load-reduce 'load-state)
+   (pipe 'load-state 'filter-load 'loaded-state)
 
-              (pipe 'eval-state 'edit-information 'editor-events)
+   (pipe 'loaded-state 'format-state 'oasis-layout)
+   ;; (pipe 'eval-state 'format-state 'log-layout)
 
-              (pipe 'oasis-layout 'tag-layout 'layout-state)
-              ;; (pipe 'layout-state 'log-layout)
-              (pipe 'layout-state 'state-dedupe)
+   (pipe 'eval-state 'edit-information 'editor-events)
 
-              ;; (pipe 'select-events 'center-view)
-              ;; (pipe 'layout-state 'center-view)
-              ;; (pipe 'center-view 'view-events)
+   (pipe 'oasis-layout 'tag-layout 'layout-state)
+   (pipe 'layout-state 'log-layout)
+   (pipe 'layout-state 'state-dedupe)
 
-              (pipe 'editor-state 'mode-data)
-              (pipe 'mode-data 'mode-raw)
-              (pipe 'mode-raw 'tag-mode 'mode-state)
+   ;; (pipe 'select-events 'center-view)
+   ;; (pipe 'layout-state 'center-view)
+   ;; (pipe 'center-view 'view-events)
 
-              (pipe 'editor-state 'editor-actions)
-              (pipe 'editor-immediate 'editor-actions)
-              (pipe 'mode-state 'editor-actions)
-              (pipe 'events 'editor-actions)
+   (pipe 'editor-state 'mode-data)
+   (pipe 'mode-data 'mode-raw)
+   (pipe 'mode-raw 'tag-mode 'mode-state)
 
-              (pipe 'editor-actions 'handle-state)
-              (pipe 'handle-state 'be-commands)
-              ;; (pipe 'be-commands 'log-command)
-              (api/pipe (api/symbol 'be-commands)
-                        (api/symbol 'filter-call)
-                        (api/symbol 'm-caravan-actions))
+   (pipe 'editor-state 'editor-actions)
+   (pipe 'editor-immediate 'editor-actions)
+   (pipe 'mode-state 'editor-actions)
+   (pipe 'events 'editor-actions)
 
-              (pipe 'oasis-core-init 'source-menu-const 'source-menu-items)
-              (pipe 'source-menu-items 'source-menu-map)
-              (pipe 'source-menu-map 'source-menu)
-              (pipe 'source-menu 'tag-items 'source-menu-events)
-              (pipe 'hover-state 'source-menu-events)
-              (pipe 'source-menu-events 'reduce-menu-source)
-              (pipe 'reduce-menu-source 'source-menu-state)
-              (pipe 'source-menu-state 'tag-menu-source 'state-reduce)
-
-              (pipe 'oasis-core-init 'sink-menu-const 'sink-menu-items)
-              (pipe 'sink-menu-items 'sink-menu-map)
-              (pipe 'sink-menu-map 'sink-menu)
-              (pipe 'sink-menu 'tag-items 'sink-menu-events)
-              (pipe 'hover-state 'sink-menu-events)
-              (pipe 'events 'sink-menu-events)
-              (pipe 'sink-menu-events 'reduce-menu-sink)
-              (pipe 'reduce-menu-sink 'sink-menu-state)
-              (pipe 'sink-menu-state 'tag-sink-menu 'state-reduce)
+   (pipe 'editor-actions 'handle-state)
+   (pipe 'handle-state 'be-commands)
+   ;; (pipe 'be-commands 'log-command)
+   (api/pipe (api/symbol 'be-commands)
+             (api/symbol 'filter-call)
+             (api/symbol 'm-caravan-actions))
 
 
-              ;; (pipe 'init 'header 'render)
-              ;;                (pipe 'init 'repl 'render)
-              (pipe 'oasis-core-init 'init-view 'view-events)
+   (pipe 'oasis-core-init 'init-view 'view-events)
 
-              (api/pipe (api/fn-call (api/symbol 'caravan-commands) [(api/integer 42)])
-                        (api/symbol 'log-caravan))
-
+   (api/pipe (api/fn-call (api/symbol 'caravan-commands) [(api/integer 42)])
+             (api/symbol 'log-caravan))
    ])
 
 (def oasis-render-defs
   [
    (defncall 'oasis-render-in 'pipes/debug)
    (defncall 'oasis-render-out 'pipes/debug)
+
+   ;; dark theme based on base16-atelierdune-dark
+   ;; (http://atelierbram.github.io/syntax-highlighting/atelier-schemes/dune)
+   (defmap 'get-color
+     {(api/keyword :cell-active) (api/string "#4d4a41")
+      (api/keyword :cell-edit) (api/string "#6684e1")
+      (api/keyword :cell-seclight) (api/string "#999580")
+      (api/keyword :cell-background) (api/string "#292824")
+      (api/keyword :cell-content) (api/string "#e8e4cf")
+      (api/keyword :cell-active-content) (api/string "#fefbec")
+      (api/keyword :cell-dividers) (api/string "#6e6b5e")
+      (api/keyword :cell-type-fill) (api/string "#6e6b5e")
+      (api/keyword :cell-type-stroke) (api/string "#20201d")
+      (api/keyword :cell-counter-stroke) (api/string "#6e6b5e")
+      (api/keyword :node-selected) (api/string "#6684e1")
+      (api/keyword :node-bg) (api/string "#292824")
+      (api/keyword :node-name-stroke) (api/string "#e8e4cf")
+      (api/keyword :node-gutter) (api/string "#292824")
+      (api/keyword :element-highlight-stroke) (api/string "#6684e1")
+      (api/keyword :pipe-fill) (api/string "#292824")
+      (api/keyword :pipe-glow) (api/string "#6684e1")
+      (api/keyword :pipe-stroke) (api/string "#a6a28c")
+      (api/keyword :pipe-drag) (api/string "#b65611")
+      (api/keyword :edge-in) (api/string "#6684e1")
+      (api/keyword :edge-out) (api/string "#b65611")
+      (api/keyword :edge-neutral) (api/string "#a6a28c")
+      (api/keyword :graph-background) (api/string "#20201d")
+      (api/keyword :shadow-flood) (api/string "#292824")
+      (api/keyword :menu-entry-bg) (api/string "#999580")
+      (api/keyword :menu-entry-active-bg) (api/string "#a6a28c")
+      (api/keyword :menu-entry-text) (api/string "#fefbec")
+      (api/keyword :menu-bar-bg) (api/string "#6e6b5e")
+      (api/keyword :menu-bar-text) (api/string "#a6a28c")
+      })
+
+   (defmap 'get-font
+     {(api/string "str") (api/string "serif")})
+
+   (defmap 'get-syntax-color
+     {(api/keyword :caravan/str) (api/map {(api/keyword :cell-content) (api/string "#60ac39")
+                                           (api/keyword :cell-active-content) (api/string "#60ac39")})
+      (api/keyword :caravan/kw) (api/map {(api/keyword :cell-content) (api/string "#b65611")
+                                          (api/keyword :cell-active-content) (api/string "#b65611")})
+      (api/keyword :caravan/int) (api/map {(api/keyword :cell-content) (api/string "#1fad83")
+                                           (api/keyword :cell-active-content) (api/string "#1fad83")})
+      (api/keyword :caravan/float) (api/map {(api/keyword :cell-content) (api/string "#1fad83")
+                                             (api/keyword :cell-active-content) (api/string "#1fad83")})
+      (api/keyword :caravan/acc) (api/map {(api/keyword :cell-content) (api/string "#ae9513")
+                                           (api/keyword :cell-active-content) (api/string "#ae9513")})
+      (api/keyword :caravan/func) (api/map {(api/keyword :cell-content) (api/string "#6684e1")
+                                            (api/keyword :cell-active-content) (api/string "#6684e1")})
+      (api/keyword :caravan/table) (api/map {(api/keyword :cell-content) (api/string "#d43552")
+                                             (api/keyword :cell-active-content) (api/string "#d43552")})
+      (api/keyword :caravan/list) (api/map {(api/keyword :cell-content) (api/string "#b854d4")
+                                            (api/keyword :cell-active-content) (api/string "#b854d4")})})
+
+
+   (defncall 'translate-str 'str
+     (api/string "translate(")
+     (api/fn-call (api/symbol 'or) [(api/key-fn :x) (api/integer 0)])
+     (api/string ",")
+     (api/fn-call (api/symbol 'or) [(api/key-fn :y) (api/integer 0)])
+     (api/string ")"))
+
+   (defncall 'translate-graph-str 'str
+     (api/string "matrix(")
+     (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol 'nth) [(api/key-fn :matrix) (api/integer 0)])
+                                   (api/key-fn :zoom)])
+     (api/string ",")
+     (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol 'nth) [(api/key-fn :matrix) (api/integer 1)])
+                                   (api/key-fn :zoom)])
+     (api/string ",")
+     (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol 'nth) [(api/key-fn :matrix) (api/integer 2)])
+                                   (api/key-fn :zoom)])
+     (api/string ",")
+     (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol 'nth) [(api/key-fn :matrix) (api/integer 3)])
+                                   (api/key-fn :zoom)])
+     (api/string ",")
+     (api/key-fn :x)
+     (api/string ",")
+     (api/key-fn :y)
+     (api/string ")"))
+
+   (defncall 'translate-dialog '->
+     (api/map {(api/keyword :x)
+               (api/integer 150)
+               (api/keyword :y)
+               (api/integer 50)
+               (api/keyword :zoom)
+               (api/float 1.5)
+               (api/keyword :matrix)
+               (api/vector [(api/float  1.0)
+                            (api/float  0.0)
+                            (api/float  0.0)
+                            (api/float  1.0)])})
+     (api/symbol 'translate-graph-str))
+
+   (defncall 'translate-func '->
+     (api/fn-call (api/symbol 'into) [(api/symbol '_)
+                                      (api/map {(api/keyword :zoom)
+                                                (api/float 1.5)
+                                                ;; (api/keyword :x)
+                                                ;; (api/integer 150)
+                                                ;; (api/keyword :y)
+                                                ;; (api/integer -60)
+                                                (api/keyword :matrix)
+                                                (api/vector [(api/float 1.0)
+                                                             (api/float 0.0)
+                                                             (api/float 0.0)
+                                                             (api/float 1.0)])})])
+     (api/symbol 'translate-graph-str))
+
+   (defncall 'translate-blur '->
+     (api/fn-call (api/symbol 'into) [(api/symbol '_)
+                                      (api/map {(api/keyword :zoom)
+                                                (api/float 2.0)
+                                                (api/keyword :x)
+                                                (api/fn-call (api/symbol '-) [(api/key-fn :x) (api/integer 100)])
+                                                ;; (api/keyword :y)
+                                                ;; (api/integer -50)
+                                                (api/keyword :matrix)
+                                                (api/vector [(api/float 1.0)
+                                                             (api/float 0.0)
+                                                             (api/float 0.0)
+                                                             (api/float 1.0)])})])
+     (api/symbol 'translate-graph-str))
+
+   (defncall 'translate-graph '->
+     (api/fn-call (api/symbol 'assoc) [(api/symbol '_) (api/keyword :matrix)
+                                       (api/vector [(api/float  1.0)
+                                                    (api/float -0.5)
+                                                    (api/float  1.0)
+                                                    (api/float  0.5)])])
+     (api/symbol 'translate-graph-str))
+
+   (defncall 'translate-ident '->
+     (api/fn-call (api/symbol 'into) [(api/symbol '_)
+                                      (api/map {(api/keyword :zoom)
+                                                (api/float 1.0)
+                                                (api/keyword :matrix)
+                                                (api/vector [(api/float 1.0)
+                                                             (api/float 0.0)
+                                                             (api/float 0.0)
+                                                             (api/float 1.0)])})])
+     (api/symbol 'translate-graph-str))
+
+   ;; FIXME: menu
+
+   (defncall 'calculate-y '->
+     (api/fn-call (api/symbol '*) [(api/integer 100) (api/key-fn :position)])
+     (api/fn-call (api/symbol '+) [(api/integer 10) (api/symbol '_)]))
+
+   (defncall 'menu-transform '->
+     (api/key-fn :item)
+     (api/map {(api/keyword :x) (api/integer 50)
+               (api/keyword :y) (api/symbol 'calculate-y)})
+     (api/symbol 'translate-str))
+
+   (defncall 'animate-sink '->
+     (api/vector [(api/vector [(api/keyword :animate)
+                               (api/map {(api/keyword :attributeName) (api/string "stroke")
+                                         (api/keyword :values) (api/string "#999580;#6684e1;#6684e1;#6684e1;#999580")
+                                         (api/keyword :dur) (api/string "3s")
+                                         (api/keyword :repeatCount) (api/string "indefinite")})])
+                  (api/vector [(api/keyword :animate)
+                               (api/map {(api/keyword :attributeName) (api/string "r")
+                                         (api/keyword :values) (api/string "43;37;37;37;35")
+                                         (api/keyword :dur) (api/string "3s")
+                                         (api/keyword :repeatCount) (api/string "indefinite")})])]))
+
+   (defncall 'animate-source '->
+     (api/vector [(api/vector [(api/keyword :animate)
+                               (api/map {(api/keyword :attributeName) (api/string "stroke")
+                                         (api/keyword :values) (api/string "#999580;#6684e1;#6684e1;#6684e1;#999580")
+                                         (api/keyword :dur) (api/string "3s")
+                                         (api/keyword :repeatCount) (api/string "indefinite")})])
+                  (api/vector [(api/keyword :animate)
+                               (api/map {(api/keyword :attributeName) (api/string "r")
+                                         (api/keyword :values) (api/string "35;37;37;37;43")
+                                         (api/keyword :dur) (api/string "3s")
+                                         (api/keyword :repeatCount) (api/string "indefinite")})])]))
+
+   (defncall 'is-hovered-entry '->
+     (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :item)
+                                                 (api/vector [(api/key-fn :type) (api/key-fn :name)])])
+                  (api/fn-call (api/symbol '->) [(api/key-fn :context)
+                                                 (api/key-fn :hover)
+                                                 (api/key-fn :current)
+                                                 (api/vector [(api/key-fn :type) (api/key-fn :name)])])])
+     (api/fn-call (api/symbol '->) [(api/fn-call (api/symbol 'distinct) [(api/symbol '_)])
+                                    (api/fn-call (api/symbol 'count) [(api/symbol '_)])
+                                    (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 1)])]))
+
+   (defncall 'is-entry-sink '->
+     (api/key-fn :item)
+     (api/key-fn :type)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "sink")]))
+
+   (defncall 'get-animation-style '->
+     (api/fn-call (api/symbol 'if) [(api/symbol 'is-hovered-entry)
+                                    (api/fn-call (api/symbol 'if) [(api/symbol 'is-entry-sink)
+                                                                   (api/symbol 'animate-sink)
+                                                                   (api/symbol 'animate-source)])
+                                    (api/string "")]))
+
+   (defncall 'get-entry-bg '->
+     (api/fn-call (api/symbol 'if) [(api/symbol 'is-hovered-entry)
+                                    (api/keyword :menu-entry-active-bg)
+                                    (api/keyword :menu-entry-bg)]))
+
+   (defncall 'render-menu-entry '->
+     (api/vector [(api/keyword :g)
+                  (api/map {(api/keyword :transform) (api/symbol 'menu-transform)})
+                  (api/vector [(api/keyword :circle)
+                               (api/map {(api/keyword :cx) (api/integer 0)
+                                         (api/keyword :cy) (api/integer 45)
+                                         (api/keyword :r) (api/integer 40)
+                                         (api/keyword :style) (api/map {(api/keyword :filter) (api/string "url(#shadow)")
+                                                                        (api/keyword :pointer-events) (api/string "all")})
+                                         (api/keyword :fill) (api/fn-call (api/symbol 'get-color) [(api/keyword :menu-entry-bg)])
+                                         (api/keyword :stroke) (api/fn-call (api/symbol 'get-color) [(api/keyword :menu-entry-text)])})])
+                  (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :circle)
+                                                                (api/map {(api/keyword :cx) (api/integer 0)
+                                                                          (api/keyword :cy) (api/integer 45)
+                                                                          (api/keyword :r) (api/integer 35)
+                                                                          (api/keyword :stroke-width) (api/integer 2)
+                                                                          (api/keyword :stroke) (api/fn-call (api/symbol '->) [(api/keyword :element-highlight-stroke)
+                                                                                                                               (api/symbol 'get-color)])
+                                                                          (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/symbol 'get-entry-bg)
+                                                                                                                             (api/symbol 'get-color)])})])
+                                                   (api/symbol 'get-animation-style)])
+                  (api/vector [(api/keyword :text)
+                               (api/map {(api/keyword :height) (api/integer 20)
+                                         (api/keyword :width) (api/string "100%")
+                                         (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :menu-entry-text) (api/symbol 'get-color)])
+                                         (api/keyword :text-anchor) (api/keyword :middle)
+                                         (api/keyword :x) (api/integer 0)
+                                         (api/keyword :y) (api/integer 35)
+                                         (api/keyword :dy) (api/integer 14)})
+                               (api/fn-call (api/symbol '->) [(api/key-fn :item)
+                                                              (api/key-fn :name)])])
+                  (api/vector [(api/keyword :circle)
+                               (api/map {(api/keyword :id) (api/fn-call (api/symbol '->) [(api/key-fn :item)
+                                                                                          (api/key-fn :id)])
+                                         (api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "all")})
+                                         (api/keyword :cx) (api/integer 0)
+                                         (api/keyword :cy) (api/integer 45)
+                                         (api/keyword :r) (api/integer 40)
+                                         (api/keyword :fill-opacity) (api/integer 0)})])]))
+
+   (defncall 'get-menu-fill '->
+     (api/keyword :menu-bar-bg)
+     (api/symbol 'get-color))
+
+   (defncall 'get-menu-fg '->
+     (api/keyword :menu-bar-text)
+     (api/symbol 'get-color))
+
+
+   (defncall 'tag-item-context '->
+     (api/map {(api/keyword :item) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
+               (api/keyword :context) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
+
+   (defncall 'get-menu-items '->
+     (api/key-fn :items)
+     (api/fn-call (api/symbol 'map) [(api/symbol 'tag-item-context) (api/symbol '_)])
+     (api/fn-call (api/symbol 'map) [(api/symbol 'render-menu-entry) (api/symbol '_)])
+     (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g)]) (api/symbol '_)])
+     )
+
+
+   (defncall 'render-source-menu '->
+     (api/key-fn :source-menu)
+     (api/map {(api/keyword :items) (api/key-fn :items)
+               (api/keyword :context) (api/map {(api/keyword :hover) (api/key-fn :hover)
+                                                (api/keyword :resize) (api/key-fn :resize)})})
+     (api/map {(api/keyword :items) (api/fn-call (api/symbol 'myzip) [(api/key-fn :items)
+                                                                      (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol 'count) [(api/key-fn :items)])
+                                                                                                         (api/key-fn :context)])])
+               (api/keyword :context) (api/key-fn :context)})
+     (api/vector [(api/keyword :g)
+                  (api/vector [(api/keyword :rect)
+                               (api/map {(api/keyword :id) (api/string "menu/source")
+                                         (api/keyword :height) (api/string "100%")
+                                         (api/keyword :width) (api/integer 100)
+                                         (api/keyword :stroke) (api/symbol 'get-menu-fg)
+                                         (api/keyword :style) (api/map {(api/keyword :filter) (api/string "url(#shadow)")
+                                                                        (api/keyword :pointer-events) (api/string "all")})
+                                         (api/keyword :fill-opacity) (api/float 0.8)
+                                         (api/keyword :fill) (api/symbol 'get-menu-fill)})])
+                  (api/symbol 'get-menu-items)])
+     (api/map {(api/keyword :source-menu) (api/symbol '_)}))
+
+   (defncall 'get-sink-position '->
+     (api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :resize) (api/key-fn :width)])
+     (api/fn-call (api/symbol '-) [(api/symbol '_) (api/integer 100)])
+     (api/map {(api/keyword :x) (api/symbol '_)})
+     (api/symbol 'translate-str))
+
+   (defncall 'render-sink-menu '->
+     (api/key-fn :sink-menu)
+     (api/map {(api/keyword :items) (api/key-fn :items)
+               (api/keyword :context) (api/map {(api/keyword :hover) (api/key-fn :hover)
+                                                (api/keyword :resize) (api/key-fn :resize)})})
+     (api/map {(api/keyword :items) (api/fn-call (api/symbol 'myzip) [(api/key-fn :items)
+                                                                      (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol 'count) [(api/key-fn :items)])
+                                                                                                         (api/key-fn :context)])])
+               (api/keyword :context) (api/key-fn :context)})
+     (api/vector [(api/keyword :g)
+                  (api/map {(api/keyword :transform) (api/symbol 'get-sink-position)})
+                  (api/vector [(api/keyword :rect)
+                               (api/map {(api/keyword :id) (api/string "menu/sink")
+                                         (api/keyword :height) (api/string "100%")
+                                         (api/keyword :width) (api/integer 100)
+                                         (api/keyword :stroke) (api/symbol 'get-menu-fg)
+                                         (api/keyword :style) (api/map {(api/keyword :filter) (api/string "url(#leftshadow)")
+                                                                        (api/keyword :pointer-events) (api/string "all")})
+                                         (api/keyword :fill-opacity) (api/float 0.8)
+                                         (api/keyword :fill) (api/symbol 'get-menu-fill)})])
+                  (api/symbol 'get-menu-items)])
+     (api/map {(api/keyword :sink-menu) (api/symbol '_)}))
+
+   (defncall 'get-menu-state '->
+     (api/vector [(api/string "mode: ")
+                  (api/fn-call (api/symbol '->) [(api/key-fn :editor)
+                                                 (api/key-fn :mode)])
+                  (api/string "/")
+                  (api/fn-call (api/symbol '->) [(api/key-fn :editor)
+                                                 (api/key-fn :activity)])])
+     (api/fn-call (api/symbol 'str-join) [(api/string " ") (api/symbol '_)]))
+
+   (defncall 'render-menu-action '->
+     ;; (api/fn-call (api/symbol 'spy) [(api/string "render action")])
+     (api/symbol '_))
+
+   (defncall 'get-menu-actions '->
+     (api/fn-call (api/symbol '->) [(api/key-fn :mode)
+                                    (api/key-fn :actions)
+                                    (api/fn-call (api/symbol 'map) [(api/symbol 'render-menu-action) (api/symbol '_)])])
+     (api/fn-call (api/symbol 'str-join) [(api/string ", ") (api/symbol '_)])
+     (api/vector [(api/string "type: ") (api/symbol '_)])
+     (api/fn-call (api/symbol 'str-join) [(api/string "") (api/symbol '_)]))
+
+   (defncall 'get-action-position '->
+     (api/fn-call (api/symbol '->) [(api/key-fn :resize) (api/key-fn :height)])
+     (api/fn-call (api/symbol '-) [(api/symbol '_) (api/integer 50)])
+     (api/map {(api/keyword :y) (api/symbol '_)})
+     (api/symbol 'translate-str))
+
+   (defncall 'render-action-menu '->
+     (api/map {(api/keyword :action-menu)
+               (api/vector [(api/keyword :g)
+                            (api/map {(api/keyword :transform) (api/symbol 'get-action-position)})
+                            (api/vector [(api/keyword :rect)
+                                         (api/map {(api/keyword :id) (api/string "menu/action")
+                                                   (api/keyword :height) (api/integer 50)
+                                                   (api/keyword :width) (api/string "100%")
+                                                   (api/keyword :stroke) (api/symbol 'get-menu-fg)
+                                                   (api/keyword :style) (api/map {(api/keyword :filter) (api/string "url(#upshadow)")
+                                                                                  (api/keyword :pointer-events) (api/string "all")})
+                                                   (api/keyword :fill-opacity) (api/float 0.8)
+                                                   (api/keyword :fill) (api/symbol 'get-menu-fill)})])
+                            (api/vector [(api/keyword :text)
+                                         (api/map {(api/keyword :height) (api/integer 20)
+                                                   (api/keyword :width) (api/string "100%")
+                                                   (api/keyword :text-anchor) (api/keyword :middle)
+                                                   (api/keyword :x) (api/integer 600)
+                                                   (api/keyword :y) (api/integer 5)
+                                                   (api/keyword :dy) (api/integer 14)})
+                                         (api/fn-call (api/symbol '->)
+                                                      [(api/vector [(api/string "state: ")
+                                                                    (api/symbol 'get-menu-state)])
+                                                       (api/fn-call (api/symbol 'str-join) [(api/string "") (api/symbol '_)])])])
+                            (api/vector [(api/keyword :text)
+                                         (api/map {(api/keyword :height) (api/integer 20)
+                                                   (api/keyword :width) (api/string "100%")
+                                                   (api/keyword :text-anchor) (api/keyword :middle)
+                                                   (api/keyword :x) (api/integer 600)
+                                                   (api/keyword :y) (api/integer 25)
+                                                   (api/keyword :dy) (api/integer 14)})
+                                         (api/fn-call (api/symbol '->)
+                                                      [(api/vector [(api/string "actions: ")
+                                                                    (api/symbol 'get-menu-actions)])
+                                                       (api/fn-call (api/symbol 'str-join) [(api/string "") (api/symbol '_)])])])])}))
+
+
+   ;; state
 
    (defncall 'state-reduce 'pipes/reductions
      (api/fn-call (api/symbol '->)
@@ -2704,7 +2587,118 @@
    (defncall 'only-resize '->
      (api/map {(api/keyword :resize) (api/key-fn :resize)}))
 
+
+   ;; cell handling
+
+   (defncall 'func-id 'str
+     (api/string "func/")
+     (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)]))
+
+   (defncall 'is-same '->
+     (api/fn-call (api/symbol 'distinct) [(api/symbol '_)])
+     (api/fn-call (api/symbol 'count) [(api/symbol '_)])
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 1)]))
+
+   (defncall 'is-selected '->
+     (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :selected)])
+                  (api/symbol 'func-id)])
+     (api/symbol 'is-same))
+
+   (defncall 'is-hovered '->
+     (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :name)])
+                  (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)])])
+     (api/symbol 'is-same))
+
+   (defncall 'cell-y '->
+     (api/fn-call (api/symbol '*) [(api/integer 20)
+                                   (api/key-fn :counter)])
+     (api/fn-call (api/symbol '+) [(api/integer 10)
+                                   (api/symbol '_)]))
+
+   (defncall 'cell-x '->
+     (api/fn-call (api/symbol '*) [(api/integer 15)
+                                   (api/key-fn :level)]))
+
+   (defncall 'cell-pos '->
+     (api/map {(api/keyword :x)
+               (api/integer 0)
+               (api/keyword :y)
+               (api/symbol 'cell-y)})
+     (api/symbol 'translate-str))
+
+   (defncall 'line-pos '->
+     (api/map {(api/keyword :x)
+               (api/integer 0)
+               (api/keyword :y)
+               (api/integer -15)})
+     (api/symbol 'translate-str))
+
+
+   (defncall 'text-pos '->
+     (api/map {(api/keyword :x)
+               (api/symbol 'cell-x)
+               (api/keyword :y)
+               (api/integer 0)})
+     (api/symbol 'translate-str))
+
+   (defncall 'counter-pos '->
+     (api/map {(api/keyword :x)
+               (api/integer 10)
+               (api/keyword :y)
+               (api/integer 0)})
+     (api/symbol 'translate-str))
+
+   (defncall 'type-pos '->
+     (api/map {(api/keyword :x)
+               (api/fn-call (api/symbol '+)  [(api/integer 190)
+                                              ;; (api/symbol 'cell-x)
+                                              (api/integer 10)])
+               (api/keyword :y)
+               (api/integer 0)})
+     (api/symbol 'translate-str))
+
+   (defncall 'is-marked-cell '->
+     (api/fn-call (api/symbol '-) [(api/fn-call (api/symbol '->) [(api/key-fn :context)
+                                                                  (api/key-fn :mark)])
+                                   (api/fn-call (api/symbol '->) [(api/key-fn :exp)
+                                                                  (api/key-fn :counter)])])
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 0)]))
+
+   (defncall 'is-active-cell '->
+     (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '->) [(api/key-fn :context)
+                                                                    (api/key-fn :selected)])
+                                     (api/symbol 'is-marked-cell)]))
+
+   (defncall 'is-edited-cell '->
+     ;; (api/fn-call (api/symbol 'spy) [(api/string "edited")])
+     (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '->) [(api/key-fn :context)
+                                                                    (api/key-fn :activity)
+                                                                    (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :edit)])])
+                                     (api/fn-call (api/symbol '->) [(api/key-fn :context)
+                                                                    (api/key-fn :selected)])
+                                     (api/symbol 'is-marked-cell)]))
+
+   (defncall 'is-active-branch '->
+     (api/key-fn :exp)
+     (api/key-fn :counter)
+     (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '>) [(api/symbol '_) (api/integer 100)])
+                                     (api/fn-call (api/symbol '<) [(api/symbol '_) (api/integer 101)])]))
+
    ;; graphing of nodes
+
+   (defncall 'get-fill '->
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-edited-cell)
+                                        (api/fn-call (api/symbol '->) [(api/keyword :cell-edit)
+                                                                       (api/symbol 'get-color)])])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-active-cell)
+                                        (api/fn-call (api/symbol '->) [(api/keyword :cell-active)
+                                                                       (api/symbol 'get-color)])])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-active-branch)
+                                        (api/fn-call (api/symbol '->) [(api/keyword :cell-seclight)
+                                                                       (api/symbol 'get-color)])])
+     (api/fn-call (api/symbol 'incase) [(api/key-fn :exp)
+                                        (api/fn-call (api/symbol '->) [(api/keyword :cell-background)
+                                                                       (api/symbol 'get-color)])]))
 
    (defncall 'get-func-stroke '->
      (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol 'or) [(api/symbol 'is-selected) (api/key-fn :expanded)])
@@ -3187,6 +3181,7 @@
                             (api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "all")})})]))
 
    (defncall 'graph '->
+     ;; (api/fn-call (api/symbol 'spy) [(api/string "graph")])
      (api/map {(api/keyword :layout) (api/key-fn :layout)
                (api/keyword :view) (api/key-fn :view)
                (api/keyword :context) (api/symbol 'build-context)})
@@ -3313,8 +3308,7 @@
                                (api/vector [(api/keyword :feDropShadow)
                                             (api/map {(api/keyword :dx) (api/string "3")
                                                       (api/keyword :dy) (api/string "3")
-                                                      (api/keyword :flood-color) (api/fn-call (api/symbol '->) [(api/keyword :shadow-flood)
-                                                                                                                (api/symbol 'get-color)])
+                                                      (api/keyword :flood-color) (api/fn-call (api/symbol 'get-color) [(api/keyword :shadow-flood)])
                                                       (api/keyword :flood-opacity) (api/string "0.3")
                                                       (api/keyword :stdDeviation) (api/string "3")})])])
 
@@ -3349,8 +3343,7 @@
                                (api/vector [(api/keyword :feDropShadow)
                                             (api/map {(api/keyword :dx) (api/string "-3")
                                                       (api/keyword :dy) (api/string "3")
-                                                      (api/keyword :flood-color) (api/fn-call (api/symbol '->) [(api/keyword :shadow-flood)
-                                                                                                                (api/symbol 'get-color)])
+                                                      (api/keyword :flood-color) (api/fn-call (api/symbol 'get-color) [(api/keyword :shadow-flood)])
                                                       (api/keyword :flood-opacity) (api/string "0.3")
                                                       (api/keyword :stdDeviation) (api/string "3")})])])
                   (api/vector [(api/keyword :filter)
@@ -3358,8 +3351,7 @@
                                (api/vector [(api/keyword :feDropShadow)
                                             (api/map {(api/keyword :dx) (api/string "0")
                                                       (api/keyword :dy) (api/string "-3")
-                                                      (api/keyword :flood-color) (api/fn-call (api/symbol '->) [(api/keyword :shadow-flood)
-                                                                                                                (api/symbol 'get-color)])
+                                                      (api/keyword :flood-color) (api/fn-call (api/symbol 'get-color) [(api/keyword :shadow-flood)])
                                                       (api/keyword :flood-opacity) (api/string "0.3")
                                                       (api/keyword :stdDeviation) (api/string "3")})])])]))
 
@@ -3394,7 +3386,8 @@
                                       ])})}))
 
 
-   (api/defmodule 'oasis-render (api/map {(api/keyword :sources) (api/map {(api/keyword :state) (api/symbol 'oasis-render-in)})
+   (api/defmodule 'oasis-render (api/map {(api/keyword :sources) (api/map {(api/keyword :state) (api/symbol 'oasis-render-in)
+                                                                           (api/keyword :svg-elems) (api/symbol 'oasis-render-out)})
                                           (api/keyword :sinks) (api/map {(api/keyword :svg-elems) (api/symbol 'oasis-render-out)})}))
    ])
 
@@ -3439,7 +3432,9 @@
      (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :div) (api/map {(api/keyword :class) (api/string "fullscreen")})])
                                       (api/symbol '_)]))
 
-   (api/defmodule 'oasis-ui (api/map {(api/keyword :sources) (api/map {(api/keyword :render) (api/symbol 'oasis-ui-in)})
+   (api/defmodule 'oasis-ui (api/map {(api/keyword :sources) (api/map {(api/keyword :render) (api/symbol 'oasis-ui-in)
+                                                                       (api/keyword :kb) (api/symbol 'oasis-ui-kb)
+                                                                       (api/keyword :mouse) (api/symbol 'oasis-ui-mouse)})
                                       (api/keyword :sinks) (api/map {(api/keyword :mouse) (api/symbol 'oasis-ui-mouse)
                                                                      (api/keyword :kb) (api/symbol 'oasis-ui-kb)})
                                     (api/keyword :tests) (api/map {(api/keyword :t1) (api/map {(api/keyword :when) (api/map {(api/string "oasis-ui-in") (api/vector [(api/map {(api/keyword :header)
@@ -3464,7 +3459,8 @@
    ])
 
 (def oasis-module-defs
-  [(defncall 'm-ui '->
+  [
+   (defncall 'm-ui '->
      (api/symbol 'oasis-ui))
    (defncall 'm-render-fn '->
      (api/symbol 'm-ui)
@@ -3475,12 +3471,12 @@
      (api/symbol 'm-ui)
      (api/key-fn :sinks)
      (api/key-fn :mouse))
-   (defncall 'oasis-mouse 'm-mouse-fn)
+   (defncall 'oasis-bug 'm-mouse-fn)
    (defncall 'm-kb-fn '->
      (api/symbol 'm-ui)
      (api/key-fn :sinks)
      (api/key-fn :kb))
-   (defncall 'oasis-kb 'm-kb-fn)
+   (defncall 'oasis-keyboard 'm-kb-fn)
 
    (defncall 'm-render '->
      (api/symbol 'oasis-render))
@@ -3507,36 +3503,71 @@
      (api/key-fn :sources)
      (api/key-fn :init))
    (defncall 'core-init 'm-init-fn)
+   (defncall 'm-core-kb-fn '->
+     (api/symbol 'm-core)
+     (api/key-fn :sources)
+     (api/key-fn :kb))
+   (defncall 'core-kb-in 'm-core-kb-fn)
+   (defncall 'm-core-mouse-fn '->
+     (api/symbol 'm-core)
+     (api/key-fn :sources)
+     (api/key-fn :mouse))
+   (defncall 'core-mouse-in 'm-core-mouse-fn)
 
    (defncall 'log-state 'pipes/log (api/string "log-state: "))
    (defncall 'log-render 'pipes/log (api/string "render: "))
+   (defncall 'log-foo 'pipes/log (api/string "foo: "))
+
+   (defncall 'header '->
+     (api/map {(api/keyword :header)
+               (api/map {(api/keyword :oasis.gui/order)
+                         (api/integer 1)
+                         (api/keyword :oasis.gui/element)
+                         (api/vector [(api/keyword :h1)
+                                      (api/string "사막 Oasis")])})}))
+
 
    (defncall 'oasis-init 'pipes/debug)
-   (defncall 'init 'pipes/debug)
-   (api/defexp 'oasis-main (api/pipe (api/symbol 'oasis-init)
-                                     (api/symbol 'init)))
-   (api/defexp 'oasis (api/map {(api/keyword :sources) (api/map {(api/keyword :main) (api/symbol 'oasis-init)
+   (api/defmodule 'oasis (api/map {(api/keyword :depends) (api/map {(api/keyword :oasis-core) (api/symbol 'oasis-core)
 
-                                                                 (api/keyword :mouse) (api/symbol 'oasis-mouse)
-                                                                 (api/keyword :kb) (api/symbol 'oasis-kb)
-                                                                 (api/keyword :eval) (api/symbol 'oasis-eval)
-                                                                 (api/keyword :layout) (api/symbol 'oasis-layout)
-                                                                 })
-                                ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
-                                (api/keyword :tests) (api/map {(api/keyword ::test)
-                                                               (api/map {(api/keyword :when) (api/map {(api/string "init")
-                                                                                                       (api/vector [(api/integer 1)])})
-                                                                         (api/keyword :then) (api/map {(api/string "oasis-ui-out")
-                                                                                                       (api/vector [(api/keyword :success)])})})})}))])
+                                                                    (api/keyword :oasis-render) (api/symbol 'oasis-render)
+                                                                    (api/keyword :oasis-ui) (api/symbol 'oasis-ui)
+                                                                    })
+                                   (api/keyword :sources) (api/map {(api/keyword :module-core) (api/symbol 'm-core)
+                                                                    (api/keyword :module-core-out) (api/symbol 'core-state)
+                                                                    (api/keyword :module-render) (api/symbol 'm-render)
+                                                                    (api/keyword :module-render-out) (api/symbol 'render-elems)
+                                                                    (api/keyword :module-ui) (api/symbol 'm-ui)
+                                                                    (api/keyword :kb) (api/symbol 'oasis-keyboard)
+                                                                    (api/keyword :mouse) (api/symbol 'oasis-bug)
+                                                                    (api/keyword :main) (api/symbol 'oasis-init)
+                                                                    })}))
+   (api/defexp 'oasis-legacy (api/map {(api/keyword :sources) (api/map {(api/keyword :main) (api/symbol 'oasis-init)
+
+                                                                        (api/keyword :mouse) (api/symbol 'oasis-mouse)
+                                                                        (api/keyword :kb) (api/symbol 'oasis-kb)
+                                                                        (api/keyword :eval) (api/symbol 'oasis-eval)
+                                                                        (api/keyword :layout) (api/symbol 'oasis-layout)
+                                                                        })
+                                       ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
+                                       (api/keyword :tests) (api/map {(api/keyword ::test)
+                                                                      (api/map {(api/keyword :when) (api/map {(api/string "init")
+                                                                                                              (api/vector [(api/integer 1)])})
+                                                                                (api/keyword :then) (api/map {(api/string "oasis-ui-out")
+                                                                                                              (api/vector [(api/keyword :success)])})})})}))
+   ])
 
 (def oasis-module-net
   [
-   (pipe 'init 'header 'ui-render)
-   (pipe 'init 'core-init)
+   (pipe 'oasis-init 'header 'ui-render)
+   (pipe 'oasis-init 'core-init)
    ;; (pipe 'core-state 'log-state)
    (pipe 'core-state 'render-state)
    ;; (pipe 'render-elems 'log-render)
    (pipe 'render-elems 'ui-render)
+
+   (pipe 'oasis-keyboard 'core-kb-in)
+   (pipe 'oasis-bug 'core-mouse-in)
    ])
 
 
@@ -3544,12 +3575,12 @@
   (into oasis-ui-defs (flatten oasis-ui-net)))
 
 (def network (concat oasis-module-net oasis-ui-net oasis-core-net oasis-render-net))
-(def oasis (into oasis1 (into oasis2 (into oasis3 (into oasis-core-defs (into oasis-render-defs (into oasis-ui-defs oasis-module-defs)))))))
+(def oasis (into oasis1 (into oasis2 (into oasis-core-defs (into oasis-render-defs (into oasis-ui-defs oasis-module-defs))))))
 
 (defn start []
   (into oasis (flatten network)))
 
-(defn store [stores]
-  (.persist-tree! stores oasis)
-  (.persist-tree! stores (flatten network))
-  stores)
+(defn store [s]
+  (stores/persist-tree! s oasis)
+  (stores/persist-tree! s (flatten network))
+  s)

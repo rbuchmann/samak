@@ -58,12 +58,12 @@
   (println "start")
   (let [in (chan)
         out (chan)]
-    (render/start-render-runtime in out)
-    (let [w (js/Worker. "/js/oasis-worker.js")
+    (let [;; w (js/Worker. "/js/oasis-worker.js")
           loading (chan)]
+      (render/start-render-runtime loading in out)
       (handle-update loading)
-      (aset w "onmessage" (make-handler loading in))
-      (handle-send w out)
+      ;; (aset w "onmessage" (make-handler loading in))
+      ;; (handle-send w out)
       ;; (.postMessage w (pr-str {:cmd "init" :args {:name "tl"}}))
       )
     ))

@@ -32,6 +32,18 @@
 (def resolver (atom {}))
 (def cancel-conditions (atom {}))
 
+(defn eval-all [server forms]
+  (reduce (fn [server form]
+            (swap! resolver #(assoc % :server server))
+            (servers/eval-ast server form))
+          server forms))
+
+(defn load-by-id
+  ""
+  [{store :store} id]
+  (stores/load-by-id store id))
+
+
 (defn cancel?
   ""
   [paket]
@@ -46,11 +58,6 @@
   [id condition]
   (swap! cancel-conditions update id merge condition))
 
-(defn eval-all [server forms]
-  (reduce (fn [server form]
-            (swap! resolver #(assoc % :server server))
-            (servers/eval-ast server form))
-          server forms))
 
 (defn resolve-fn
   ([id]
@@ -58,10 +65,11 @@
   ([rt id]
    (let [defs (servers/get-defined (:server rt))
          fn (get defs id)]
-     ;; (println "found: " id fn)
-     (if fn
-       fn
-       (println "not found: " id)))))
+     fn
+     ;; (if fn
+     ;;   fn
+     ;;   (println "not evaluated: " id " -> " (stores/load-by-id (:store rt) id)))
+     )))
 
 (defn wrap-out
   ""
@@ -97,10 +105,10 @@
             out-mapped (pipes/link! trans-out to-world)]
         (pipes/composite-pipe out-mapped in-mapped)))))
 
-
 (defn link-fn
   ""
   [from to xf]
+  (println "linking" from to)
   (let [a (replace-piped from "from")
         c (replace-piped to "to")]
     (when (not a)
@@ -132,7 +140,7 @@
                      (update :server servers/load-builtins! builtins))
          rt2 (->> (keys builtins)
                   (map (partial stores/resolve-name (:store runtime)))
-                  (map (partial stores/load-by-id (:store runtime)))
+                  (map (partial load-by-id runtime))
                   (update runtime :server eval-all))]
      (reset! resolver rt2)
      rt2)))
@@ -180,16 +188,11 @@
        (store! store)
        (eval-all server)))
 
-(defn load-by-id
-  ""
-  [{store :store} id]
-  (stores/load-by-id store id))
-
 (defn load-by-sym
   ""
-  [{store :store} sym]
+  [{store :store :as rt} sym]
   (when-let [ref (stores/resolve-name store sym)]
-    (stores/load-by-id store ref)))
+    (load-by-id rt ref)))
 
 (defn load-network
   "loads the given network from storage"
@@ -202,24 +205,43 @@
         fn (if (:samak.nodes/fn-expression val) (:samak.nodes/fn-expression val) val)]
     (get-in fn [:samak.nodes/fn :db/id])))
 
+(defn get-ids-from-source-def
+  [def type-set]
+  (let [deps (filter #(type-set (:samak.nodes/value (:samak.nodes/mapkey %))) def)
+        _ (println "deps" deps)
+        sources (mapcat #(:samak.nodes/mapkv-pairs (:samak.nodes/mapvalue %)) deps)] ;; FIXME, move to db?
+    (println "sources" sources)
+    sources))
 
-(defn load-sources-from-bundle
+
+(defn load-roots-from-bundle
   ""
-  [defns]
-  (let [kv (:samak.nodes/mapkv-pairs defns)
-        sources (:samak.nodes/mapkv-pairs (:samak.nodes/mapvalue (first kv))) ;; FIXME, move to db?
-        value (map get-id-from-source-val sources)]
-    value))
+  [rt defns]
+  (let [defs (if (= (:samak.nodes/type defns) :samak.nodes/def)
+                (:samak.nodes/rhs defns)
+                (:samak.nodes/definition defns))
+        kvs (:samak.nodes/mapkv-pairs defs)
+        _ (println "kvs" kvs)
+        sources (get-ids-from-source-def kvs #{:sources})
+        deps (get-ids-from-source-def kvs #{:depends})
+        source-ids (map get-id-from-source-val sources)
+        dep-ids (map get-id-from-source-val deps)
+        _ (println "dep-ids" dep-ids)
+        deps-sources (map #(load-by-id rt %) dep-ids)
+        _ (println "dep-s" deps-sources)
+        deps-source-ids (map #(load-roots-from-bundle rt %) deps-sources)
+        _ (println "dep-s-id" deps-source-ids)
+        roots (flatten (concat deps-source-ids dep-ids source-ids))]
+    (println "roots: " roots)
+    roots))
 
 
 (defn load-bundle
   "loads the definition of a bundle"
-  [{store :store :as rt} sym]
+  [rt sym]
   (let [defns (load-by-sym rt sym)
-        value (load-sources-from-bundle (if (= (:samak.nodes/type defns) :samak.nodes/def)
-                                          (:samak.nodes/rhs defns)
-                                          (:samak.nodes/definition defns)))]
-    value))
+        value (load-roots-from-bundle rt defns)]
+    (distinct value)))
 
 
 (defn eval-expression! [{:keys [store server] :as rt} form]
@@ -231,7 +253,9 @@
 
 (defn get-definition-by-name [runtime sym]
   (let [id (-> runtime :store (stores/resolve-name sym))]
+    (println "def id:" id)
     (-> runtime :server servers/get-defined (get id))))
+
 
 (defn fire-into-named-pipe
   ""

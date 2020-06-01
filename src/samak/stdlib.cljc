@@ -35,7 +35,8 @@
 
 (defn debug
   ([] (pipes/pipe (chan)))
-  ([spec] (pipes/checked-pipe (debug) spec spec)))
+  ([spec] (debug spec (helpers/uuid)))
+  ([spec id] (pipes/checked-pipe (debug) spec spec id)))
 
 (defn log-through
   ([]
@@ -57,7 +58,7 @@
            (tools/log prefix x)
            (tools/log x))
          (recur)))
-     (pipes/sink log-chan))))
+     (pipes/sink log-chan nil prefix))))
 
 ;; Networking
 

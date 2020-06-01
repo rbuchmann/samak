@@ -13,7 +13,7 @@
   (persist-tree! [_ tree]
     (db/parse-tree->db! db tree))
   (load-by-id [_ id]
-    (db/load-by-id db id))
+    (db/load-recurse db id))
   (load-network [_ id]
     (db/load-network db id))
   (resolve-name [_ db-name]

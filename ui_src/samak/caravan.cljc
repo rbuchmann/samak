@@ -272,12 +272,14 @@
 (defn load-ast
   "loads an ast given by its entity id from the database"
   [rt id]
-  (w/postwalk (fn [form]
-                  (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
-                                    (:db/id form))]
-                    (rt/load-by-id rt sub-id)
-                    form))
-              (rt/load-by-id rt id)))
+  (rt/load-by-id rt id)
+  ;; (w/postwalk (fn [form]
+  ;;                 (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
+  ;;                                   (:db/id form))]
+  ;;                   (rt/load-by-id rt sub-id)
+  ;;                   form))
+  ;;             (rt/load-by-id rt id))
+  )
 
 
 (defn persist!
@@ -679,11 +681,11 @@
 
 (defn load-bundle
   ""
-  [sym]
+  [sym rt]
   (let [_ (print "  V" "Fetching bundle from DB: ")
-        bundle (rt/load-bundle @rt-conn sym)
+        bundle (rt/load-bundle rt sym)
         _ (println (s/join "," bundle))
-        sources (map #(rt/load-network @rt-conn %) bundle)
+        sources (map #(rt/load-network rt %) bundle)
         net (reduce (fn [a, v]
                       (let [val (vals v)]
                         {:nodes (into (:nodes a) (flatten [(map :xf val) (map :ends val)]))
@@ -699,13 +701,13 @@
 (defn eval-bundle
   ""
   [sym]
-  (database-net (load-bundle sym)))
+  (database-net (load-bundle sym @rt-conn)))
 
 (defn test-bundle
   ""
   [sym test]
   (let [verify (setup-verify)
-        bundle (load-bundle sym)]
+        bundle (load-bundle sym @rt-conn)]
     (runtime-net bundle test verify)
     verify))
 
@@ -869,7 +871,6 @@
   []
   (let [caravan-in (chan)
         caravan-out (chan)]
-    (tools/log "pipe: " caravan-out)
     (go-loop []
       (when-let [x (<! caravan-in)]
         (tools/log "caravan: " x)
