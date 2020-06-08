@@ -208,30 +208,35 @@
 (defn get-ids-from-source-def
   [def type-set]
   (let [deps (filter #(type-set (:samak.nodes/value (:samak.nodes/mapkey %))) def)
-        _ (println "deps" deps)
+        ;; _ (println "deps" deps)
         sources (mapcat #(:samak.nodes/mapkv-pairs (:samak.nodes/mapvalue %)) deps)] ;; FIXME, move to db?
-    (println "sources" sources)
+    ;; (println "sources" sources)
     sources))
 
 
 (defn load-roots-from-bundle
   ""
-  [rt defns]
+  [rt id defns]
   (let [defs (if (= (:samak.nodes/type defns) :samak.nodes/def)
                 (:samak.nodes/rhs defns)
                 (:samak.nodes/definition defns))
+        ;; _ (println "id" id "- defns" defns)
         kvs (:samak.nodes/mapkv-pairs defs)
-        _ (println "kvs" kvs)
+        ;; _ (println "kvs" kvs)
         sources (get-ids-from-source-def kvs #{:sources})
         deps (get-ids-from-source-def kvs #{:depends})
-        source-ids (map get-id-from-source-val sources)
-        dep-ids (map get-id-from-source-val deps)
+        source-ids (mapv get-id-from-source-val sources)
+        _ (println "sources" source-ids)
+        dep-ids (mapv get-id-from-source-val deps)
         _ (println "dep-ids" dep-ids)
-        deps-sources (map #(load-by-id rt %) dep-ids)
-        _ (println "dep-s" deps-sources)
-        deps-source-ids (map #(load-roots-from-bundle rt %) deps-sources)
+        deps-source-ids (mapv (fn [dep]
+                                (println "dep" dep)
+                                (load-roots-from-bundle rt dep (load-by-id rt dep)))
+                              dep-ids)
         _ (println "dep-s-id" deps-source-ids)
-        roots (flatten (concat deps-source-ids dep-ids source-ids))]
+        roots {id {:depends dep-ids
+                   :dependencies deps-source-ids
+                   :roots source-ids}}]
     (println "roots: " roots)
     roots))
 
@@ -239,9 +244,8 @@
 (defn load-bundle
   "loads the definition of a bundle"
   [rt sym]
-  (let [defns (load-by-sym rt sym)
-        value (load-roots-from-bundle rt defns)]
-    (distinct value)))
+  (let [defns (load-by-sym rt sym)]
+    (load-roots-from-bundle rt sym defns)))
 
 
 (defn eval-expression! [{:keys [store server] :as rt} form]

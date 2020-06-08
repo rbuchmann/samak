@@ -134,7 +134,7 @@
 (defn eval-oasis
   ""
   [length cb state [nr exp]]
-  (println "eval" nr exp)
+  ;; (println "eval" nr exp)
   (let [progress (int (* (/ nr length) 100))]
     (when (= 0 (mod progress 10))
       (put! cb progress)
@@ -154,22 +154,40 @@
     (doseq [expression parsed]
       (caravan/repl-eval expression))))
 
-(defn load-bundle
+(defn load-module
   ""
-  [sym rt]
-  (let [_ (print "  V" "Fetching bundle from DB: " sym)
-        bundle (run/load-bundle rt sym)
-        _ (println bundle)
-        sources (map #(run/load-network rt %) bundle)
+  [rt mod]
+  (let [sources (map #(run/load-network rt %) (:roots mod))
         net (reduce (fn [a, v]
                       (let [val (vals v)]
                         {:nodes (into (:nodes a) (flatten [(map :xf val) (map :ends val)]))
                          :pipes (into (:pipes a) (map :db/id (flatten (map :pipes val))))
                          }))
-                    {:nodes (into [] bundle)
+                    {:nodes (into [] (:roots mod))
                      :pipes []}
                     sources)]
-    net
+    net))
+
+
+(defn load-deps
+  ""
+  [rt [id mod]]
+  (println "load-deps" id mod)
+  (let [deps (:dependencies mod)]
+    {:id id
+     :deps (mapv (fn [m] (load-deps rt (first m))) deps)
+     :roots (load-module rt mod)})
+  )
+
+
+(defn load-bundle
+  ""
+  [rt sym]
+  (let [_ (print "  V" "Fetching bundle from DB: " sym)
+        bundle (get (run/load-bundle rt sym) sym)
+        _ (println "bundle: " bundle)
+        deps  (load-deps rt [sym bundle])]
+    deps
 ))
 
 (defn load-ast
@@ -182,25 +200,43 @@
                     form))
               (run/load-by-id rt id)))
 
+
+(defn eval-module
+  ""
+  [rt module]
+  (println "eval" (:id module))
+  (doall (map #(eval-module rt %) (:deps module)))
+  (let [roots (:roots module)
+        asts (map #(load-ast rt %) (into (into [] (distinct (:nodes roots))) (distinct (:pipes roots))))]
+    (update rt :server run/eval-all asts)))
+
+
 (defn start-oasis
   [cb]
-  (let [c (chan)
-        net (load-bundle 'oasis @rt)
+  (let [net (load-bundle @rt 'oasis)
         _ (println net)
-        exps (into (into [] (distinct (:nodes net))) (distinct (:pipes net)))
-        _ (println exps)
-        source (map #(load-ast @rt %) exps)
-        ;; _ (println source)
-        numbered (map-indexed vector source)
-        cnt (count numbered)]
-    (go-loop [state @rt]
-      (let [part (<! c)]
-        (if part
-          (let [state (eval-oasis cnt cb state part)] ;
-            (recur state))
-          (run-oasis state cb))))
-    (doall (map #(put! c %) numbered))
-    (close! c)))
+        state (eval-module @rt net)]
+    (run-oasis state cb)))
+
+;; (defn start-oasis
+;;   [cb]
+;;   (let [c (chan)
+;;         net (load-bundle @rt 'oasis)
+;;         _ (println net)
+;;         exps (into (into [] (distinct (:nodes net))) (distinct (:pipes net)))
+;;         _ (println "exps" exps)
+;;         source (map #(load-ast @rt %) exps)
+;;         ;; _ (println source)
+;;         numbered (map-indexed vector source)
+;;         cnt (count numbered)]
+;;     (go-loop [state @rt]
+;;       (let [part (<! c)]
+;;         (if part
+;;           (let [state (eval-oasis cnt cb state part)] ;
+;;             (recur state))
+;;           (run-oasis state cb))))
+;;     (doall (map #(put! c %) numbered))
+;;     (close! c)))
 
 (defn trace
   [src duration msg]
