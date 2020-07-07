@@ -12,6 +12,6 @@
     "react-dom": "^15.2.1"
   },
   "devDependencies": {
-    "electron": "^1.6.11"
+    "electron": "^9.1.0"
   }
 }
