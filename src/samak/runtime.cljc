@@ -3,6 +3,7 @@
   (:clj
    [(:require
      [clojure.core.async :as a :refer [<! >! chan go go-loop close! put!]]
+     [clojure.walk :as w]
      [samak.runtime.stores  :as stores]
      [samak.runtime.servers :as servers]
      [samak.helpers :as helpers]
@@ -16,6 +17,7 @@
    :cljs
    [(:require
      [clojure.core.async :as a :refer [<! >! chan close! put!]]
+     [clojure.walk :as w]
      [samak.runtime.stores  :as stores]
      [samak.runtime.servers :as servers]
      [samak.helpers :as helpers]
@@ -35,13 +37,25 @@
 (defn eval-all [server forms]
   (reduce (fn [server form]
             (swap! resolver #(assoc % :server server))
+            ;; (println "form" (:db/id form) "->" form)
             (servers/eval-ast server form))
           server forms))
+
 
 (defn load-by-id
   ""
   [{store :store} id]
   (stores/load-by-id store id))
+
+(defn load-ast
+  "loads an ast given by its entity id from the database"
+  [rt id]
+  (w/postwalk (fn [form]
+                  (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
+                                    (:db/id form))]
+                    (load-by-id rt sub-id)
+                    form))
+              (load-by-id rt id)))
 
 
 (defn cancel?
@@ -67,40 +81,44 @@
          fn (get defs id)]
      fn
      ;; (if fn
-     ;;   fn
+     ;;   (do
+     ;;     ;; (println "resolved " id "-> " fn)
+     ;;     fn)
      ;;   (println "not evaluated: " id " -> " (stores/load-by-id (:store rt) id)))
      )))
 
 (defn wrap-out
   ""
-  [target]
+  [target id]
   (fn [paket]
+    ;; (println id "wrap-out paket" target paket)
     {::type ::paket ::target (:named target) ::content paket}))
 
 (defn wrap-in
   ""
-  [wrapped]
+  [wrapped id]
   (fn [paket]
+    ;; (println id "wrap-in paket" wrapped paket)
     (let [type (::type paket)
-          target (subs (name (::target paket)) 3)]
-      (if (and (= type ::paket) (= target (name (:named wrapped))))
+          target (::target paket)]
+      (if (and (= type ::paket) (= target (:name (:named wrapped))))
         (do
-          ;; (println "wrap-in" wrapped target)
+          ;; (println "wrap-in target" target (::content paket))
           (::content paket))
         ::ignore)))) ;;FIXME
 
 
 (defn replace-piped
   ""
-  [{target :target :as pipe} dir]
+  [{target :target :as pipe}]
   (if (not= target :pipe)
     pipe
     (do
       (println "replacing " pipe)
       (let [from-scheduler (:scheduler @resolver)
-            trans-in (pipes/transduction-pipe (comp (map (wrap-in pipe)) (remove #(= % ::ignore))))
+            trans-in (pipes/transduction-pipe (comp (map (wrap-in pipe (:id @resolver))) (remove #(= % ::ignore))))
             to-world (:broadcast @resolver)
-            trans-out (pipes/transduction-pipe (map (wrap-out pipe)))
+            trans-out (pipes/transduction-pipe (map (wrap-out pipe (:id @resolver))))
             in-mapped (pipes/link! from-scheduler trans-in)
             out-mapped (pipes/link! trans-out to-world)]
         (pipes/composite-pipe out-mapped in-mapped)))))
@@ -109,23 +127,46 @@
   ""
   [from to xf]
   (println "linking" from to)
-  (let [a (replace-piped from "from")
-        c (replace-piped to "to")]
-    (when (not a)
+  (let [a (replace-piped from)
+        c (replace-piped to)]
+    (when (not (pipes/pipe? a))
       (fail "cant link from " from))
-    (when (not c)
+    (when (not (pipes/pipe? c))
       (fail "cant link to " to))
     (if xf
       (pipes/link! (pipes/link! a xf) c)
       (pipes/link! a c))))
 
+(defn instanciate-module
+  ""
+  [{:keys [:samak.nodes/definition] :as module} man]
+  (let [n (str (:samak.nodes/name module))
+        c (get (:config man) n)]
+    (if c
+      (fn []
+        (println "return stub for" n "[" (:db/id module) "] -> " c)
+        c)
+      (fn []
+        ;; FIXME
+        ;; needs to prep resolve magic when instanciating pipes, to select same runtime
+        ;; maybe simply do so explicitly
+        ;; (if (:config man))
+        (println  (str "about to eval module: " module))
+        (let [evaled (n/eval-env man nil definition (:db/id module))]
+          (println (str "used module: " module "->" evaled))
+          evaled)))))
+
 (defn make-runtime-internal
   ""
-  [scheduler]
+  [scheduler conf]
   (let [c (pipes/pipe (chan))]
      {:id (str "rt-" (helpers/uuid))
       :store  (stores/make-local-store)
-      :server (servers/make-local-server {:resolve resolve-fn :link link-fn :cancel? cancel?})
+      :server (servers/make-local-server {:config conf
+                                          :resolve resolve-fn
+                                          :link link-fn
+                                          :cancel? cancel?
+                                          :module instanciate-module})
       :broadcast c
       :scheduler (when scheduler (scheduler c))}))
 
@@ -135,7 +176,9 @@
   ([builtins]
    (make-runtime builtins nil))
   ([builtins scheduler]
-   (let [runtime (-> (make-runtime-internal scheduler)
+   (make-runtime builtins scheduler {}))
+  ([builtins scheduler conf]
+   (let [runtime (-> (make-runtime-internal scheduler conf)
                      (update :store stores/load-builtins! (keys builtins))
                      (update :server servers/load-builtins! builtins))
          rt2 (->> (keys builtins)
@@ -205,6 +248,7 @@
         fn (if (:samak.nodes/fn-expression val) (:samak.nodes/fn-expression val) val)]
     (get-in fn [:samak.nodes/fn :db/id])))
 
+
 (defn get-ids-from-source-def
   [def type-set]
   (let [deps (filter #(type-set (:samak.nodes/value (:samak.nodes/mapkey %))) def)
@@ -225,8 +269,8 @@
         ;; _ (println "kvs" kvs)
         sources (get-ids-from-source-def kvs #{:sources})
         deps (get-ids-from-source-def kvs #{:depends})
-        source-ids (mapv get-id-from-source-val sources)
-        _ (println "sources" source-ids)
+        source-ids (apply sorted-set (map get-id-from-source-val sources))
+        _ (println "source-ids:" source-ids)
         dep-ids (mapv get-id-from-source-val deps)
         _ (println "dep-ids" dep-ids)
         deps-source-ids (mapv (fn [dep]
@@ -242,10 +286,10 @@
 
 
 (defn load-bundle
-  "loads the definition of a bundle"
-  [rt sym]
-  (let [defns (load-by-sym rt sym)]
-    (load-roots-from-bundle rt sym defns)))
+  "loads the definition of a bundle by the given id"
+  [rt id]
+  (let [defns (load-by-id rt id)]
+    (load-roots-from-bundle rt id defns)))
 
 
 (defn eval-expression! [{:keys [store server] :as rt} form]
@@ -255,10 +299,13 @@
 (defn resolve-name [runtime sym]
   (-> runtime :store (stores/resolve-name sym)))
 
+(defn get-definition-by-id [runtime id]
+  (when id
+    (-> runtime :server servers/get-defined (get id))))
+
 (defn get-definition-by-name [runtime sym]
   (let [id (-> runtime :store (stores/resolve-name sym))]
-    (println "def id:" id)
-    (-> runtime :server servers/get-defined (get id))))
+    (get-definition-by-id runtime id)))
 
 
 (defn fire-into-named-pipe

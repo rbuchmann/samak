@@ -51,6 +51,7 @@
         before (helpers/now)
         handler (fn [token]
                   (fn [return]
+                    (println "layout ret: " return)
                     (let [result (assoc {} token return)
                           re-wrap (tt/re-wrap meta result)]
                       (trace/trace ::layout (helpers/duration before (helpers/now)) re-wrap)

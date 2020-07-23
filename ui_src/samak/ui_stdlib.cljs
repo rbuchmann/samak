@@ -82,37 +82,58 @@
             (map #(transform-element % ch) children)))
     x))
 
-(defn ui [n events]
-  (let [ui-in (chan (a/sliding-buffer 1))
-        ui-out (chan (a/sliding-buffer 1000))
-        init (atom true)]
-    (go-loop []
-      (when-some [i (<! ui-in)]
-        (trace/trace ::ui 0 i)
-        (let [x (or (:samak.pipes/content i) i)]
-          (if (s/valid? ::hiccup x)
-            (when-let [node (js/document.getElementById (str "samak" n))]
-              ;; (when n (.warn js/console (str "render " n " - " x)))
-              (r/render (if events (transform-element x ui-out) x) node))
-            (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x)))))
-        (when @init
-          (reset! init false)
-          (put-meta! ui-out
-                     {:data :resize
-                      :width (.-clientWidth (.-documentElement js/document))
-                      :height (.-clientHeight (.-documentElement js/document))}
-                     ::view))
-        (recur)))
+(defn events [n]
+  (let [c (chan)
+        elem (if n (js/document.getElementById (str "samak" n)) (.-body js/document))
+        bound (.getBoundingClientRect elem)]
+    (println "foobar: " n)
     (set! (.-onresize js/window)
-          (fn [e] (do (put-meta! ui-out (let [event (js->clj e :keywordize-keys true)]
+          (fn [e] (do (println "rez: " n)
+                      (put-meta! c (let [event (js->clj e :keywordize-keys true)]
                                      {:data :resize
                                       :width (.-clientWidth (.-documentElement js/document))
                                       :height (.-clientHeight (.-documentElement js/document))
                                       :samak.view/target (.-id (.-target event))}
                                      )
                                  ::view)
-                     false)))
-    (pipes/pipe ui-in ui-out)))
+                      (println "EVS: " n)
+                      false)))
+    (pipes/source c)))
+
+(defn ui
+  ([n]
+   (ui n true))
+  ([n events]
+   (let [ui-in (chan (a/sliding-buffer 1))
+         ui-out (chan (a/sliding-buffer 1000))
+         init (atom true)]
+     (go-loop []
+       (when-some [i (<! ui-in)]
+         (trace/trace ::ui 0 i)
+         (let [x (or (:samak.pipes/content i) i)]
+           (if (s/valid? ::hiccup x)
+             (when-let [node (js/document.getElementById (str "samak" n))]
+               ;; (when n (.warn js/console (str "render " n " - " x)))
+               (r/render (if events (transform-element x ui-out) x) node))
+             (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x) "for" x))))
+         (when @init
+           (reset! init false)
+           (put-meta! ui-out
+                      {:data :resize
+                       :width (.-clientWidth (.-documentElement js/document))
+                       :height (.-clientHeight (.-documentElement js/document))}
+                      ::view))
+         (recur)))
+     (set! (.-onresize js/window)
+           (fn [e] (do (put-meta! ui-out (let [event (js->clj e :keywordize-keys true)]
+                                           {:data :resize
+                                            :width (.-clientWidth (.-documentElement js/document))
+                                            :height (.-clientHeight (.-documentElement js/document))
+                                            :samak.view/target (.-id (.-target event))}
+                                           )
+                                  ::view)
+                       false)))
+     (pipes/pipe ui-in ui-out))))
 
 (defn translate-coords
   ""
@@ -196,11 +217,16 @@
 
 (defn ui-module
   [id]
-  (let [render (ui id true)]
-    {:sources {:events render
-               :mouse (mouse id)
-               :keyboard (keyboard)}
-     :sinks {:render render}}))
+  (println "init ui")
+  (fn []
+    (let [xid 2
+          render (ui id true)
+          m (mouse id)]
+      (println "start ui:" m)
+      {:sources {:events render
+                 :mouse m
+                 :keyboard (keyboard)}
+       :sinks {:render render}})))
 
 
 ;; Exported symbols
@@ -208,5 +234,6 @@
 (def ui-symbols
   {'modules/ui     ui-module
    'pipes/ui       ui
+   'pipes/events   events
    'pipes/mouse    mouse
    'pipes/keyboard keyboard})

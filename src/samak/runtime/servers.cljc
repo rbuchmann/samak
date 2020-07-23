@@ -19,6 +19,7 @@
   (load-builtins [this builtins])
   (unload [this ids]))
 
+
 (defrecord LocalSamakServer [defined-ids builtins manager]
   SamakServer
   (eval-ast [this {:keys [db/id] :as ast}]

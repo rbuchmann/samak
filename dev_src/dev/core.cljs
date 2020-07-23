@@ -9,6 +9,11 @@
             [samak.builtins :as builtins])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
+(defn start-main
+  [load in out]
+  (render/start-render-runtime load in out)
+  (render/start-oasis))
+
 
 (defn update-bar
   ""
@@ -22,10 +27,14 @@
 
 (defn handle-update
   ""
-  [c]
+  [c done]
   (go-loop []
     (let [p (<! c)]
-      (update-bar p))
+      (do
+        (update-bar p)
+        (when (= p 100)
+          (println "done core")
+          (done))))
     (recur)))
 
 (defn handle-send
@@ -35,6 +44,7 @@
     (go-loop []
       (let [p (<! c)
             before (helpers/now)]
+        ;; (println "to worker" p)
         (.postMessage worker (t/write w p))
         (render/trace ::render-out
                     (helpers/duration before (helpers/now))
@@ -48,6 +58,7 @@
   (fn
     [event]
     (let [data (t/read json-reader (.-data event))]
+      ;; (println "recv from w" data)
       (condp = (:target data)
         :load (put! load (:data data))
         (put! in data)))))
@@ -58,13 +69,11 @@
   (println "start")
   (let [in (chan)
         out (chan)]
-    (let [;; w (js/Worker. "/js/oasis-worker.js")
+    (let [w (js/Worker. "/js/oasis-worker.js")
           loading (chan)]
-      (render/start-render-runtime loading in out)
-      (handle-update loading)
-      ;; (aset w "onmessage" (make-handler loading in))
-      ;; (handle-send w out)
-      ;; (.postMessage w (pr-str {:cmd "init" :args {:name "tl"}}))
+      (handle-update loading #(start-main loading in out))
+      (aset w "onmessage" (make-handler loading in))
+      (handle-send w out)
       )
     ))
 

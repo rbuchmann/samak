@@ -119,7 +119,7 @@
 (defn fire-raw!
   "put a raw event into the given pipe. should be used for testing only."
   [pipe event]
-  (println "pipe fire" pipe)
+  ;; (println "pipe fire" pipe)
   (put! (in-port pipe) event))
 
 

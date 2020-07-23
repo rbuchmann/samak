@@ -39,21 +39,24 @@
     (ref? value)             (let [id (:db/id value)]
                                (or ((:resolve *manager*) id)
                                    (compile-error "Referenced id " id " was undefined")))
-    :default                 (compile-error "unknown token during evaluation: " (str value))))
+    :default                 (compile-error "unknown token during evaluation: " (str "type: " (or (type value) "nil") " with value: " (str value)))))
 
-(defmethod eval-node ::module [{:keys [::definition] :as module}]
-  ;; (println "evaling module: " module)
+(defmethod eval-node ::module [module]
+  (println "evaling module: " module)
   ;; FIXME: also needs to make this stuff available for resolve?
 
-    (fn []
-    ;; FIXME
-    ;; needs to prep resolve magic when instanciating pipes, to select same runtime
-    ;; maybe simply do so explicitly
+  ((:module *manager*) module *manager*))
 
-        (println  (str "about to eval module: " module))
-        (let [evaled (eval-node definition)]
-          (println (str "used module: " module "->" evaled))
-          evaled)))
+(defn foo
+  ""
+  [& args]
+  (println args))
+
+
+(defmethod eval-node ::fuse [{:keys [::module-name ::bindings] :as module}]
+  (foo module)
+  (let [mod (eval-node module-name)]
+    ))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]
@@ -87,8 +90,14 @@
 
 (defmethod eval-node ::fn-ref [{:keys [::fn] :as f}]
   (or ((:resolve *manager*) (:db/id fn))
-      (when (api/is-def? fn) (eval-node fn))
-      (compile-error "Undefined reference " fn " in " *manager*)))
+      (when (api/is-def? fn)
+        (let [res (eval-node fn)]
+          (println "evaling" (:db/id fn) "->" res "def" fn) res))
+      ;; (when (api/is-module? fn)
+      ;;   (let [res (eval-node fn)]
+      ;;     (println "evaling" (:db/id fn) "->" res "mod" fn) res))
+      (println "type:" (::type fn) (:db/id fn))
+      (compile-error "Undefined reference for evaling " *db-id* " fn " fn)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
   (let [func (eval-node fn-expression)]
