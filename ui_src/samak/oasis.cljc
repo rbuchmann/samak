@@ -301,82 +301,13 @@
                                                                    (api/keyword :target) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/target)])
                                                                    (api/keyword :source) (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :source)])})})}))
 
-               (defncall 'mouse-reduce 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/fn-call (api/symbol 'incase) [(api/symbol 'is-mouse-move)
-                                                                  (api/symbol 'handle-mouse-move)])
-                               (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mouse-down)
-                                                                  (api/symbol 'handle-mouse-down)])
-                               (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mouse-up)
-                                                                  (api/symbol 'handle-mouse-up)])
-                               (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :state)
-                                                                           (api/key-fn :mouse)])
-                                            (api/key-fn :next)])
-                               (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])
-                               (api/map {(api/keyword :mouse) (api/symbol '_)})])
-                 (api/map {(api/keyword :mouse) (api/map {})}))
 
-               (defncall 'mouse-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
-                 )
-
-               (defncall 'target-reduce 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/map {(api/keyword :prev) (api/fn-call (api/symbol '->) [(api/key-fn :state)
-                                                                                            (api/key-fn :current)])
-                                         (api/keyword :current) (api/fn-call (api/symbol '->) [(api/key-fn :next)
-                                                                                               (api/key-fn :samak.mouse/target)
-                                                                                               (api/symbol 'make-target)])})])
-                 (api/map {(api/keyword :current) (api/map {(api/keyword :type) (api/string "none")
-                                                            (api/keyword :name) (api/string "none")})
-                           (api/keyword :prev) (api/map {(api/keyword :type) (api/string "none")
-                                                         (api/keyword :name) (api/string "none")})}))
-
-               (defncall 'only-different '->
-                 (api/fn-call (api/symbol 'except) [(api/fn-call (api/symbol '->) [(api/vector [(api/key-fn :prev) (api/key-fn :current)])
-                                                                                   (api/fn-call (api/symbol 'distinct) [(api/symbol '_)])
-                                                                                   (api/fn-call (api/symbol 'count) [(api/symbol '_)])
-                                                                                   (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 1)])])]))
 
                (defncall 'tag-hover '->
                  (api/map {(api/keyword :hover) (api/symbol '_)}))
 
-               (defncall 'target-events 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
-                 )
-               (defncall 'hover-events 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
-                 )
-               (defncall 'hover-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
-                 )
-
-               (defncall 'is-drag '->
-                 (api/key-fn :mouse)
-                 (api/key-fn :drag)
-                 (api/key-fn :active)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :true)]))
-
-               (defncall 'is-drag-end '->
-                 (api/key-fn :drag)
-                 (api/key-fn :end)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :end)]))
-
-               (defncall 'is-drag-start '->
-                 (api/key-fn :drag)
-                 (api/key-fn :begin)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :true)]))
-
-               (defncall 'is-drag-or-end 'or
-                 (api/symbol 'is-drag)
-                 (api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/symbol 'is-drag-end)]))
-
-               (defncall 'is-drag-end-or-start 'or
-                 (api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/symbol 'is-drag-start)])
-                 (api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/symbol 'is-drag-end)]))
-
-               (defncall 'filter-drag-end-or-start 'only (api/symbol 'is-drag-end-or-start))
-
-               (defncall 'filter-drag 'only (api/symbol 'is-drag-or-end))
 
                (defncall 'drag-events 'pipes/debug)
-               (defncall 'drag-state 'pipes/debug)
 
                ;; (defncall 'drag-reduce 'pipes/reductions
                ;;   (api/fn-call (api/symbol '->)
@@ -797,12 +728,6 @@
                  (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
                                                     (api/symbol 'ignore)]))
 
-               (defncall 'make-zoom 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/map {(api/keyword :zoom) (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :zoom)])
-                                                                                           (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :zoom)])])})])
-                 (api/map {(api/keyword :zoom) (api/integer 1)}))
-
                (defncall 'make-view-move 'pipes/reductions
                  (api/fn-call (api/symbol '->)
                               [(api/key-fn :next)
@@ -927,74 +852,6 @@
                  (api/fn-call (api/symbol 'spy) [(api/string "car cmd")])
                  (api/key-fn :samak.caravan/id)
                  (api/symbol 'construct-scope))
-
-               (defncall 'is-scroll '->
-                 (api/key-fn :mouse)
-                 (api/key-fn :drag)
-                 (api/key-fn :button)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :secondary)]))
-
-               (defncall 'filter-scroll 'only (api/fn-call (api/symbol 'and) [(api/symbol 'is-scroll)
-                                                                              (api/symbol 'is-drag-or-end)]))
-
-               (defncall 'scroll-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
-                 )
-
-               (defncall 'construct-view '->
-                 (api/key-fn :mouse)
-                 (api/map {(api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :delta)
-                                                                           (api/key-fn :x)])
-                           (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :delta)
-                                                                           (api/key-fn :y)])}))
-
-               (defncall 'center-view 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/map {(api/keyword :x) (api/integer 150)
-                                         (api/keyword :y) (api/integer 50)})])
-                 (api/map {}))
-
-               (defncall 'view-reduce 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/fn-call (api/symbol 'into) [(api/key-fn :state) (api/key-fn :next)])])
-                 (api/map {(api/keyword :zoom) (api/integer 1)
-                           (api/keyword :x) (api/integer 150)
-                           (api/keyword :y) (api/integer 50)}))
-
-               (defncall 'tag-view '->
-                 (api/map {(api/keyword :view) (api/symbol '_)}))
-
-
-               (defncall 'view-commands 'pipes/debug)
-               (defncall 'view-events 'pipes/debug)
-               (defncall 'zoom-events 'pipes/debug)
-
-               (defncall 'view-delta 'pipes/reductions
-                 (api/fn-call (api/symbol '->)
-                              [(api/map {(api/keyword :x)
-                                         (api/fn-call (api/symbol '+) [(api/fn-call (api/symbol '->)
-                                                                                    [(api/key-fn :next)
-                                                                                     (api/key-fn :x)])
-                                                                       (api/fn-call (api/symbol '->)
-                                                                                    [(api/key-fn :state)
-                                                                                     (api/key-fn :x)])])
-                                         (api/keyword :y)
-                                         (api/fn-call (api/symbol '+) [(api/fn-call (api/symbol '->)
-                                                                                    [(api/key-fn :next)
-                                                                                     (api/key-fn :y)])
-                                                                       (api/fn-call (api/symbol '->)
-                                                                                    [(api/key-fn :state)
-                                                                                     (api/key-fn :y)])])}
-                                        )])
-                 (api/map {(api/keyword :x) (api/integer 150)
-                           (api/keyword :y) (api/integer 50)}))
-
-
-               (defncall 'view-raw 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
-                 )
-               (defncall 'view-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
-                 )
-               (defncall 'view-deltas 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
-                 )
 
                ;; keep evaluations in state reduction
 
@@ -1543,6 +1400,21 @@
                (api/map {(api/keyword :items) (api/vector [])
                          (api/keyword :hover) (api/map {})
                          (api/keyword :resize) (api/map {})}))
+
+
+             (defncall 'state-dedupe 'pipes/reductions
+               (api/fn-call (api/symbol '->)
+                            [(api/map {(api/keyword :next) (api/key-fn :next)
+                                       (api/keyword :state) (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :state)])
+                                       (api/keyword :key) (api/fn-call (api/symbol 'first) [(api/fn-call (api/symbol 'keys) [(api/key-fn :next)])])})
+                             (api/map {(api/keyword :next) (api/key-fn :next)
+                                       (api/keyword :state) (api/key-fn :state)
+                                       (api/keyword :existing) (api/fn-call (api/symbol 'lookup) [(api/key-fn :state) (api/key-fn :key) (api/keyword :not-found)])})
+                             (api/map {(api/keyword :dupe) (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '=) [(api/key-fn :existing) (api/key-fn :next)])
+                                                                                          (api/keyword :dupe)
+                                                                                          (api/keyword :unique)])
+                                       (api/keyword :state) (api/fn-call (api/symbol 'into) [(api/map {}) (api/vector [(api/key-fn :state) (api/key-fn :next)])])})])
+               (api/map {(api/keyword :state) (api/map {})}))
 
 
               ;; global state
@@ -2149,22 +2021,21 @@
              (defncall 'tag-mode '->
                (api/map {(api/keyword :mode) (api/symbol '_)}))
 
-             (defncall 'init-view '->
-               (api/map {(api/keyword :zoom) (api/integer 1)
-                         (api/keyword :x) (api/integer 150)
-                         (api/keyword :y) (api/integer 50)}))
-
              (defncall 'm-caravan-actions 'caravan-actions)
              ])
 
 (def oasis-core-defs
   [(defncall 'oasis-core-init 'pipes/debug)
    (defncall 'oasis-kb 'pipes/debug)
-   (defncall 'oasis-mouse 'pipes/debug)
+   (defncall 'oasis-hover-state 'pipes/debug)
+   (defncall 'oasis-scroll-state 'pipes/debug)
+   (defncall 'oasis-drag-state 'pipes/debug)
    (defncall 'oasis-core-events 'pipes/debug)
    (defncall 'oasis-core-out 'pipes/debug)
 
-   (defncall 'log-mouse 'pipes/log (api/string "mouse: "))
+   (defncall 'log-drag 'pipes/log (api/string "drag: "))
+   (defncall 'log-hover 'pipes/log (api/string "hover: "))
+   (defncall 'log-scroll 'pipes/log (api/string "scroll: "))
    (defncall 'log-state2 'pipes/log (api/string "state: "))
 
    (api/defmodule 'oasis-core (api/map {(api/keyword :depends) (api/map {(api/keyword :caravan) (api/symbol 'modules/caravan)})
@@ -2177,7 +2048,8 @@
                                                                          ;(api/keyword :layout) (api/symbol 'oasis-layout)
                                                                          (api/keyword :init) (api/symbol 'oasis-core-init)
                                                                          (api/keyword :kb) (api/symbol 'oasis-kb)
-                                                                         (api/keyword :mouse) (api/symbol 'oasis-mouse)
+                                                                         (api/keyword :drag) (api/symbol 'oasis-drag-state)
+                                                                         (api/keyword :hover) (api/symbol 'oasis-hover-state)
                                                                          (api/keyword :events) (api/symbol 'oasis-core-events)
                                                                          (api/keyword :state) (api/symbol 'oasis-core-out)
                                                                          })
@@ -2188,25 +2060,15 @@
 (def oasis-core-net
   [;; networks
 
-   (pipe 'oasis-mouse 'log-mouse)
-   (pipe 'oasis-mouse 'mouse-reduce)
-   (pipe 'mouse-reduce 'mouse-state)
-   (pipe 'oasis-mouse 'target-reduce)
-   (pipe 'target-reduce 'target-events)
-
-   (pipe 'target-events 'only-different 'hover-events)
-   (pipe 'hover-events 'tag-hover 'hover-state)
+   (pipe 'oasis-drag-state 'log-drag)
+   (pipe 'oasis-hover-state 'log-hover)
 
    (pipe 'oasis-kb 'filter-key-input 'keyboard-filtered)
    (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
    (pipe 'keyboard-filtered 'filter-menu 'editor-commands)
    (pipe 'keyboard-filtered 'log-keyboard)
 
-   (pipe 'keyboard-filtered 'filter-view 'view-commands)
-   (pipe 'view-commands 'make-zoom)
-   (pipe 'make-zoom 'zoom-events)
-   (pipe 'zoom-events 'view-events)
-   (pipe 'view-commands 'view-deltas)
+   ;; (pipe 'keyboard-filtered 'filter-view 'view-commands)
 
    (pipe 'raw-events 'input-reduce)
    (pipe 'input-reduce 'reduced-events)
@@ -2227,17 +2089,14 @@
    (pipe 'eval-reduce 'eval-raw)
    (pipe 'eval-raw 'tag-eval 'eval-state)
 
-   (pipe 'mouse-state 'filter-drag 'drag-events)
-
-   (pipe 'drag-events 'filter-drag-end-or-start 'drag-state) ;; FIXME reduce
    ;; (pipe 'drag-state 'log-mouse)
-   (pipe 'drag-state 'interpret-drag 'editor-commands)
+   (pipe 'oasis-drag-state 'interpret-drag 'editor-commands)
    ;; (pipe 'drag-events 'log-mouse)
 
    (pipe 'caravan-commands 'handle-caravan-command 'editor-commands)
    (pipe 'editor-commands 'handle-commands 'editor-events)
-   (pipe 'hover-state 'editor-events)
-   (pipe 'scroll-state 'editor-events)
+   (pipe 'oasis-hover-state 'editor-events)
+   ;; (pipe 'oasis-scroll-state 'editor-events)
    (pipe 'editor-events 'editor-state-reduce)
    (pipe 'editor-state-reduce 'editor-cooked)
    (pipe 'editor-cooked 'tag-editor 'editor-state)
@@ -2246,19 +2105,12 @@
    (pipe 'editor-commands 'filter-immediate 'editor-immediate)
    ;; (pipe 'editor-immediate 'log-command)
 
-   (pipe 'mouse-state 'filter-scroll 'scroll-state)
-   (pipe 'scroll-state 'construct-view 'view-deltas)
-   (pipe 'view-deltas 'view-delta)
-   (pipe 'view-delta 'view-events)
-   (pipe 'view-events 'view-reduce)
-   (pipe 'view-reduce 'view-raw)
-   (pipe 'view-raw 'tag-view 'view-state)
 
    (pipe 'oasis-core-init 'source-menu-const 'source-menu-items)
    (pipe 'source-menu-items 'source-menu-map)
    (pipe 'source-menu-map 'source-menu)
    (pipe 'source-menu 'tag-items 'source-menu-events)
-   (pipe 'hover-state 'source-menu-events)
+   (pipe 'oasis-hover-state 'source-menu-events)
    (pipe 'source-menu-events 'reduce-menu-source)
    (pipe 'reduce-menu-source 'source-menu-state)
    (pipe 'source-menu-state 'tag-menu-source 'state-dedupe)
@@ -2267,7 +2119,7 @@
    (pipe 'sink-menu-items 'sink-menu-map)
    (pipe 'sink-menu-map 'sink-menu)
    (pipe 'sink-menu 'tag-items 'sink-menu-events)
-   (pipe 'hover-state 'sink-menu-events)
+   (pipe 'oasis-hover-state 'sink-menu-events)
    (pipe 'events 'sink-menu-events)
    (pipe 'sink-menu-events 'reduce-menu-sink)
    (pipe 'reduce-menu-sink 'sink-menu-state)
@@ -2275,18 +2127,16 @@
 
    (pipe 'editor-state 'state-dedupe)
    (pipe 'loaded-state 'state-dedupe)
-   (pipe 'view-state 'state-dedupe)
    (pipe 'drag-events 'state-dedupe)
-   (pipe 'hover-state 'state-dedupe)
+   (pipe 'oasis-hover-state 'state-dedupe)
    (pipe 'mode-state 'state-dedupe)
    (pipe 'events 'state-dedupe)
    (pipe 'state-dedupe 'filter-state 'oasis-core-out)
    ;; (pipe 'state-dedupe 'oasis-core-out)
 
    (pipe 'mode-state 'load-reduce)
-   (pipe 'hover-state 'load-reduce)
+   (pipe 'oasis-hover-state 'load-reduce)
    (pipe 'eval-state 'load-reduce)
-   (pipe 'zoom-events 'load-reduce)
    (pipe 'load-reduce 'load-state)
    (pipe 'load-state 'filter-load 'loaded-state)
 
@@ -2319,8 +2169,6 @@
              (api/symbol 'm-caravan-actions))
 
 
-   (pipe 'oasis-core-init 'init-view 'view-events)
-
    (pipe 'oasis-core-init 'm-caravan-actions)
 
    (pipe 'caravan-commands 'log-caravan)
@@ -2329,10 +2177,13 @@
 (def oasis-render-defs
   [
    (defncall 'oasis-render-in 'pipes/debug)
-   (defncall 'log-mouse2 'pipes/log (api/string "mouse2: "))
+   (defncall 'oasis-render-init 'pipes/debug)
    (defncall 'oasis-render-mouse-in 'pipes/debug)
-   (defncall 'oasis-render-mouse-out 'pipes/debug)
+   (defncall 'oasis-render-drag-out 'pipes/debug)
+   (defncall 'oasis-render-hover-out 'pipes/debug)
    (defncall 'oasis-render-out 'pipes/debug)
+   (defncall 'scroll-state 'pipes/debug)
+   (defncall 'log-view 'pipes/log (api/string "view: "))
 
    ;; dark theme based on base16-atelierdune-dark
    ;; (http://atelierbram.github.io/syntax-highlighting/atelier-schemes/dune)
@@ -2391,6 +2242,163 @@
                                             (api/keyword :cell-active-content) (api/string "#b854d4")})})
 
 
+   ;; View handling
+
+   (defncall 'view-raw 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+     )
+   (defncall 'view-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+     )
+   (defncall 'view-deltas 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+     )
+   (defncall 'view-commands 'pipes/debug)
+   (defncall 'view-events 'pipes/debug)
+   (defncall 'zoom-events 'pipes/debug)
+
+   (defncall 'init-view '->
+     (api/map {(api/keyword :zoom) (api/integer 1)
+               (api/keyword :x) (api/integer 150)
+               (api/keyword :y) (api/integer 50)}))
+
+   (defncall 'make-zoom 'pipes/reductions
+     (api/fn-call (api/symbol '->)
+                  [(api/map {(api/keyword :zoom) (api/fn-call (api/symbol '*) [(api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :zoom)])
+                                                                               (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :zoom)])])})])
+     (api/map {(api/keyword :zoom) (api/integer 1)}))
+
+
+   (defncall 'view-delta 'pipes/reductions
+     (api/fn-call (api/symbol '->)
+                  [(api/map {(api/keyword :x)
+                             (api/fn-call (api/symbol '+) [(api/fn-call (api/symbol '->)
+                                                                        [(api/key-fn :next)
+                                                                         (api/key-fn :x)])
+                                                           (api/fn-call (api/symbol '->)
+                                                                        [(api/key-fn :state)
+                                                                         (api/key-fn :x)])])
+                             (api/keyword :y)
+                             (api/fn-call (api/symbol '+) [(api/fn-call (api/symbol '->)
+                                                                        [(api/key-fn :next)
+                                                                         (api/key-fn :y)])
+                                                           (api/fn-call (api/symbol '->)
+                                                                        [(api/key-fn :state)
+                                                                         (api/key-fn :y)])])}
+                            )])
+     (api/map {(api/keyword :x) (api/integer 150)
+               (api/keyword :y) (api/integer 50)}))
+
+   (defncall 'construct-view '->
+     (api/key-fn :mouse)
+     (api/map {(api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :delta)
+                                                               (api/key-fn :x)])
+               (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :delta)
+                                                               (api/key-fn :y)])}))
+
+   (defncall 'center-view 'pipes/reductions
+     (api/fn-call (api/symbol '->)
+                  [(api/map {(api/keyword :x) (api/integer 150)
+                             (api/keyword :y) (api/integer 50)})])
+     (api/map {}))
+
+   (defncall 'view-reduce 'pipes/reductions
+     (api/fn-call (api/symbol '->)
+                  [(api/fn-call (api/symbol 'into) [(api/key-fn :state) (api/key-fn :next)])])
+     (api/map {(api/keyword :zoom) (api/integer 1)
+               (api/keyword :x) (api/integer 150)
+               (api/keyword :y) (api/integer 50)}))
+
+   (defncall 'tag-view '->
+     (api/map {(api/keyword :view) (api/symbol '_)}))
+
+
+   ;; Mouse handling
+   (defncall 'mouse-reduce 'pipes/reductions
+     (api/fn-call (api/symbol '->)
+                  [(api/fn-call (api/symbol 'incase) [(api/symbol 'is-mouse-move)
+                                                      (api/symbol 'handle-mouse-move)])
+                   (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mouse-down)
+                                                      (api/symbol 'handle-mouse-down)])
+                   (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mouse-up)
+                                                      (api/symbol 'handle-mouse-up)])
+                   (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :state)
+                                                               (api/key-fn :mouse)])
+                                (api/key-fn :next)])
+                   (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])
+                   (api/map {(api/keyword :mouse) (api/symbol '_)})])
+     (api/map {(api/keyword :mouse) (api/map {})}))
+
+   (defncall 'mouse-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+     )
+
+   (defncall 'is-drag '->
+     (api/key-fn :mouse)
+     (api/key-fn :drag)
+     (api/key-fn :active)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :true)]))
+
+   (defncall 'is-drag-end '->
+     (api/key-fn :drag)
+     (api/key-fn :end)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :end)]))
+
+   (defncall 'is-drag-start '->
+     (api/key-fn :drag)
+     (api/key-fn :begin)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :true)]))
+
+   (defncall 'is-drag-or-end 'or
+     (api/symbol 'is-drag)
+     (api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/symbol 'is-drag-end)]))
+
+   (defncall 'is-drag-end-or-start 'or
+     (api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/symbol 'is-drag-start)])
+     (api/fn-call (api/symbol '->) [(api/key-fn :mouse) (api/symbol 'is-drag-end)]))
+
+   (defncall 'filter-drag-end-or-start 'only (api/symbol 'is-drag-end-or-start))
+
+   (defncall 'filter-drag 'only (api/symbol 'is-drag-or-end))
+
+
+   (defncall 'is-scroll '->
+     (api/key-fn :mouse)
+     (api/key-fn :drag)
+     (api/key-fn :button)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :secondary)]))
+
+   (defncall 'filter-scroll 'only (api/fn-call (api/symbol 'and) [(api/symbol 'is-scroll)
+                                                                  (api/symbol 'is-drag-or-end)]))
+
+   (defncall 'make-target-hover '->
+     (api/fn-call (api/symbol 'str-split) [(api/symbol '_) (api/string "/")])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-valid-target)
+                                        (api/map {(api/keyword :type) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
+                                                  (api/keyword :name) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])})]))
+
+
+   (defncall 'target-reduce 'pipes/reductions
+     (api/fn-call (api/symbol '->)
+                  [(api/map {(api/keyword :prev) (api/fn-call (api/symbol '->) [(api/key-fn :state)
+                                                                                (api/key-fn :current)])
+                             (api/keyword :current) (api/fn-call (api/symbol '->) [(api/key-fn :next)
+                                                                                   (api/key-fn :samak.mouse/target)
+                                                                                   (api/symbol 'make-target-hover)])})])
+     (api/map {(api/keyword :current) (api/map {(api/keyword :type) (api/string "none")
+                                                (api/keyword :name) (api/string "none")})
+               (api/keyword :prev) (api/map {(api/keyword :type) (api/string "none")
+                                             (api/keyword :name) (api/string "none")})}))
+
+   (defncall 'target-events 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+     )
+
+   (defncall 'only-different '->
+     (api/fn-call (api/symbol 'except) [(api/fn-call (api/symbol '->) [(api/vector [(api/key-fn :prev) (api/key-fn :current)])
+                                                                       (api/fn-call (api/symbol 'distinct) [(api/symbol '_)])
+                                                                       (api/fn-call (api/symbol 'count) [(api/symbol '_)])
+                                                                       (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 1)])])]))
+
+   (defncall 'hover-events 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+     )
+
+   ;; render handlers
    (defncall 'translate-str 'str
      (api/string "translate(")
      (api/fn-call (api/symbol 'or) [(api/key-fn :x) (api/integer 0)])
@@ -2730,20 +2738,6 @@
                   [(api/vector [(api/key-fn :state) (api/key-fn :next)])
                    (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)]) ])
      (api/map {}))
-
-   (defncall 'state-dedupe 'pipes/reductions
-     (api/fn-call (api/symbol '->)
-                  [(api/map {(api/keyword :next) (api/key-fn :next)
-                             (api/keyword :state) (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :state)])
-                             (api/keyword :key) (api/fn-call (api/symbol 'first) [(api/fn-call (api/symbol 'keys) [(api/key-fn :next)])])})
-                   (api/map {(api/keyword :next) (api/key-fn :next)
-                             (api/keyword :state) (api/key-fn :state)
-                             (api/keyword :existing) (api/fn-call (api/symbol 'lookup) [(api/key-fn :state) (api/key-fn :key) (api/keyword :not-found)])})
-                   (api/map {(api/keyword :dupe) (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '=) [(api/key-fn :existing) (api/key-fn :next)])
-                                                                                (api/keyword :dupe)
-                                                                                (api/keyword :unique)])
-                             (api/keyword :state) (api/fn-call (api/symbol 'into) [(api/map {}) (api/vector [(api/key-fn :state) (api/key-fn :next)])])})])
-     (api/map {(api/keyword :state) (api/map {})}))
 
    (defncall 'filter-state '->
      (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol '=) [(api/key-fn :dupe) (api/keyword :unique)])
@@ -3647,9 +3641,13 @@
 
    (api/defmodule 'oasis-render (api/map {(api/keyword :sources) (api/map {(api/keyword :state) (api/symbol 'oasis-render-in)
                                                                            (api/keyword :mouse) (api/symbol 'oasis-render-mouse-in)
-                                                                           (api/keyword :svg-elems) (api/symbol 'oasis-render-out)})
+                                                                           (api/keyword :init) (api/symbol 'oasis-render-init)
+                                                                           (api/keyword :svg-elems) (api/symbol 'oasis-render-out)
+                                                                           (api/keyword :drag) (api/symbol 'oasis-render-drag-out)
+                                                                           (api/keyword :hover) (api/symbol 'oasis-render-hover-out)})
                                           (api/keyword :sinks) (api/map {(api/keyword :svg-elems) (api/symbol 'oasis-render-out)
-                                                                         (api/keyword :mouse) (api/symbol 'oasis-render-mouse-out)})}))
+                                                                         (api/keyword :drag) (api/symbol 'oasis-render-drag-out)
+                                                                         (api/keyword :hover) (api/symbol 'oasis-render-hover-out)})}))
    ])
 
 (def oasis-render-net
@@ -3658,7 +3656,44 @@
    (pipe 'state-reduce 'condensed-state)
 
    ;; (pipe 'oasis-render-mouse-in 'log-mouse2)
-   (pipe 'oasis-render-mouse-in 'oasis-render-mouse-out)
+   ;; (pipe 'oasis-render-mouse-in 'oasis-render-mouse-out)
+
+   ;; mouse handling
+   (pipe 'oasis-render-mouse-in 'mouse-reduce)
+   (pipe 'mouse-reduce 'mouse-state)
+   (pipe 'mouse-state 'filter-drag 'drag-events)
+
+   ;; (pipe 'drag-events 'filter-drag-end-or-start 'oasis-render-drag-out) ;; FIXME reduce
+   (pipe 'mouse-state 'filter-scroll 'scroll-state)
+
+   (pipe 'oasis-render-mouse-in 'target-reduce)
+   (pipe 'target-reduce 'target-events)
+   (pipe 'target-events 'only-different 'hover-events)
+   ;; (pipe 'hover-events 'tag-hover 'oasis-render-hover-out)
+
+   ;; keyboard handling
+
+
+   ;; view handling
+
+   (pipe 'view-commands 'make-zoom)
+   (pipe 'make-zoom 'zoom-events)
+   ;; (pipe 'zoom-events 'view-events)
+   ;; (pipe 'view-commands 'view-deltas) ;; FIXME
+
+   (pipe 'scroll-state 'construct-view 'view-deltas)
+   (pipe 'view-deltas 'view-delta)
+   (pipe 'view-delta 'view-events)
+   (pipe 'view-events 'view-reduce)
+   (pipe 'view-reduce 'view-raw)
+   (pipe 'view-raw 'tag-view 'view-state)
+   ;; (pipe 'view-state 'log-view)
+   (pipe 'view-state 'state-reduce)
+
+   (pipe 'oasis-render-init 'init-view 'view-events)
+
+
+   ;; state rendering
 
    (pipe 'condensed-state 'only-resize 'svg-render)
    (pipe 'condensed-state 'graph 'svg-render)
@@ -3791,6 +3826,11 @@
      (api/key-fn :sources)
      (api/key-fn :state))
    (defncall 'render-state 'm-state-fn)
+   (defncall 'm-ro-init-fn '->
+     (api/symbol 'm-render)
+     (api/key-fn :sources)
+     (api/key-fn :init))
+   (defncall 'render-init 'm-ro-init-fn)
    (defncall 'm-r-mouse-fn '->
      (api/symbol 'm-render)
      (api/key-fn :sources)
@@ -3801,11 +3841,16 @@
      (api/key-fn :sinks)
      (api/key-fn :svg-elems))
    (defncall 'render-elems 'm-elems-fn)
-   (defncall 'm-ro-mouse-fn '->
+   (defncall 'm-ro-hover-fn '->
      (api/symbol 'm-render)
      (api/key-fn :sinks)
-     (api/key-fn :mouse))
-   (defncall 'render-mouse-out 'm-ro-mouse-fn)
+     (api/key-fn :hover))
+   (defncall 'render-hover-out 'm-ro-hover-fn)
+   (defncall 'm-ro-drag-fn '->
+     (api/symbol 'm-render)
+     (api/key-fn :sinks)
+     (api/key-fn :drag))
+   (defncall 'render-drag-out 'm-ro-drag-fn)
 
    (defncall 'm-core-mod 'oasis-core)
    (defncall 'm-core 'm-core-mod)
@@ -3824,11 +3869,16 @@
      (api/key-fn :sources)
      (api/key-fn :kb))
    (defncall 'core-kb-in 'm-core-kb-fn)
-   (defncall 'm-core-mouse-fn '->
+   (defncall 'm-core-drag-fn '->
      (api/symbol 'm-core)
      (api/key-fn :sources)
-     (api/key-fn :mouse))
-   (defncall 'core-mouse-in 'm-core-mouse-fn)
+     (api/key-fn :drag))
+   (defncall 'core-drag-in 'm-core-drag-fn)
+   (defncall 'm-core-hover-fn '->
+     (api/symbol 'm-core)
+     (api/key-fn :sources)
+     (api/key-fn :hover))
+   (defncall 'core-hover-in 'm-core-hover-fn)
    (defncall 'm-core-events-fn '->
      (api/symbol 'm-core)
      (api/key-fn :sources)
@@ -3855,10 +3905,14 @@
                                                                     })
                                    (api/keyword :sources) (api/map {(api/keyword :module-core-out) (api/symbol 'core-state)
                                                                     ;(api/keyword :module-core-kb-in) (api/symbol 'core-kb-in)
-                                                                    (api/keyword :module-core-mouse-in) (api/symbol 'core-mouse-in)
+                                                                    ;(api/keyword :module-core-drag-in) (api/symbol 'core-drag-in)
+                                                                    ;(api/keyword :module-core-scroll-in) (api/symbol 'core-scroll-in)
+                                                                    ;(api/keyword :module-core-hover-in) (api/symbol 'core-hover-in)
                                                                     (api/keyword :module-render-state) (api/symbol 'render-state)
+                                                                    (api/keyword :module-render-init) (api/symbol 'render-init)
                                                                     (api/keyword :module-render-mouse-in) (api/symbol 'render-mouse-in)
-                                                                    (api/keyword :module-render-mouse-out) (api/symbol 'render-mouse-out)
+                                                                    (api/keyword :module-render-drag-out) (api/symbol 'render-drag-out)
+                                                                    (api/keyword :module-render-hover-out) (api/symbol 'render-hover-out)
                                                                     (api/keyword :module-render-out) (api/symbol 'render-elems)
                                                                     (api/keyword :kb) (api/symbol 'oasis-keyboard)
                                                                     (api/keyword :mouse) (api/symbol 'oasis-bug)
@@ -3888,15 +3942,18 @@
    (pipe 'oasis-init 'header 'ui-render)
    ;; (pipe 'oasis-init 'header 'log-render)
    (pipe 'oasis-init 'core-init)
+   (pipe 'oasis-init 'render-init)
    ;; (pipe 'core-state 'log-state)
    (pipe 'core-state 'render-state)
    ;; (pipe 'render-elems 'log-render)
    (pipe 'render-elems 'ui-render)
 
    (pipe 'oasis-keyboard 'core-kb-in)
-   ;; (pipe 'oasis-bug 'core-mouse-in)
    (pipe 'oasis-bug 'render-mouse-in)
-   (pipe 'render-mouse-out 'core-mouse-in)
+   (pipe 'render-drag-out 'core-drag-in)
+   (pipe 'render-hover-out 'core-hover-in)
+   ;; (pipe 'render-drag-out 'log-foo)
+   ;; (pipe 'render-hover-out 'log-foo)
    ;; (pipe 'render-mouse-out 'log-foo)
    (pipe 'oasis-events 'core-events-in)
    (pipe 'oasis-events 'log-state)

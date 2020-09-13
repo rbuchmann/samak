@@ -58,7 +58,8 @@
                               :sources {
                                         :init (sched/make-pipe-id {:module :lone :type :sources :name :init})
                                         :kb (sched/make-pipe-id {:module :lone :type :sources :name :kb})
-                                        :mouse (sched/make-pipe-id {:module :lone :type :sources :name :mouse})
+                                        :drag (sched/make-pipe-id {:module :lone :type :sources :name :drag})
+                                        :hover (sched/make-pipe-id {:module :lone :type :sources :name :hover})
                                         :events (sched/make-pipe-id {:module :lone :type :sources :name :events})
                                         }
                               }})
