@@ -618,6 +618,10 @@
                  (api/keyword :fall)
                  (api/symbol 'construct-action))
 
+               (defncall 'construct-scope '->
+                 (api/map {(api/keyword :command) (api/keyword :scope)
+                           (api/keyword :data) (api/symbol '_)}))
+
                (defncall 'filter-edit '->
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-phase-up)
                                                     (api/fn-call (api/symbol '->) [(api/map {(api/keyword :key) (api/keyword :ignore)})])])
@@ -921,7 +925,8 @@
 
                (defncall 'handle-caravan-command '->
                  (api/fn-call (api/symbol 'spy) [(api/string "car cmd")])
-                 (api/symbol 'construct-back))
+                 (api/key-fn :samak.caravan/id)
+                 (api/symbol 'construct-scope))
 
                (defncall 'is-scroll '->
                  (api/key-fn :mouse)
@@ -1162,6 +1167,13 @@
                 (api/key-fn :data)
                 (api/map {(api/keyword :activity) (api/symbol '_)}))
 
+              (defncall 'is-scope-change '->
+                (api/key-fn :command)
+                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :scope)]))
+
+              (defncall 'handle-scope '->
+                (api/key-fn :data)
+                (api/map {(api/keyword :scope) (api/symbol '_)}))
 
               (defncall 'handle-commands '->
                 (api/fn-call (api/symbol 'spy) [(api/string "comm")])
@@ -1183,6 +1195,8 @@
                                                    (api/symbol 'handle-trace)])
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-mode-change)
                                                    (api/symbol 'handle-mode)])
+                (api/fn-call (api/symbol 'incase) [(api/symbol 'is-scope-change)
+                                                   (api/symbol 'handle-scope)])
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-activity-change)
                                                    (api/symbol 'handle-activity)])
                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-command)
@@ -1251,7 +1265,7 @@
 
               (defncall 'def-name 'str
                 (api/string "d/")
-                (api/key-fn :caravan/name))
+                (api/key-fn :caravan/id))
 
               (defncall 'detect-pipe-node '->
                 (api/key-fn :caravan/type)
@@ -1317,6 +1331,17 @@
                                                         (api/keyword :ast) (api/symbol 'selected-source-change)
                                                         (api/keyword :formatted) (api/fn-call (api/symbol '->) [(api/map {(api/keyword :def) (api/symbol 'selected-source-change)})
                                                                                                                 (api/symbol 'format-def)])})}))
+
+             (defncall 'is-next-scope '->
+                (api/key-fn :next)
+                (api/key-fn :scope))
+
+             (defncall 'process-scope '->
+               (api/map {(api/keyword :state) (api/key-fn :state)
+                          (api/keyword :next) (api/map {(api/keyword :mode) (api/keyword :back)
+                                                        (api/keyword :scope) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :scope)])})})
+                (api/fn-call (api/symbol 'spy) [(api/string "scope")])
+               )
 
               (defncall 'is-next-mode '->
                 (api/key-fn :next)
@@ -1413,6 +1438,8 @@
                                                                  (api/symbol 'process-activity)])
                               (api/fn-call (api/symbol 'incase) [(api/symbol 'is-next-cursor)
                                                                  (api/symbol 'process-cursor)])
+                              (api/fn-call (api/symbol 'incase) [(api/symbol 'is-next-scope)
+                                                                 (api/symbol 'process-scope)])
                               (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :selected)])
                                                                  (api/symbol 'process-select)])
                               (api/fn-call (api/symbol 'incase) [(api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :eval)])
@@ -1592,28 +1619,55 @@
                 (api/fn-call (api/symbol 'filter) [(api/symbol 'is-pipe-eval)
                                                   (api/symbol '_)]))
 
-             (defncall 'format-mod '->
-               (api/fn-call (api/symbol 'spy) [(api/string "fmod2")])
-               (api/map {(api/keyword :id) (api/key-fn :caravan/name)
-                         (api/keyword :name) (api/key-fn :caravan/name)
-                         (api/keyword :type) (api/keyword :module)
-                         ;; (api/keyword :width) (api/integer 300)
-                         ;; (api/keyword :height) (api/integer 300)
-                         }))
 
-             (defncall 'format-modules '->
-               (api/fn-call (api/symbol 'map) [(api/symbol 'format-mod) (api/key-fn :modules)]))
+             (defncall 'format-child-fn '->
+               (api/map {(api/keyword :def) (api/fn-call (api/symbol 'lookup) [(api/key-fn :evalorig) (api/fn-call (api/symbol 'str) [(api/key-fn :node)]) (api/map {(api/keyword :unknown) (api/fn-call (api/symbol 'str) [(api/key-fn :node)])})])
+                         (api/keyword :context) (api/map {(api/keyword :zoom) (api/integer 2)})})
+               (api/symbol 'format-def)
+               )
 
-             (defncall 'merge-defs '->
-               (api/map {(api/keyword :def) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
-                         (api/keyword :context) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
+             (defncall 'merge-child-fn '->
+               (api/map {(api/keyword :node) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
+                         (api/keyword :evalorig) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
 
-              (defncall 'format-defs '->
-                (api/fn-call (api/symbol 'myzip) [(api/key-fn :defs)
-                                                  (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol 'count) [(api/key-fn :defs)])
-                                                                                     (api/key-fn :context)])])
-                (api/fn-call (api/symbol 'map) [(api/symbol 'merge-defs) (api/symbol '_)])
-                (api/fn-call (api/symbol 'map) [(api/symbol 'format-def) (api/symbol '_)]))
+             (defncall 'format-child-fns '->
+               (api/fn-call (api/symbol 'myzip) [(api/fn-call (api/symbol '->) [(api/key-fn :mod)
+                                                                                (api/key-fn :caravan/nodes)])
+                                                 (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :mod)
+                                                                                                                   (api/key-fn :caravan/nodes)
+                                                                                                                   (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
+                                                                                    (api/key-fn :evalorig)])])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'merge-child-fn) (api/symbol '_)])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'format-child-fn) (api/symbol '_)]))
+
+             (defncall 'port-name 'str
+                (api/string "d/")
+                (api/key-fn :caravan/id))
+
+             (defncall 'format-port-def '->
+               (api/map {(api/keyword :id) (api/fn-call (api/symbol '->) [(api/key-fn :def) (api/symbol 'port-name)])
+                         (api/keyword :name) (api/fn-call (api/symbol '->) [(api/key-fn :def) (api/key-fn :caravan/name)])
+                         (api/keyword :width) (api/integer 30)
+                         (api/keyword :height) (api/integer 30)}))
+
+             (defncall 'format-port '->
+               (api/map {(api/keyword :def) (api/fn-call (api/symbol 'lookup) [(api/key-fn :evalorig) (api/fn-call (api/symbol 'str) [(api/key-fn :port)]) (api/map {(api/keyword :unknown) (api/fn-call (api/symbol 'str) [(api/key-fn :port)])})])})
+               (api/symbol 'format-port-def)
+               )
+
+             (defncall 'merge-port '->
+               (api/map {(api/keyword :port) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
+                         (api/keyword :evalorig) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
+
+             (defncall 'format-ports '->
+               (api/fn-call (api/symbol 'myzip) [(api/fn-call (api/symbol '->) [(api/key-fn :mod)
+                                                                                (api/key-fn :caravan/ports)])
+                                                 (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :mod)
+                                                                                                                   (api/key-fn :caravan/ports)
+                                                                                                                   (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
+                                                                                    (api/key-fn :evalorig)])])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'merge-port) (api/symbol '_)])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'format-port) (api/symbol '_)]))
 
              (defncall 'extract-connection '->
                (api/fn-call (api/symbol 'if) [(api/key-fn :caravan/func)
@@ -1626,24 +1680,81 @@
 
                                                                      (api/keyword :to) (api/key-fn :caravan/sink)})])]))
 
+             (defncall 'merge-child-pipe '->
+               (api/map {(api/keyword :pipe) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
+                         (api/keyword :evalorig) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
+
+             (defncall 'extract-child-pipe '->
+               (api/fn-call (api/symbol 'lookup) [(api/key-fn :evalorig) (api/fn-call (api/symbol 'str) [(api/key-fn :pipe)]) (api/map {(api/keyword :unknown) (api/fn-call (api/symbol 'str) [(api/key-fn :pipe)])})])
+               ;; (api/fn-call (api/symbol 'spy) [(api/string "fconn")])
+                (api/symbol 'extract-connection))
+
+             (defncall 'format-child-pipes '->
+               (api/fn-call (api/symbol 'myzip) [(api/fn-call (api/symbol '->) [(api/key-fn :mod)
+                                                                                (api/key-fn :caravan/pipes)])
+                                                 (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :mod)
+                                                                                                                   (api/key-fn :caravan/pipes)
+                                                                                                                   (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
+                                                                                    (api/key-fn :evalorig)])])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'merge-child-pipe) (api/symbol '_)])
+               (api/fn-call (api/symbol 'mapcat) [(api/symbol 'extract-child-pipe) (api/symbol '_)])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'format-pipe) (api/symbol '_)]))
+
+             (defncall 'format-mod '->
+               ;; (api/fn-call (api/symbol 'spy) [(api/string "fmod2")])
+               (api/map {(api/keyword :id) (api/fn-call (api/symbol '->) [(api/key-fn :mod) (api/key-fn :caravan/name)])
+                         (api/keyword :name) (api/fn-call (api/symbol '->) [(api/key-fn :mod) (api/key-fn :caravan/name)])
+                         (api/keyword :type) (api/keyword :module)
+                         (api/keyword :ports) (api/symbol 'format-ports)
+                         (api/keyword :children) (api/symbol 'format-child-fns)
+                         (api/keyword :edges) (api/symbol 'format-child-pipes)
+                         })
+               )
+
+
+             (defncall 'merge-mod '->
+               (api/map {(api/keyword :mod) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
+                         (api/keyword :evalorig) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
+
+             (defncall 'format-modules '->
+               (api/fn-call (api/symbol 'myzip) [(api/fn-call (api/symbol '->) [(api/key-fn :modules)])
+                                                 (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :modules)
+                                                                                                                   (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
+                                                                                    (api/key-fn :evalorig)])])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'merge-mod) (api/symbol '_)])
+               (api/fn-call (api/symbol 'map) [(api/symbol 'format-mod) (api/symbol '_)]))
+
+             (defncall 'merge-defs '->
+               (api/map {(api/keyword :def) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
+                         (api/keyword :context) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
+
+              (defncall 'format-defs '->
+                (api/fn-call (api/symbol 'myzip) [(api/key-fn :defs)
+                                                  (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol 'count) [(api/key-fn :defs)])
+                                                                                     (api/key-fn :context)])])
+                (api/fn-call (api/symbol 'map) [(api/symbol 'merge-defs) (api/symbol '_)])
+                (api/fn-call (api/symbol 'map) [(api/symbol 'format-def) (api/symbol '_)]))
+
              (defncall 'format-pipes '->
                (api/fn-call (api/symbol 'mapcat) [(api/symbol 'extract-connection) (api/key-fn :pipes)])
                (api/fn-call (api/symbol 'map) [(api/symbol 'format-pipe) (api/symbol '_)]))
 
              (defncall 'format-state '->
-               (api/map {(api/keyword :eval) (api/fn-call (api/symbol '->) [(api/key-fn :eval)
+               (api/map {(api/keyword :evalorig) (api/key-fn :eval)
+                         (api/keyword :eval) (api/fn-call (api/symbol '->) [(api/key-fn :eval)
                                                                             (api/fn-call (api/symbol 'vals) [(api/symbol '_)])])
                          (api/keyword :context) (api/symbol '_)})
-               (api/map {(api/keyword :defs) (api/symbol 'filter-nodes)
+               (api/map {(api/keyword :evalorig) (api/key-fn :evalorig)
+                         (api/keyword :defs) (api/symbol 'filter-nodes)
                          (api/keyword :pipes) (api/symbol 'filter-connections)
                          (api/keyword :modules) (api/symbol 'filter-modules)
                          (api/keyword :context) (api/key-fn :context)})
-               (api/fn-call (api/symbol 'spy) [(api/string "fmod")])
+               ;; (api/fn-call (api/symbol 'spy) [(api/string "fmod")])
                (api/map {(api/keyword :id) (api/string "root")
                          (api/keyword :layoutOptions) (api/map {(api/string "elk.algorithm") (api/string "layered")})
-                         (api/keyword :children) (api/symbol 'format-modules)
-                         ;; (api/keyword :children) (api/symbol 'format-defs)
-                         ;; (api/keyword :edges) (api/symbol 'format-pipes)
+                         (api/keyword :children) (api/fn-call (api/symbol 'into) [(api/symbol 'format-modules) ;; (api/symbol 'format-defs)
+                                                                                  ])
+                         (api/keyword :edges) (api/symbol 'format-pipes)
                          }))
 
 
@@ -2022,12 +2133,17 @@
                                                                   (api/vector [(api/keyword :next)
                                                                                (api/keyword :mode)])
                                                                   (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :editor) (api/key-fn :mode)])])
+                             (api/fn-call (api/symbol 'assoc-in) [(api/symbol '_)
+                                                                  (api/vector [(api/keyword :next)
+                                                                               (api/keyword :scope)])
+                                                                  (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :editor) (api/key-fn :scope)])])
                              (api/fn-call (api/symbol 'update-in) [(api/symbol '_) (api/vector [(api/keyword :next) (api/keyword :editor)]) (api/keyword :removed)])
 
                              (api/vector [(api/key-fn :state)
                                           (api/key-fn :next)])
                              (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)]) ])
                (api/map {(api/keyword :mode) (api/keyword :unknown)
+                         (api/keyword :scope) (api/keyword :none)
                          (api/keyword :actions) (api/vector [])}))
 
              (defncall 'tag-mode '->
@@ -2175,7 +2291,7 @@
    (pipe 'load-state 'filter-load 'loaded-state)
 
    (pipe 'loaded-state 'format-state 'oasis-layout)
-   ;; (pipe 'eval-state 'format-state 'log-layout)
+   ;; (pipe 'loaded-state 'format-state 'log-layout)
 
    (pipe 'eval-state 'edit-information 'editor-events)
 
@@ -2240,6 +2356,7 @@
       (api/keyword :pipe-glow) (api/string "#6684e1")
       (api/keyword :pipe-stroke) (api/string "#a6a28c")
       (api/keyword :pipe-drag) (api/string "#b65611")
+      (api/keyword :module-bg) (api/string "#6684e1")
       (api/keyword :edge-in) (api/string "#6684e1")
       (api/keyword :edge-out) (api/string "#b65611")
       (api/keyword :edge-neutral) (api/string "#a6a28c")
@@ -2545,7 +2662,10 @@
                                                  (api/key-fn :mode)])
                   (api/string "/")
                   (api/fn-call (api/symbol '->) [(api/key-fn :editor)
-                                                 (api/key-fn :activity)])])
+                                                 (api/key-fn :activity)])
+                  (api/string " - scope: ")
+                  (api/fn-call (api/symbol '->) [(api/key-fn :editor)
+                                                 (api/key-fn :scope)])])
      (api/fn-call (api/symbol 'str-join) [(api/string " ") (api/symbol '_)]))
 
    (defncall 'render-menu-action '->
@@ -3056,7 +3176,8 @@
                                                                                                        (api/keyword :pointer-events) (api/string "all")})})])
                                                  (api/vector [(api/keyword :g)])])
                   (api/vector [(api/keyword :circle)
-                               (api/map {(api/keyword :id) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'pipe-id)])
+                               (api/map {(api/keyword :id) (api/key-fn :id)
+                                         (api/keyword :class) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'pipe-id)])
                                          (api/keyword :cx) (api/integer 50)
                                          (api/keyword :cy) (api/integer 50)
                                          (api/keyword :r) (api/integer 50)
@@ -3115,70 +3236,9 @@
                (api/keyword :hovered) (api/symbol 'is-pipe-hovered)})
      (api/symbol 'graph-pipe-single))
 
-   (defncall 'graph-module '->
-     (api/fn-call (api/symbol 'spy) [(api/string "gmod")])
-     (api/vector [(api/keyword :g)
-                  (api/vector [(api/keyword :rect)
-                               (api/map {(api/keyword :id) (api/symbol 'func-id)
-                                         (api/keyword :fill-opacity) (api/float 0.7)
-
-                                         (api/keyword :style) (api/map {(api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :node-gutter) (api/symbol 'get-color)])
-                                                                        (api/keyword :stroke) (api/symbol 'get-func-stroke)
-                                                                        (api/keyword :filter) (api/string "url(#shadow)")
-                                                                        (api/keyword :pointer-events) (api/string "all")})
-                                         (api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :x)])
-                                         (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :y)])
-                                         (api/keyword :width) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :width)])
-                                         (api/keyword :height) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :height)])})])
-                  (api/vector [(api/keyword :text)
-                               (api/map {;; (api/keyword :transform) (api/string "rotate(90 50 50)")
-                                         (api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :x)])
-                                         (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :y)])
-                                         (api/keyword :dy) (api/integer 14)
-                                         (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :node-name-stroke) (api/symbol 'get-color)])
-                                         (api/keyword :text-anchor) (api/keyword :middle)
-                                         (api/keyword :font-weight) (api/string "bold")
-                                         (api/keyword :pointer-events) (api/string "none")})
-                               (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)])])])
-     (api/fn-call (api/symbol 'spy) [(api/string "gmod2")])
-     )
-
-   (defncall 'is-module '->
-     (api/key-fn :node)
-     (api/key-fn :type)
-     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :caravan/module)]))
-
-   (defncall 'is-pipe-node '->
-     (api/key-fn :node)
-     (api/key-fn :type)
-     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :caravan/sink)]))
-
-   (defncall 'is-func-node '->
-     (api/key-fn :node)
-     (api/key-fn :value))
-
-   (defncall 'graph-node '->
-     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-module)
-                                        (api/symbol 'graph-module)])
-     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-pipe-node)
-                                        (api/symbol 'graph-pipe)])
-     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-func-node)
-                                        (api/symbol 'graph-func)]))
-
    (defncall 'merge-node '->
      (api/map {(api/keyword :node) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
                (api/keyword :context) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
-
-   (defncall 'graph-nodes '->
-     (api/fn-call (api/symbol 'myzip) [(api/fn-call (api/symbol '->) [(api/key-fn :layout)
-                                                                      (api/key-fn :children)])
-                                       (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :layout)
-                                                                                                         (api/key-fn :children)
-                                                                                                         (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
-                                                                          (api/key-fn :context)])])
-     (api/fn-call (api/symbol 'map) [(api/symbol 'merge-node) (api/symbol '_)])
-     (api/fn-call (api/symbol 'map) [(api/symbol 'graph-node) (api/symbol '_)])
-     (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g) (api/map {(api/keyword :id) (api/string "nodes")})]) (api/symbol '_)]))
 
    (defncall 'graph-coords 'str
      (api/key-fn :x)
@@ -3227,18 +3287,121 @@
 
    (defncall 'prepare-edges '->
      (api/fn-call (api/symbol 'map) [(api/symbol 'build-edge)
-                                     (api/fn-call (api/symbol '->) [(api/key-fn :layout)
-                                                                    (api/key-fn :edges)])]))
+                                     (api/key-fn :edges)]))
 
    (defncall 'graph-connections '->
-     (api/fn-call (api/symbol 'myzip) [(api/symbol 'prepare-edges)
+     (api/fn-call (api/symbol 'myzip) [(api/fn-call (api/symbol '->) [(api/key-fn :layout) (api/symbol 'prepare-edges)])
                                        (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :layout)
                                                                                                          (api/key-fn :edges)
                                                                                                          (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
                                                                           (api/key-fn :context)])])
      (api/fn-call (api/symbol 'map) [(api/symbol 'merge-connection) (api/symbol '_)])
+     (api/fn-call (api/symbol 'filter) [(api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :section)]) (api/symbol '_)])
      (api/fn-call (api/symbol 'map) [(api/symbol 'graph-connection) (api/symbol '_)])
-     (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g)]) (api/symbol '_)]))
+     (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g) (api/map {(api/keyword :id) (api/string "edges")})]) (api/symbol '_)]))
+
+   (defncall 'graph-module-edges '->
+     (api/fn-call (api/symbol 'myzip) [(api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'prepare-edges)])
+                                       (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :node)
+                                                                                                         (api/key-fn :edges)
+                                                                                                         (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
+                                                                          (api/key-fn :context)])])
+     (api/fn-call (api/symbol 'map) [(api/symbol 'merge-connection) (api/symbol '_)])
+     (api/fn-call (api/symbol 'map) [(api/symbol 'graph-connection) (api/symbol '_)])
+     (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g) (api/map {(api/keyword :id) (api/string "edges")})]) (api/symbol '_)]))
+
+   (defncall 'graph-module-stub '->
+     (api/vector [(api/keyword :g)
+                  (api/vector [(api/keyword :rect)
+                               (api/map {(api/keyword :id) (api/symbol 'func-id)
+                                         (api/keyword :fill-opacity) (api/float 0.4)
+
+                                         (api/keyword :style) (api/map {(api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :module-bg) (api/symbol 'get-color)])
+                                                                        (api/keyword :stroke) (api/symbol 'get-func-stroke)
+                                                                        (api/keyword :filter) (api/string "url(#shadow)")
+                                                                        (api/keyword :pointer-events) (api/string "all")})
+                                         (api/keyword :rx) (api/integer 10)
+                                         ;; (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :y)])
+                                         (api/keyword :width) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :width)])
+                                         (api/keyword :height) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :height)])})])
+                  (api/vector [(api/keyword :text)
+                               (api/map {;; (api/keyword :transform) (api/string "rotate(90 50 50)")
+                                         (api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :x)])
+                                         (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :y)])
+                                         (api/keyword :dy) (api/integer 14)
+                                         (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :node-name-stroke) (api/symbol 'get-color)])
+                                         (api/keyword :text-anchor) (api/keyword :middle)
+                                         (api/keyword :font-weight) (api/string "bold")
+                                         (api/keyword :pointer-events) (api/string "none")})
+                               (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)])])]))
+
+   (defncall 'is-module '->
+     (api/key-fn :node)
+     (api/key-fn :type)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :caravan/module)]))
+
+   (defncall 'is-pipe-node '->
+     (api/key-fn :node)
+     (api/key-fn :type)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "sink")]))
+
+   (defncall 'is-func-node '->
+     (api/key-fn :node)
+     (api/key-fn :value))
+
+   (defncall 'graph-inner '->
+     (api/map {(api/keyword :node) (api/symbol '_)})
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-module)
+                                        (api/symbol 'graph-module-stub)])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-pipe-node)
+                                        (api/symbol 'graph-pipe)])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-func-node)
+                                        (api/symbol 'graph-func)]))
+
+
+   (defncall 'graph-module-elems '->
+     (api/key-fn :node)
+     (api/key-fn :children)
+     (api/fn-call (api/symbol 'map) [(api/symbol 'graph-inner) (api/symbol '_)])
+     (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g) (api/map {(api/keyword :id) (api/string "inner")})]) (api/symbol '_)])
+     )
+
+   (defncall 'graph-port '->
+     (api/vector [(api/keyword :g)
+                  (api/map {(api/keyword :id) (api/key-fn :id)
+                            (api/keyword :name) (api/key-fn :name)
+                            (api/keyword :transform) (api/symbol 'translate-str)})
+                  (api/vector [(api/keyword :rect)
+                               (api/map {(api/keyword :style) (api/map {(api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :module-bg) (api/symbol 'get-color)])
+                                                                        (api/keyword :stroke) (api/symbol 'get-func-stroke)
+                                                                        (api/keyword :filter) (api/string "url(#shadow)")
+                                                                        (api/keyword :pointer-events) (api/string "all")})
+                                         (api/keyword :width) (api/key-fn :width)
+                                         (api/keyword :height) (api/key-fn :height)})])]))
+
+   (defncall 'graph-module-ports '->
+     (api/key-fn :node)
+     (api/key-fn :ports)
+     (api/fn-call (api/symbol 'map) [(api/symbol 'graph-port) (api/symbol '_)])
+     (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g) (api/map {(api/keyword :id) (api/string "ports")})]) (api/symbol '_)]))
+
+   (defncall 'graph-module '->
+     (api/vector [(api/keyword :g)
+                  (api/map {(api/keyword :id) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :id)])
+                            (api/keyword :transform) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'translate-str)])})
+                  (api/symbol 'graph-module-stub)
+                  (api/symbol 'graph-module-ports)
+                  (api/symbol 'graph-module-elems)
+                  (api/symbol 'graph-module-edges)
+                  ]))
+
+   (defncall 'graph-node '->
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-module)
+                                        (api/symbol 'graph-module)])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-pipe-node)
+                                        (api/symbol 'graph-pipe)])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-func-node)
+                                        (api/symbol 'graph-func)]))
 
    (defncall 'build-context '->
      (api/map {(api/keyword :editor) (api/key-fn :editor)
@@ -3264,6 +3427,17 @@
                             ;; (api/fn-call (api/symbol '->) [(api/keyword :graph-background)
                             ;;   (api/symbol 'get-color)])
                             (api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "all")})})]))
+
+   (defncall 'graph-nodes '->
+     (api/fn-call (api/symbol 'myzip) [(api/fn-call (api/symbol '->) [(api/key-fn :layout)
+                                                                      (api/key-fn :children)])
+                                       (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :layout)
+                                                                                                         (api/key-fn :children)
+                                                                                                         (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
+                                                                          (api/key-fn :context)])])
+     (api/fn-call (api/symbol 'map) [(api/symbol 'merge-node) (api/symbol '_)])
+     (api/fn-call (api/symbol 'map) [(api/symbol 'graph-node) (api/symbol '_)])
+     (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g) (api/map {(api/keyword :id) (api/string "nodes")})]) (api/symbol '_)]))
 
    (defncall 'graph '->
      ;; (api/fn-call (api/symbol 'spy) [(api/string "graph")])

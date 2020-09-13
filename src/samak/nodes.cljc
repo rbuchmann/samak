@@ -92,7 +92,8 @@
   (or ((:resolve *manager*) (:db/id fn))
       (when (api/is-def? fn)
         (let [res (eval-node fn)]
-          (println "evaling" (:db/id fn) "->" res "def" fn) res))
+          ;; (println "evaling" (:db/id fn) "->" res "def" fn)
+          res))
       ;; (when (api/is-module? fn)
       ;;   (let [res (eval-node fn)]
       ;;     (println "evaling" (:db/id fn) "->" res "mod" fn) res))

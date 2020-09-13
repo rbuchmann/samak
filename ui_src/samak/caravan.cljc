@@ -216,9 +216,10 @@
         ast (make-cell-list fn)]
     (if (empty? ast)
       (println (str "ERROR: no ast for: " sym " - " fn))
-      {(str sym) {:caravan/type type
-                  :caravan/name (str sym)
-                  :caravan/ast ast}})))
+      {sym {:caravan/type type
+            :caravan/id sym
+            :caravan/name (:samak.nodes/name fn)
+            :caravan/ast ast}})))
 (defn add-node
   ""
   [sym fn]
@@ -252,12 +253,18 @@
         xf (:samak.nodes/xf pipe)
         func (if xf (name-of-node xf) nil)
         sink (name-of-node (:samak.nodes/to pipe))
-        pipe-name (str source "-" func "-" sink)]
-    {pipe-name {:caravan/type :caravan/pipe
-                :caravan/name pipe-name
-                :caravan/source source
-                :caravan/func func
-                :caravan/sink sink}}))
+        pipe-name (str source "-" func "-" sink)
+        id (:db/id pipe)]
+    {id {:caravan/type :caravan/pipe
+         :caravan/id id
+         :caravan/name pipe-name
+         :caravan/source (:db/id (:samak.nodes/fn (:samak.nodes/from pipe)))
+         :caravan/source-name source
+         :caravan/func (:db/id (:samak.nodes/fn xf)) ;;This might be wrong?
+         :caravan/func-name func
+         :caravan/sink (:db/id (:samak.nodes/fn (:samak.nodes/to pipe)))
+         :caravan/sink-name sink
+         }}))
 
 
 (defn add-pipe
@@ -665,9 +672,9 @@
   (let [nodes (:nodes source)
         _ (println "  V" "Loading asts: " (s/join ", " nodes))
         asts (map #(load-ast @rt-conn %1) nodes)
-        _ (println "  V" "Adding nodes: " (s/join ", " (map :samak.nodes/name asts)))
+        _ (println "  V" "Adding nodes: " (s/join ", " (map #(str (:samak.nodes/name %) "(" (:db/id %) ")") asts)))
         adder (if eval? add-node format-node)
-        node-notify (doall (map #(adder (symbol (name-of-node %)) %) asts))
+        node-notify (doall (map #(adder (:db/id %) %) asts))
         pipes (:pipes source)
         _ (println "  V" "Adding pipes: " (s/join ", " pipes))
         pipe-asts (doall (map #(load-ast @rt-conn %1) pipes))]
@@ -681,14 +688,9 @@
         root (:roots module)]
     {id {:caravan/type :caravan/module
          :caravan/name (str id)
-         :caravan/nodes (:nodes root)
-         :caravan/pipes (:pipes root)}}))
-
-
-(defn handle-deps
-  ""
-  [deps]
-  (map handle-mod deps))
+         :caravan/ports (into [] (concat (:sources module) (:sinks module)))
+         :caravan/nodes (into [] (:nodes root))
+         :caravan/pipes (into [] (:pipes root))}}))
 
 
 (defn runtime-net
@@ -698,6 +700,7 @@
   (let [[_ pipe-asts] (handle-source net true)]
     (doall (map #(add-pipe-net verify (:then config) %) pipe-asts))))
 
+
 (defn database-net
   ""
   [net]
@@ -706,13 +709,34 @@
 
     {:nodes node-notify :pipes pipe-notify}))
 
+(defn handle-deps
+  ""
+  [deps]
+  (reduce (fn [acc x]
+            (let [roots (database-net (:roots x))]
+              {:nodes (into [] (concat (:nodes acc) (:nodes roots)))
+               :pipes (into [] (concat (:pipes acc) (:pipes roots)))
+               :modules (conj (:modules acc) (handle-mod x))}))
+          {:nodes []
+           :pipes []
+           :modules []}
+          deps))
+
 (defn eval-bundle
   ""
   [sym]
   (let [bundle (sched/load-bundle @rt-conn sym)
+        _ (println "ev b" bundle)
         roots (:roots bundle)
-        deps (handle-deps (:deps bundle))]
-    (assoc (database-net roots) :modules deps)
+        deps (handle-deps (:deps bundle))
+        _ (println "deps" deps)
+        rootnotify (assoc (database-net roots) :modules [(handle-mod bundle)])
+        ;; rootnotify  (database-net roots)
+        _ (println "root" rootnotify)
+        a1 (merge-with into rootnotify deps)
+        ]
+        _ (println "ev n" a1)
+    (assoc a1 :id (:id bundle))
     ))
 
 (defn test-bundle
@@ -803,7 +827,7 @@
 (defn load-lib
   ""
   [cmd ev sym]
-  (let [bundle (doall (eval-bundle sym))
+  (let [bundle (eval-bundle sym)
         merged (merge-with concat bundle)
         _ (println (str "bundle: " merged))
         ;; dist (into {} (for [[k v] merged] [k (distinct v)]))
@@ -818,7 +842,7 @@
     (notify-source
      ev
      {::state ::done}
-     #(a/put! cmd (pipes/make-paket {::event ::load ::status ::done ::percent 100} ::caravan)))))
+     #(a/put! cmd (pipes/make-paket {::event ::load ::status ::done ::percent 100 ::id (:id bundle)} ::caravan)))))
 
 (defn load-net
   ""
@@ -836,6 +860,12 @@
   ""
   [cmd ev]
   (load-net cmd ev test-programs/chuck 'chuck)
+  )
+
+(defn load-test
+  ""
+  [cmd ev]
+  (load-net cmd ev test-programs/test-nested-modules-test 'baz)
   )
 
 (defn test-chuck

@@ -226,3 +226,14 @@
          (println (str "\ntraces: "))
          (sut/trace-dump)
          (is (= :success val)))))))
+
+(deftest should-eval-lib
+  (let [syms core/samak-symbols
+        c (chan 1)
+        rt (rt/make-runtime syms)]
+    ;; (trace/init-tracer rt {:backend :logging})
+    (sut/init rt)
+    (sut/persist-net test-programs/test-nested-modules-test)
+    (let [res (sut/eval-bundle 'baz)]
+      (is (= :foo res)))
+  ))

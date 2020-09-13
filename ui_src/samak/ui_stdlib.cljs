@@ -102,7 +102,7 @@
 
 (defn ui
   ([n]
-   (ui n true))
+   (ui n false)) ;;FIXME
   ([n events]
    (let [ui-in (chan (a/sliding-buffer 1))
          ui-out (chan (a/sliding-buffer 1000))
@@ -111,7 +111,7 @@
        (when-some [i (<! ui-in)]
          (trace/trace ::ui 0 i)
          (let [x (or (:samak.pipes/content i) i)]
-           (if (s/valid? ::hiccup x)
+           (if true ;; (s/valid? ::hiccup x)
              (when-let [node (js/document.getElementById (str "samak" n))]
                ;; (when n (.warn js/console (str "render " n " - " x)))
                (r/render (if events (transform-element x ui-out) x) node))

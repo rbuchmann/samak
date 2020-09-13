@@ -126,7 +126,7 @@
 (defn link-fn
   ""
   [from to xf]
-  (println "linking" from to)
+  ;; (println "linking" from to)
   (let [a (replace-piped from)
         c (replace-piped to)]
     (when (not (pipes/pipe? a))
@@ -151,9 +151,9 @@
         ;; needs to prep resolve magic when instanciating pipes, to select same runtime
         ;; maybe simply do so explicitly
         ;; (if (:config man))
-        (println  (str "about to eval module: " module))
+        ;; (println  (str "about to eval module: " module))
         (let [evaled (n/eval-env man nil definition (:db/id module))]
-          (println (str "used module: " module "->" evaled))
+          ;; (println (str "used module: " module "->" evaled))
           evaled)))))
 
 (defn make-runtime-internal
@@ -258,7 +258,7 @@
     sources))
 
 
-(defn load-roots-from-bundle
+(defn load-def-from-bundle
   ""
   [rt id defns]
   (let [defs (if (= (:samak.nodes/type defns) :samak.nodes/def)
@@ -268,28 +268,32 @@
         kvs (:samak.nodes/mapkv-pairs defs)
         ;; _ (println "kvs" kvs)
         sources (get-ids-from-source-def kvs #{:sources})
-        deps (get-ids-from-source-def kvs #{:depends})
         source-ids (apply sorted-set (map get-id-from-source-val sources))
         _ (println "source-ids:" source-ids)
+        sinks (get-ids-from-source-def kvs #{:sinks})
+        sink-ids (apply sorted-set (map get-id-from-source-val sinks))
+        _ (println "sink-ids:" sink-ids)
+        deps (get-ids-from-source-def kvs #{:depends})
         dep-ids (mapv get-id-from-source-val deps)
         _ (println "dep-ids" dep-ids)
         deps-source-ids (mapv (fn [dep]
                                 (println "dep" dep)
-                                (load-roots-from-bundle rt dep (load-by-id rt dep)))
+                                (load-def-from-bundle rt dep (load-by-id rt dep)))
                               dep-ids)
         _ (println "dep-s-id" deps-source-ids)
-        roots {id {:depends dep-ids
-                   :dependencies deps-source-ids
-                   :roots source-ids}}]
-    (println "roots: " roots)
-    roots))
+        def {id {:depends dep-ids
+                 :dependencies deps-source-ids
+                 :sinks sink-ids
+                 :roots source-ids}}]
+    (println "def: " def)
+    def))
 
 
 (defn load-bundle
   "loads the definition of a bundle by the given id"
   [rt id]
   (let [defns (load-by-id rt id)]
-    (load-roots-from-bundle rt id defns)))
+    (load-def-from-bundle rt id defns)))
 
 
 (defn eval-expression! [{:keys [store server] :as rt} form]

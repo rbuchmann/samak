@@ -37,7 +37,6 @@
   (let [sources (map #(run/load-network rt %) (:roots mod))
         net (reduce (fn [a, v]
                       (let [val (vals v)]
-
                         {:nodes (into (:nodes a) (flatten [(map :xf val) (map :ends val)]))
                          :pipes (into (:pipes a) (map :db/id (flatten (map :pipes val))))
                          }))
@@ -54,6 +53,8 @@
   (let [deps (:dependencies mod)]
     {:id id
      :deps (mapv (fn [m] (load-deps rt (first m))) deps)
+     :sinks (:sinks mod)
+     :sources (:roots mod)
      :roots (load-module rt mod)})
   )
 
@@ -76,15 +77,15 @@
   (if (contains? conf (:id module))
     (println "skipping" (:id module))
     (do
-      (println "eval" (:id module) "->" module)
+      ;; (println "eval" (:id module) "->" module)
       (doall (map #(eval-module rt conf % (:id %)) (:deps module)))
       (println "loading" (:id module))
       (let [roots (:roots module)
             base (if root [root] [])
             root-ids (into (into base (:nodes roots)) (:pipes roots))
-            _ (println "[" (:id module) "] roots" root-ids)
+            ;; _ (println "[" (:id module) "] roots" root-ids)
             asts (doall (map #(run/load-ast @rt %) root-ids))]
-        (println "evaling" (:id module))
+        ;; (println "evaling" (:id module))
         (reset! rt (update @rt :server run/eval-all asts))
         (println "done" (:id module))))))
 
