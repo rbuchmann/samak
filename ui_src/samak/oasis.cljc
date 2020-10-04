@@ -89,7 +89,6 @@
                (defncall 'log-layout 'pipes/log (api/string "layout: "))
                (defncall 'log-events 'pipes/log (api/string "events: "))
                (defncall 'log-editor 'pipes/log (api/string "editor: "))
-               (defncall 'log-hover 'pipes/log (api/string "hover: "))
                (defncall 'log-keyboard 'pipes/log (api/string "keyboard: "))
                (defncall 'log-caravan 'pipes/log (api/string "caravan-cmd: "))
                (defncall 'log-caravan-ev 'pipes/log (api/string "caravan-eval: "))
@@ -224,11 +223,6 @@
                                                                                      (api/keyword :id) (api/string "input/repl")
                                                                                      (api/keyword :style) (api/map {(api/keyword :pointer-events) (api/string "auto")})})])])})})
 
-               (defncall 'is-mouse-move '->
-                 (api/key-fn :next)
-                 (api/key-fn :samak.mouse/type)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :move)]))
-
                (defncall 'calculate-mouse-delta-x '->
                  (api/fn-call (api/symbol '+) [(api/fn-call (api/symbol '->) [(api/key-fn :next)
                                                                               (api/key-fn :samak.mouse/page-x)])
@@ -251,63 +245,6 @@
                                                                                                             (api/key-fn :y)
                                                                                                             ])])]))
 
-               (defncall 'handle-mouse-move '->
-                 (api/map {(api/keyword :state) (api/key-fn :state)
-                           (api/keyword :next) (api/map {(api/keyword :position)
-                                                         (api/map {(api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/page-x)])
-                                                                   (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/symbol 'get-mouse-y)])})
-                                                         (api/keyword :delta)
-                                                         (api/map {(api/keyword :x)
-                                                                   (api/symbol 'calculate-mouse-delta-x)
-                                                                   (api/keyword :y)
-                                                                   (api/symbol 'calculate-mouse-delta-y)})
-                                                         (api/keyword :drag)
-                                                         (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :mouse) (api/key-fn :drag)
-                                                                                        (api/map {(api/keyword :active) (api/key-fn :active)
-                                                                                                  (api/keyword :source) (api/key-fn :source)
-                                                                                                  (api/keyword :begin) (api/keyword :false)
-                                                                                                  (api/keyword :button) (api/key-fn :button)})])})}))
-
-               (defncall 'is-mouse-down '->
-                 (api/key-fn :next)
-                 (api/key-fn :samak.mouse/type)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :down)]))
-
-               (defncall 'handle-mouse-down '->
-                 (api/map {(api/keyword :state) (api/key-fn :state)
-                           (api/keyword :next) (api/fn-call (api/symbol '->)
-                                                            [(api/key-fn :next)
-                                                             (api/map {(api/keyword :drag) (api/map {(api/keyword :begin) (api/keyword :true)
-                                                                                                     (api/keyword :active) (api/keyword :true)
-                                                                                                     (api/keyword :button) (api/key-fn :samak.mouse/button)
-                                                                                                     (api/keyword :source) (api/key-fn :samak.mouse/target)})
-
-                                                                       (api/keyword :position) (api/map {(api/keyword :x) (api/key-fn :samak.mouse/page-x)
-                                                                                                      (api/keyword :y) (api/symbol 'get-mouse-y)})
-                                                                       (api/keyword :start) (api/map {(api/keyword :x) (api/key-fn :samak.mouse/page-x)
-                                                                                                      (api/keyword :y) (api/symbol 'get-mouse-y)})})])}))
-
-               (defncall 'is-mouse-up '->
-                 (api/key-fn :next)
-                 (api/key-fn :samak.mouse/type)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :up)]))
-
-               (defncall 'handle-mouse-up '->
-                 (api/map {(api/keyword :state) (api/key-fn :state)
-                           (api/keyword :next) (api/map {(api/keyword :drag)
-                                                         (api/map {(api/keyword :active) (api/keyword :false)
-                                                                   (api/keyword :end) (api/keyword :end)
-                                                                   (api/keyword :button) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/button)])
-                                                                   (api/keyword :target) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/target)])
-                                                                   (api/keyword :source) (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :source)])})})}))
-
-
-
-               (defncall 'tag-hover '->
-                 (api/map {(api/keyword :hover) (api/symbol '_)}))
-
-
-               (defncall 'drag-events 'pipes/debug)
 
                ;; (defncall 'drag-reduce 'pipes/reductions
                ;;   (api/fn-call (api/symbol '->)
@@ -617,7 +554,18 @@
                (defncall 'construct-load '->
                  (api/map {(api/keyword :command) (api/keyword :load)
                            (api/keyword :type) (api/keyword :immediate)
-                           (api/keyword :data) (api/keyword :load)}))
+                           (api/keyword :data) (api/keyword :load)
+                           (api/keyword :load) (api/keyword :load)}))
+
+               (defncall 'is-kb-self '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "p")]))
+
+               (defncall 'construct-self '->
+                 (api/map {(api/keyword :command) (api/keyword :load)
+                           (api/keyword :type) (api/keyword :immediate)
+                           (api/keyword :data) (api/keyword :load)
+                           (api/keyword :load) (api/keyword :self)}))
 
                (defncall 'is-kb-test '->
                  (api/key-fn :key)
@@ -644,6 +592,8 @@
                                                     (api/symbol 'construct-menu)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-load)
                                                     (api/symbol 'construct-load)])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-self)
+                                                    (api/symbol 'construct-self)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-test)
                                                     (api/symbol 'construct-test)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-trace)
@@ -651,82 +601,6 @@
                  (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
                                                     (api/symbol 'ignore)]))
 
-
-               (defncall 'is-kb-move-left '->
-                 (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "ArrowLeft")]))
-
-               (defncall 'is-kb-move-right '->
-                 (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "ArrowRight")]))
-
-               (defncall 'is-kb-move-up '->
-                 (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "ArrowUp")]))
-
-               (defncall 'is-kb-move-down '->
-                 (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "ArrowDown")]))
-
-               (defncall 'construct-move-left '->
-                 (api/map {(api/keyword :command) (api/keyword :move)
-                           (api/keyword :x) (api/integer 50)
-                           (api/keyword :y) (api/integer 0)
-                           (api/keyword :zoom) (api/integer 1)}))
-
-               (defncall 'construct-move-right '->
-                 (api/map {(api/keyword :command) (api/keyword :move)
-                           (api/keyword :x) (api/integer -50)
-                           (api/keyword :y) (api/integer 0)
-                           (api/keyword :zoom) (api/integer 1)}))
-
-               (defncall 'construct-move-up '->
-                 (api/map {(api/keyword :command) (api/keyword :move)
-                           (api/keyword :x) (api/integer 0)
-                           (api/keyword :y) (api/integer 50)
-                           (api/keyword :zoom) (api/integer 1)}))
-
-               (defncall 'construct-move-down '->
-                 (api/map {(api/keyword :command) (api/keyword :move)
-                           (api/keyword :x) (api/integer 0)
-                           (api/keyword :y) (api/integer -50)
-                           (api/keyword :zoom) (api/integer 1)}))
-
-               (defncall 'is-kb-zoom-in '->
-                 (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "+")]))
-
-               (defncall 'is-kb-zoom-out '->
-                 (api/key-fn :key)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "-")]))
-
-               (defncall 'construct-zoom-out '->
-                 (api/map {(api/keyword :command) (api/keyword :zoom)
-                           (api/keyword :zoom) (api/float 0.9)}))
-
-               (defncall 'construct-zoom-in '->
-                 (api/map {(api/keyword :command) (api/keyword :zoom)
-                           (api/keyword :zoom) (api/float 1.1)}))
-
-
-
-               (defncall 'filter-view '->
-                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-move-left)
-                                                    (api/symbol 'construct-move-left)])
-                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-move-right)
-                                                    (api/symbol 'construct-move-right)])
-                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-move-up)
-                                                    (api/symbol 'construct-move-up)])
-                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-move-down)
-                                                    (api/symbol 'construct-move-down)])
-                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-phase-up)
-                                                    (api/fn-call (api/symbol '->) [(api/map {(api/keyword :key) (api/keyword :ignore)})])])
-                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-zoom-in)
-                                                    (api/symbol 'construct-zoom-in)])
-                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-zoom-out)
-                                                    (api/symbol 'construct-zoom-out)])
-                 (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
-                                                    (api/symbol 'ignore)]))
 
                (defncall 'make-view-move 'pipes/reductions
                  (api/fn-call (api/symbol '->)
@@ -809,6 +683,7 @@
                  (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 0)]))
 
                (defncall 'is-source-source '->
+               (api/fn-call (api/symbol 'spy) [(api/string "source")])
                  (api/key-fn :source)
                  (api/symbol 'is-pipe))
 
@@ -827,6 +702,7 @@
                                                  (api/symbol 'is-target-sink)]))
 
                (defncall 'is-start '->
+               ;; (api/fn-call (api/symbol 'spy) [(api/string "fmod2")])
                  (api/fn-call (api/symbol 'and) [(api/symbol 'is-lmb-event)
                                                  (api/symbol 'is-source-source)
                                                  (api/fn-call (api/symbol '=) [(api/key-fn :begin) (api/keyword :true)])]))
@@ -988,7 +864,7 @@
               (defncall 'handle-load '->
                 (api/key-fn :data)
                 (api/map {(api/keyword :mode) (api/keyword :load)
-                          (api/keyword :load) (api/keyword :none)}))
+                          (api/keyword :load) (api/keyword :test2)}))
 
               (defncall 'is-test '->
                 (api/key-fn :command)
@@ -997,7 +873,7 @@
               (defncall 'handle-test '->
                 (api/key-fn :data)
                 (api/map {(api/keyword :mode) (api/keyword :test)
-                          (api/keyword :test) (api/keyword :none)}))
+                          (api/keyword :test) (api/keyword :self)}))
 
               (defncall 'is-trace '->
                 (api/key-fn :command)
@@ -1596,20 +1472,26 @@
                (api/fn-call (api/symbol 'map) [(api/symbol 'merge-mod) (api/symbol '_)])
                (api/fn-call (api/symbol 'map) [(api/symbol 'format-mod) (api/symbol '_)]))
 
-             (defncall 'merge-defs '->
-               (api/map {(api/keyword :def) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
-                         (api/keyword :context) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
+             (defncall 'format-scope '->
+               (api/map {(api/keyword :scope) (api/fn-call (api/keyword '->) [(api/key-fn :context)])})
+               (api/fn-call (api/symbol 'spy) [(api/string "fscope")])
+               )
 
-              (defncall 'format-defs '->
-                (api/fn-call (api/symbol 'myzip) [(api/key-fn :defs)
-                                                  (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol 'count) [(api/key-fn :defs)])
-                                                                                     (api/key-fn :context)])])
-                (api/fn-call (api/symbol 'map) [(api/symbol 'merge-defs) (api/symbol '_)])
-                (api/fn-call (api/symbol 'map) [(api/symbol 'format-def) (api/symbol '_)]))
+             ;; (defncall 'merge-defs '->
+             ;;   (api/map {(api/keyword :def) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 0)])
+             ;;             (api/keyword :context) (api/fn-call (api/symbol 'nth) [(api/symbol '_) (api/integer 1)])}))
 
-             (defncall 'format-pipes '->
-               (api/fn-call (api/symbol 'mapcat) [(api/symbol 'extract-connection) (api/key-fn :pipes)])
-               (api/fn-call (api/symbol 'map) [(api/symbol 'format-pipe) (api/symbol '_)]))
+             ;;  (defncall 'format-defs '->
+             ;;    (api/fn-call (api/symbol 'myzip) [(api/key-fn :defs)
+             ;;                                      (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol 'count) [(api/key-fn :defs)])
+             ;;                                                                         (api/key-fn :context)])])
+             ;;    (api/fn-call (api/symbol 'map) [(api/symbol 'merge-defs) (api/symbol '_)])
+             ;;    (api/fn-call (api/symbol 'map) [(api/symbol 'format-def) (api/symbol '_)]))
+
+             ;; (defncall 'format-pipes '->
+             ;;   (api/fn-call (api/symbol 'spy) [(api/string "freepipe")])
+             ;;   (api/fn-call (api/symbol 'mapcat) [(api/symbol 'extract-connection) (api/key-fn :pipes)])
+             ;;   (api/fn-call (api/symbol 'map) [(api/symbol 'format-pipe) (api/symbol '_)]))
 
              (defncall 'format-state '->
                (api/map {(api/keyword :evalorig) (api/key-fn :eval)
@@ -1624,9 +1506,8 @@
                ;; (api/fn-call (api/symbol 'spy) [(api/string "fmod")])
                (api/map {(api/keyword :id) (api/string "root")
                          (api/keyword :layoutOptions) (api/map {(api/string "elk.algorithm") (api/string "layered")})
-                         (api/keyword :children) (api/fn-call (api/symbol 'into) [(api/symbol 'format-modules) ;; (api/symbol 'format-defs)
-                                                                                  ])
-                         (api/keyword :edges) (api/symbol 'format-pipes)
+                         (api/keyword :children) (api/fn-call (api/symbol 'into) [(api/symbol 'format-modules)])
+                         ;; (api/keyword :edges) (api/symbol 'format-pipes)
                          }))
 
 
@@ -1773,7 +1654,9 @@
                (api/map {(api/keyword :state) (api/key-fn :state)
                          (api/keyword :next) (api/map {(api/keyword :call)
                                                        (api/map {(api/keyword :action)
-                                                                 (api/keyword :load)})})}))
+                                                                 (api/keyword :load)
+                                                                 (api/keyword :arguments)
+                                                                 (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :load)])})})}))
 
              (defncall 'should-test '->
                (api/key-fn :next)
@@ -2028,6 +1911,7 @@
   [(defncall 'oasis-core-init 'pipes/debug)
    (defncall 'oasis-kb 'pipes/debug)
    (defncall 'oasis-hover-state 'pipes/debug)
+   (defncall 'oasis-hover-in 'pipes/debug)
    (defncall 'oasis-scroll-state 'pipes/debug)
    (defncall 'oasis-drag-state 'pipes/debug)
    (defncall 'oasis-core-events 'pipes/debug)
@@ -2049,7 +1933,7 @@
                                                                          (api/keyword :init) (api/symbol 'oasis-core-init)
                                                                          (api/keyword :kb) (api/symbol 'oasis-kb)
                                                                          (api/keyword :drag) (api/symbol 'oasis-drag-state)
-                                                                         (api/keyword :hover) (api/symbol 'oasis-hover-state)
+                                                                         (api/keyword :hover) (api/symbol 'oasis-hover-in)
                                                                          (api/keyword :events) (api/symbol 'oasis-core-events)
                                                                          (api/keyword :state) (api/symbol 'oasis-core-out)
                                                                          })
@@ -2061,14 +1945,12 @@
   [;; networks
 
    (pipe 'oasis-drag-state 'log-drag)
-   (pipe 'oasis-hover-state 'log-hover)
+   (pipe 'oasis-hover-in 'oasis-hover-state)
 
    (pipe 'oasis-kb 'filter-key-input 'keyboard-filtered)
    (pipe 'keyboard-filtered 'filter-edit 'editor-commands)
    (pipe 'keyboard-filtered 'filter-menu 'editor-commands)
    (pipe 'keyboard-filtered 'log-keyboard)
-
-   ;; (pipe 'keyboard-filtered 'filter-view 'view-commands)
 
    (pipe 'raw-events 'input-reduce)
    (pipe 'input-reduce 'reduced-events)
@@ -2089,9 +1971,7 @@
    (pipe 'eval-reduce 'eval-raw)
    (pipe 'eval-raw 'tag-eval 'eval-state)
 
-   ;; (pipe 'drag-state 'log-mouse)
    (pipe 'oasis-drag-state 'interpret-drag 'editor-commands)
-   ;; (pipe 'drag-events 'log-mouse)
 
    (pipe 'caravan-commands 'handle-caravan-command 'editor-commands)
    (pipe 'editor-commands 'handle-commands 'editor-events)
@@ -2127,7 +2007,6 @@
 
    (pipe 'editor-state 'state-dedupe)
    (pipe 'loaded-state 'state-dedupe)
-   (pipe 'drag-events 'state-dedupe)
    (pipe 'oasis-hover-state 'state-dedupe)
    (pipe 'mode-state 'state-dedupe)
    (pipe 'events 'state-dedupe)
@@ -2135,6 +2014,7 @@
    ;; (pipe 'state-dedupe 'oasis-core-out)
 
    (pipe 'mode-state 'load-reduce)
+   ;; (pipe 'scope-state 'load-reduce)
    (pipe 'oasis-hover-state 'load-reduce)
    (pipe 'eval-state 'load-reduce)
    (pipe 'load-reduce 'load-state)
@@ -2179,11 +2059,15 @@
    (defncall 'oasis-render-in 'pipes/debug)
    (defncall 'oasis-render-init 'pipes/debug)
    (defncall 'oasis-render-mouse-in 'pipes/debug)
+   (defncall 'oasis-render-kb-in 'pipes/debug)
+   (defncall 'oasis-render-kb-out 'pipes/debug)
    (defncall 'oasis-render-drag-out 'pipes/debug)
    (defncall 'oasis-render-hover-out 'pipes/debug)
    (defncall 'oasis-render-out 'pipes/debug)
    (defncall 'scroll-state 'pipes/debug)
    (defncall 'log-view 'pipes/log (api/string "view: "))
+   (defncall 'log-mouse2 'pipes/log (api/string "mouse2: "))
+   (defncall 'log-hov 'pipes/log (api/string "hov: "))
 
    ;; dark theme based on base16-atelierdune-dark
    ;; (http://atelierbram.github.io/syntax-highlighting/atelier-schemes/dune)
@@ -2311,6 +2195,65 @@
 
 
    ;; Mouse handling
+   (defncall 'drag-events 'pipes/debug)
+
+   (defncall 'is-mouse-move '->
+     (api/key-fn :next)
+     (api/key-fn :samak.mouse/type)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :move)]))
+
+   (defncall 'is-mouse-down '->
+     (api/key-fn :next)
+     (api/key-fn :samak.mouse/type)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :down)]))
+
+   (defncall 'handle-mouse-down '->
+     (api/map {(api/keyword :state) (api/key-fn :state)
+               (api/keyword :next) (api/fn-call (api/symbol '->)
+                                                [(api/key-fn :next)
+                                                 (api/map {(api/keyword :drag) (api/map {(api/keyword :begin) (api/keyword :true)
+                                                                                         (api/keyword :active) (api/keyword :true)
+                                                                                         (api/keyword :button) (api/key-fn :samak.mouse/button)
+                                                                                         (api/keyword :source) (api/key-fn :samak.mouse/target)})
+
+                                                           (api/keyword :position) (api/map {(api/keyword :x) (api/key-fn :samak.mouse/page-x)
+                                                                                             (api/keyword :y) (api/symbol 'get-mouse-y)})
+                                                           (api/keyword :start) (api/map {(api/keyword :x) (api/key-fn :samak.mouse/page-x)
+                                                                                          (api/keyword :y) (api/symbol 'get-mouse-y)})})])}))
+
+   (defncall 'is-mouse-up '->
+     (api/key-fn :next)
+     (api/key-fn :samak.mouse/type)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :up)]))
+
+   (defncall 'handle-mouse-up '->
+     (api/map {(api/keyword :state) (api/key-fn :state)
+               (api/keyword :next) (api/map {(api/keyword :drag)
+                                             (api/map {(api/keyword :active) (api/keyword :false)
+                                                       (api/keyword :end) (api/keyword :end)
+                                                       (api/keyword :button) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/button)])
+                                                       (api/keyword :target) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/target)])
+                                                       (api/keyword :source) (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :source)])})})}))
+
+
+   (defncall 'handle-mouse-move '->
+     (api/map {(api/keyword :state) (api/key-fn :state)
+               (api/keyword :next) (api/map {(api/keyword :position)
+                                             (api/map {(api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :samak.mouse/page-x)])
+                                                       (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/symbol 'get-mouse-y)])})
+                                             (api/keyword :delta)
+                                             (api/map {(api/keyword :x)
+                                                       (api/symbol 'calculate-mouse-delta-x)
+                                                       (api/keyword :y)
+                                                       (api/symbol 'calculate-mouse-delta-y)})
+                                             (api/keyword :drag)
+                                             (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :mouse) (api/key-fn :drag)
+                                                                            (api/map {(api/keyword :active) (api/key-fn :active)
+                                                                                      (api/keyword :source) (api/key-fn :source)
+                                                                                      (api/keyword :begin) (api/keyword :false)
+                                                                                      (api/keyword :button) (api/key-fn :button)})])})}))
+
+
    (defncall 'mouse-reduce 'pipes/reductions
      (api/fn-call (api/symbol '->)
                   [(api/fn-call (api/symbol 'incase) [(api/symbol 'is-mouse-move)
@@ -2375,8 +2318,9 @@
 
 
    (defncall 'target-reduce 'pipes/reductions
-     (api/fn-call (api/symbol '->)
-                  [(api/map {(api/keyword :prev) (api/fn-call (api/symbol '->) [(api/key-fn :state)
+     (api/fn-call (api/symbol '->) [
+     ;; (api/fn-call (api/symbol 'spy) [(api/string "target")])
+                  (api/map {(api/keyword :prev) (api/fn-call (api/symbol '->) [(api/key-fn :state)
                                                                                 (api/key-fn :current)])
                              (api/keyword :current) (api/fn-call (api/symbol '->) [(api/key-fn :next)
                                                                                    (api/key-fn :samak.mouse/target)
@@ -2397,6 +2341,88 @@
 
    (defncall 'hover-events 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
      )
+   (defncall 'hover-out 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+     )
+   (defncall 'tag-hover '->
+     (api/map {(api/keyword :hover) (api/symbol '_)}))
+
+   ;; keyboard handling
+
+
+   (defncall 'is-kb-move-left '->
+     (api/key-fn :key)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "ArrowLeft")]))
+
+   (defncall 'is-kb-move-right '->
+     (api/key-fn :key)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "ArrowRight")]))
+
+   (defncall 'is-kb-move-up '->
+     (api/key-fn :key)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "ArrowUp")]))
+
+   (defncall 'is-kb-move-down '->
+     (api/key-fn :key)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "ArrowDown")]))
+
+   (defncall 'construct-move-left '->
+     (api/map {(api/keyword :command) (api/keyword :move)
+               (api/keyword :x) (api/integer 50)
+               (api/keyword :y) (api/integer 0)
+               (api/keyword :zoom) (api/integer 1)}))
+
+   (defncall 'construct-move-right '->
+     (api/map {(api/keyword :command) (api/keyword :move)
+               (api/keyword :x) (api/integer -50)
+               (api/keyword :y) (api/integer 0)
+               (api/keyword :zoom) (api/integer 1)}))
+
+   (defncall 'construct-move-up '->
+     (api/map {(api/keyword :command) (api/keyword :move)
+               (api/keyword :x) (api/integer 0)
+               (api/keyword :y) (api/integer 50)
+               (api/keyword :zoom) (api/integer 1)}))
+
+   (defncall 'construct-move-down '->
+     (api/map {(api/keyword :command) (api/keyword :move)
+               (api/keyword :x) (api/integer 0)
+               (api/keyword :y) (api/integer -50)
+               (api/keyword :zoom) (api/integer 1)}))
+
+   (defncall 'is-kb-zoom-in '->
+     (api/key-fn :key)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "+")]))
+
+   (defncall 'is-kb-zoom-out '->
+     (api/key-fn :key)
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "-")]))
+
+   (defncall 'construct-zoom-out '->
+     (api/map {(api/keyword :command) (api/keyword :zoom)
+               (api/keyword :zoom) (api/float 0.9)}))
+
+   (defncall 'construct-zoom-in '->
+     (api/map {(api/keyword :command) (api/keyword :zoom)
+               (api/keyword :zoom) (api/float 1.1)}))
+
+   (defncall 'filter-view '->
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-move-left)
+                                        (api/symbol 'construct-move-left)])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-move-right)
+                                        (api/symbol 'construct-move-right)])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-move-up)
+                                        (api/symbol 'construct-move-up)])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-move-down)
+                                        (api/symbol 'construct-move-down)])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-phase-up)
+                                        (api/fn-call (api/symbol '->) [(api/map {(api/keyword :key) (api/keyword :ignore)})])])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-zoom-in)
+                                        (api/symbol 'construct-zoom-in)])
+     (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-zoom-out)
+                                        (api/symbol 'construct-zoom-out)])
+     (api/fn-call (api/symbol 'unless) [(api/key-fn :command)
+                                        (api/symbol 'ignore)]))
+
 
    ;; render handlers
    (defncall 'translate-str 'str
@@ -2754,9 +2780,9 @@
 
    ;; cell handling
 
-   (defncall 'func-id 'str
-     (api/string "func/")
-     (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)]))
+   (defncall 'func-id '->
+     (api/key-fn :node)
+     (api/key-fn :id))
 
    (defncall 'is-same '->
      (api/fn-call (api/symbol 'distinct) [(api/symbol '_)])
@@ -3118,19 +3144,19 @@
                   ;;                                                                      (api/fn-call (api/symbol '->) [(api/key-fn :node)
                   ;;                                                                                                     (api/symbol 'translate-blur)])})
                   ;;                                                            (api/symbol 'graph-func-single)])])
-                  (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol 'and) [(api/symbol 'is-hovered)
-                                                                                 (api/fn-call (api/symbol '->) [(api/key-fn :context)
-                                                                                                                (api/symbol 'is-change-navigate)])])
-                                                 (api/vector [(api/keyword :g)
-                                                              (api/map {(api/keyword :opacity) (api/string "1")
-                                                                        (api/keyword :transform)
-                                                                        (api/fn-call (api/symbol '->) [(api/key-fn :node)
-                                                                                                       (api/symbol 'translate-func)])})
-                                                              (api/fn-call (api/symbol '->) [(api/map {(api/keyword :node) (api/key-fn :node)
-                                                                                                       (api/keyword :context) (api/key-fn :context)
-                                                                                                       (api/keyword :expanded) (api/keyword :expand)})
-                                                                                             (api/symbol 'graph-func-single)])])
-                                                 (api/string "")])
+                  ;; (api/fn-call (api/symbol 'if) [(api/fn-call (api/symbol 'and) [(api/symbol 'is-hovered)
+                  ;;                                                                (api/fn-call (api/symbol '->) [(api/key-fn :context)
+                  ;;                                                                                               (api/symbol 'is-change-navigate)])])
+                  ;;                                (api/vector [(api/keyword :g)
+                  ;;                                             (api/map {(api/keyword :opacity) (api/string "1")
+                  ;;                                                       (api/keyword :transform)
+                  ;;                                                       (api/fn-call (api/symbol '->) [(api/key-fn :node)
+                  ;;                                                                                      (api/symbol 'translate-func)])})
+                  ;;                                             (api/fn-call (api/symbol '->) [(api/map {(api/keyword :node) (api/key-fn :node)
+                  ;;                                                                                      (api/keyword :context) (api/key-fn :context)
+                  ;;                                                                                      (api/keyword :expanded) (api/keyword :expand)})
+                  ;;                                                                            (api/symbol 'graph-func-single)])])
+                  ;;                                (api/string "")])
                   ]))
 
    (defncall 'graph-focused '->
@@ -3170,8 +3196,8 @@
                                                                                                        (api/keyword :pointer-events) (api/string "all")})})])
                                                  (api/vector [(api/keyword :g)])])
                   (api/vector [(api/keyword :circle)
-                               (api/map {(api/keyword :id) (api/key-fn :id)
-                                         (api/keyword :class) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'pipe-id)])
+                               (api/map {(api/keyword :id) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :id)])
+                                         (api/keyword :data-name) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'pipe-id)])
                                          (api/keyword :cx) (api/integer 50)
                                          (api/keyword :cy) (api/integer 50)
                                          (api/keyword :r) (api/integer 50)
@@ -3244,12 +3270,12 @@
 
    (defncall 'is-incoming '->
      (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :name)])
-                                   (api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :to)])]))
+                                   (api/fn-call (api/symbol 'str) [(api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :to)])])]))
 
    (defncall 'is-outgoing '->
      (api/fn-call (api/symbol 'and) [(api/key-fn :edge)
                                      (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :name)])
-                                                                   (api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :from)])])]))
+                                                                   (api/fn-call (api/symbol 'str) [(api/fn-call (api/symbol '->) [(api/key-fn :edge) (api/key-fn :from)])])])]))
 
    (defncall 'get-edge-color '->
      (api/fn-call (api/symbol 'incase) [(api/symbol 'is-incoming)
@@ -3307,7 +3333,7 @@
    (defncall 'graph-module-stub '->
      (api/vector [(api/keyword :g)
                   (api/vector [(api/keyword :rect)
-                               (api/map {(api/keyword :id) (api/symbol 'func-id)
+                               (api/map {(api/keyword :id) (api/fn-call (api/symbol 'str) [(api/string "m/") (api/symbol 'func-id)])
                                          (api/keyword :fill-opacity) (api/float 0.4)
 
                                          (api/keyword :style) (api/map {(api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :module-bg) (api/symbol 'get-color)])
@@ -3320,8 +3346,8 @@
                                          (api/keyword :height) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :height)])})])
                   (api/vector [(api/keyword :text)
                                (api/map {;; (api/keyword :transform) (api/string "rotate(90 50 50)")
-                                         (api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :x)])
-                                         (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :y)])
+                                         ;; (api/keyword :x) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :x)])
+                                         ;; (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :y)])
                                          (api/keyword :dy) (api/integer 14)
                                          (api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :node-name-stroke) (api/symbol 'get-color)])
                                          (api/keyword :text-anchor) (api/keyword :middle)
@@ -3381,7 +3407,7 @@
 
    (defncall 'graph-module '->
      (api/vector [(api/keyword :g)
-                  (api/map {(api/keyword :id) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :id)])
+                  (api/map {(api/keyword :id) (api/fn-call (api/symbol 'str) [(api/string "mod/") (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :id)])])
                             (api/keyword :transform) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'translate-str)])})
                   (api/symbol 'graph-module-stub)
                   (api/symbol 'graph-module-ports)
@@ -3433,14 +3459,15 @@
      (api/fn-call (api/symbol 'map) [(api/symbol 'graph-node) (api/symbol '_)])
      (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g) (api/map {(api/keyword :id) (api/string "nodes")})]) (api/symbol '_)]))
 
+
+
    (defncall 'graph '->
      ;; (api/fn-call (api/symbol 'spy) [(api/string "graph")])
-     (api/map {(api/keyword :layout) (api/key-fn :layout)
+     (api/map {(api/keyword :layout) (api/key-fn :layout) ;;(api/symbol 'prep-layout)
                (api/keyword :view) (api/key-fn :view)
                (api/keyword :context) (api/symbol 'build-context)})
      (api/map {(api/keyword :graph)
                (api/vector [(api/keyword :g)
-                            (api/map {(api/keyword :transform) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/symbol 'translate-graph)])})
                             (api/symbol 'graph-background)
                             (api/symbol 'graph-connections)
                             (api/symbol 'graph-nodes)])}))
@@ -3537,7 +3564,8 @@
                (api/keyword :action-menu) (api/vector [(api/keyword :g)])
                (api/keyword :graph-drag) (api/vector [(api/keyword :g)])
                (api/keyword :graph-dialog) (api/vector [(api/keyword :g)])
-               (api/keyword :resize) (api/map {})}))
+               (api/keyword :resize) (api/map {})
+               (api/keyword :view) (api/map {})}))
 
    ;; render elements to hiccup
 
@@ -3629,7 +3657,10 @@
                                                 (api/keyword :viewBox) (api/fn-call (api/symbol 'str) [(api/string "0 0 ") (api/symbol 'get-width) (api/string " ") (api/symbol 'get-height)])
                                                 })
                                       (api/symbol 'svg-defs)
-                                      (api/key-fn :graph)
+                                      (api/vector [(api/keyword :g)
+                                                   (api/map {(api/keyword :id) (api/string "view")
+                                                             (api/keyword :transform) (api/fn-call (api/symbol '->) [(api/key-fn :view) (api/symbol 'translate-graph)])})
+                                                   (api/key-fn :graph)])
                                       (api/key-fn :graph-focused)
                                       (api/key-fn :source-menu)
                                       (api/key-fn :sink-menu)
@@ -3641,11 +3672,14 @@
 
    (api/defmodule 'oasis-render (api/map {(api/keyword :sources) (api/map {(api/keyword :state) (api/symbol 'oasis-render-in)
                                                                            (api/keyword :mouse) (api/symbol 'oasis-render-mouse-in)
+                                                                           (api/keyword :kb) (api/symbol 'oasis-render-kb-in)
+                                                                           (api/keyword :kb-out) (api/symbol 'oasis-render-kb-out)
                                                                            (api/keyword :init) (api/symbol 'oasis-render-init)
                                                                            (api/keyword :svg-elems) (api/symbol 'oasis-render-out)
                                                                            (api/keyword :drag) (api/symbol 'oasis-render-drag-out)
                                                                            (api/keyword :hover) (api/symbol 'oasis-render-hover-out)})
                                           (api/keyword :sinks) (api/map {(api/keyword :svg-elems) (api/symbol 'oasis-render-out)
+                                                                         (api/keyword :kb) (api/symbol 'oasis-render-kb-out)
                                                                          (api/keyword :drag) (api/symbol 'oasis-render-drag-out)
                                                                          (api/keyword :hover) (api/symbol 'oasis-render-hover-out)})}))
    ])
@@ -3655,7 +3689,6 @@
    (pipe 'oasis-render-in 'state-reduce)
    (pipe 'state-reduce 'condensed-state)
 
-   ;; (pipe 'oasis-render-mouse-in 'log-mouse2)
    ;; (pipe 'oasis-render-mouse-in 'oasis-render-mouse-out)
 
    ;; mouse handling
@@ -3663,23 +3696,32 @@
    (pipe 'mouse-reduce 'mouse-state)
    (pipe 'mouse-state 'filter-drag 'drag-events)
 
-   ;; (pipe 'drag-events 'filter-drag-end-or-start 'oasis-render-drag-out) ;; FIXME reduce
+   ;; (pipe 'drag-events 'log-mouse2)
+
+   (pipe 'drag-events 'state-reduce)
+   (pipe 'drag-events 'filter-drag-end-or-start 'oasis-render-drag-out) ;; FIXME reduce
    (pipe 'mouse-state 'filter-scroll 'scroll-state)
 
    (pipe 'oasis-render-mouse-in 'target-reduce)
    (pipe 'target-reduce 'target-events)
    (pipe 'target-events 'only-different 'hover-events)
-   ;; (pipe 'hover-events 'tag-hover 'oasis-render-hover-out)
+   (pipe 'hover-events 'tag-hover 'hover-out)
+   (pipe 'hover-out 'oasis-render-hover-out)
+   ;; (pipe 'hover-out 'log-hov)
 
    ;; keyboard handling
 
+   ;; (pipe 'oasis-render-kb-in 'log-mouse2)
+   (pipe 'oasis-render-kb-in 'oasis-render-kb-out)
+
+   (pipe 'oasis-render-kb-in 'filter-view 'view-commands)
 
    ;; view handling
 
    (pipe 'view-commands 'make-zoom)
    (pipe 'make-zoom 'zoom-events)
-   ;; (pipe 'zoom-events 'view-events)
-   ;; (pipe 'view-commands 'view-deltas) ;; FIXME
+   (pipe 'zoom-events 'view-events)
+   (pipe 'view-commands 'view-deltas)
 
    (pipe 'scroll-state 'construct-view 'view-deltas)
    (pipe 'view-deltas 'view-delta)
@@ -3688,7 +3730,8 @@
    (pipe 'view-reduce 'view-raw)
    (pipe 'view-raw 'tag-view 'view-state)
    ;; (pipe 'view-state 'log-view)
-   (pipe 'view-state 'state-reduce)
+   ;; (pipe 'view-state 'state-reduce)
+   (pipe 'view-state 'svg-elements-reduce)
 
    (pipe 'oasis-render-init 'init-view 'view-events)
 
@@ -3712,7 +3755,7 @@
 
 (def oasis-ui-defs
   [
-   ;; (api/defexp 'ui-mod (api/fn-call (api/symbol 'modules/ui) [(api/integer 2)]))
+   ;; (api/defexp 'ui-mod (api/fn-call (api/symbol 'modules/ui) []))
    ;; (api/defexp 'm-ui (api/fn-call (api/symbol 'ui-mod) []))
 
    ;; (defncall 'm-ui-kb '->
@@ -3725,6 +3768,11 @@
    ;;   (api/key-fn :sources)
    ;;   (api/key-fn :mouse))
    ;; (defncall 'oasis-ui-mod-mouse 'm-ui-mouse)
+   ;; (defncall 'm-ui-events '->
+   ;;   (api/symbol 'm-ui)
+   ;;   (api/key-fn :sources)
+   ;;   (api/key-fn :events))
+   ;; (defncall 'oasis-ui-mod-events 'm-ui-events)
    ;; (defncall 'm-ui-render '->
    ;;   (api/symbol 'm-ui)
    ;;   (api/key-fn :sinks)
@@ -3733,9 +3781,11 @@
 
    (defncall 'oasis-ui-render 'pipes/ui (api/integer 2))
    (defncall 'oasis-ui-events 'pipes/events (api/integer 2))
-   (defncall 'oasis-ev 'pipes/debug)
    (defncall 'oasis-ui-mouse 'pipes/mouse)
    (defncall 'oasis-ui-kb 'pipes/keyboard)
+   (defncall 'oasis-ev 'pipes/debug)
+   (defncall 'oasis-ui-mouse-out 'pipes/debug)
+   (defncall 'oasis-ui-kb-out 'pipes/debug)
    (defncall 'oasis-ui-in 'pipes/debug)
    (defncall 'render 'pipes/debug ;; (api/keyword :oasis.spec/render)
      )
@@ -3758,15 +3808,18 @@
                                                                        ;; (api/keyword :m-ui) (api/symbol 'm-ui)
                                                                        ;; (api/keyword :ui-mod) (api/symbol 'ui-mod)
                                                                        ;; (api/keyword :m-ui-kb) (api/symbol 'm-ui-kb)
+                                                                       ;;(api/keyword :mod-kb) (api/symbol 'oasis-ui-mod-kb)
+                                                                       ;;(api/keyword :mod-mouse) (api/symbol 'oasis-ui-mod-mouse)
                                                                        (api/keyword :kb) (api/symbol 'oasis-ui-kb)
                                                                        (api/keyword :mouse) (api/symbol 'oasis-ui-mouse)
-                                                                       ;; (api/keyword :m-ui-mouse) (api/symbol 'm-ui-mouse)
-                                                                       ;; (api/keyword :m-ui-render) (api/symbol 'm-ui-render)
-                                                                       ;; (api/keyword :oasis-ui-out) (api/symbol 'oasis-ui-out)
+                                                                       ;;(api/keyword :m-ui-mouse) (api/symbol 'm-ui-mouse)
+                                                                       ;;(api/keyword :m-ui-render) (api/symbol 'm-ui-render)
+                                                                       ;;(api/keyword :oasis-ui-out) (api/symbol 'oasis-ui-out)
                                                                        (api/keyword :events) (api/symbol 'oasis-ui-events)
+                                                                       ;;(api/keyword :events-mod) (api/symbol 'oasis-ui-mod-events)
                                                                        })
-                                      (api/keyword :sinks) (api/map {(api/keyword :mouse) (api/symbol 'oasis-ui-mouse)
-                                                                     (api/keyword :kb) (api/symbol 'oasis-ui-kb)
+                                      (api/keyword :sinks) (api/map {(api/keyword :mouse) (api/symbol 'oasis-ui-mouse-out)
+                                                                     (api/keyword :kb) (api/symbol 'oasis-ui-kb-out)
                                                                      (api/keyword :events) (api/symbol 'oasis-ev)
                                                                      })
                                     ;; (api/keyword :tests) (api/map {(api/keyword :t1) (api/map {(api/keyword :when) (api/map {(api/string "oasis-ui-in") (api/vector [(api/map {(api/keyword :header)
@@ -3783,15 +3836,26 @@
    ])
 
 (def oasis-ui-net
-  [(pipe 'oasis-ui-in 'render)
-   ;; (pipe 'oasis-ui-in 'log-render2)
+  [
+   (pipe 'oasis-ui-in 'render)
    (pipe 'render 'elements-reduce)
    (pipe 'elements-reduce 'reducer)
 
    (pipe 'reducer 'render-elements 'oasis-ui-render)
    (pipe 'oasis-ui-events 'oasis-ev)
-   (pipe 'oasis-ui-events 'log-render2)
-   ;; (pipe 'reducer 'render-elements 'log-render2)
+
+   (pipe 'oasis-ui-mouse 'oasis-ui-mouse-out)
+   (pipe 'oasis-ui-kb 'oasis-ui-kb-out)
+
+   ;; (pipe 'oasis-ui-in 'render)
+   ;; (pipe 'render 'elements-reduce)
+   ;; (pipe 'elements-reduce 'reducer)
+
+   ;; (pipe 'reducer 'render-elements 'oasis-ui-render)
+   ;; (pipe 'oasis-ui-events 'oasis-ev)
+   ;; (pipe 'oasis-ui-events 'log-render2)
+   ;; ;; (pipe 'oasis-ui-render 'log-render2)
+   ;; ;; (pipe 'reducer 'render-elements 'log-render2)
    ])
 
 (def oasis-module-defs
@@ -3836,6 +3900,11 @@
      (api/key-fn :sources)
      (api/key-fn :mouse))
    (defncall 'render-mouse-in 'm-r-mouse-fn)
+   (defncall 'm-r-kb-fn '->
+     (api/symbol 'm-render)
+     (api/key-fn :sources)
+     (api/key-fn :kb))
+   (defncall 'render-kb-in 'm-r-kb-fn)
    (defncall 'm-elems-fn '->
      (api/symbol 'm-render)
      (api/key-fn :sinks)
@@ -3851,6 +3920,11 @@
      (api/key-fn :sinks)
      (api/key-fn :drag))
    (defncall 'render-drag-out 'm-ro-drag-fn)
+   (defncall 'm-ro-kb-fn '->
+     (api/symbol 'm-render)
+     (api/key-fn :sinks)
+     (api/key-fn :kb))
+   (defncall 'render-kb-out 'm-ro-kb-fn)
 
    (defncall 'm-core-mod 'oasis-core)
    (defncall 'm-core 'm-core-mod)
@@ -3907,10 +3981,12 @@
                                                                     ;(api/keyword :module-core-kb-in) (api/symbol 'core-kb-in)
                                                                     ;(api/keyword :module-core-drag-in) (api/symbol 'core-drag-in)
                                                                     ;(api/keyword :module-core-scroll-in) (api/symbol 'core-scroll-in)
-                                                                    ;(api/keyword :module-core-hover-in) (api/symbol 'core-hover-in)
+                                                                    (api/keyword :module-core-hover-in) (api/symbol 'core-hover-in)
                                                                     (api/keyword :module-render-state) (api/symbol 'render-state)
                                                                     (api/keyword :module-render-init) (api/symbol 'render-init)
                                                                     (api/keyword :module-render-mouse-in) (api/symbol 'render-mouse-in)
+                                                                    (api/keyword :module-render-kb-in) (api/symbol 'render-kb-in)
+                                                                    (api/keyword :module-render-kb-out) (api/symbol 'render-kb-out)
                                                                     (api/keyword :module-render-drag-out) (api/symbol 'render-drag-out)
                                                                     (api/keyword :module-render-hover-out) (api/symbol 'render-hover-out)
                                                                     (api/keyword :module-render-out) (api/symbol 'render-elems)
@@ -3948,13 +4024,12 @@
    ;; (pipe 'render-elems 'log-render)
    (pipe 'render-elems 'ui-render)
 
-   (pipe 'oasis-keyboard 'core-kb-in)
+   (pipe 'oasis-keyboard 'render-kb-in)
+   (pipe 'render-kb-out 'core-kb-in)
    (pipe 'oasis-bug 'render-mouse-in)
    (pipe 'render-drag-out 'core-drag-in)
    (pipe 'render-hover-out 'core-hover-in)
    ;; (pipe 'render-drag-out 'log-foo)
-   ;; (pipe 'render-hover-out 'log-foo)
-   ;; (pipe 'render-mouse-out 'log-foo)
    (pipe 'oasis-events 'core-events-in)
    (pipe 'oasis-events 'log-state)
    ])

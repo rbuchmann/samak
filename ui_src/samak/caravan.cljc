@@ -6,6 +6,7 @@
               [clojure.core.async    :as a :refer [<! >! put! chan go go-loop close!]]
               [samak.test-programs   :as test-programs]
               [samak.api             :as api]
+              [samak.helpers         :as helpers]
               [samak.lisparser       :as p]
               [samak.scheduler       :as sched]
               [samak.runtime         :as rt]
@@ -26,6 +27,7 @@
               [clojure.core.async    :as a :refer [<! >! put! chan close!]]
               [samak.test-programs   :as test-programs]
               [samak.api             :as api]
+              [samak.helpers         :as helpers]
               [samak.lisparser       :as p]
               [samak.scheduler       :as sched]
               [samak.runtime         :as rt]
@@ -734,8 +736,7 @@
         ;; rootnotify  (database-net roots)
         _ (println "root" rootnotify)
         a1 (merge-with into rootnotify deps)
-        ]
-        _ (println "ev n" a1)
+        _ (println "ev n" a1)]
     (assoc a1 :id (:id bundle))
     ))
 
@@ -827,18 +828,11 @@
 (defn load-lib
   ""
   [cmd ev sym]
-  (let [bundle (eval-bundle sym)
-        merged (merge-with concat bundle)
-        _ (println (str "bundle: " merged))
-        ;; dist (into {} (for [[k v] merged] [k (distinct v)]))
-        ;; _ (println (str "bundle2: " dist))
-        ;; cnt (apply + (map #(map count (vals %)) merged))
-        ]
+  (let [bundle (eval-bundle sym)]
     ;; (println (str "count: " cnt))
     (doall (map #(notify-source ev %) (:modules bundle)))
     (doall (map #(notify-source ev %) (:nodes bundle)))
     (doall (map #(notify-source ev %) (:pipes bundle)))
-    (println "notify done")
     (notify-source
      ev
      {::state ::done}
@@ -848,7 +842,7 @@
   ""
   [cmd ev prog sym]
   (persist-net prog)
-  (load-lib cmd ev sym))
+  (helpers/debounce #(load-lib cmd ev sym)))
 
 (defn test-net
   ""
@@ -876,12 +870,21 @@
 (defn load-oasis
   ""
   [cmd ev]
-  (load-lib cmd ev 'oasis))
+  (helpers/debounce #(load-lib cmd ev 'oasis)))
 
 (defn test-oasis
   ""
   [c]
   (run-testsuite c 'oasis {:timeout 3000}))
+
+(defn test-example
+  ""
+  [cmd ev arg]
+  (case arg
+    :load (load-test cmd ev)
+    :self (load-oasis cmd ev)
+    (tools/log "load unknown: " arg)))
+
 
 (defn oasis-hook
   ""
@@ -930,9 +933,10 @@
             (do
               (tools/log "caravan: " call)
               (case (:action call)
-                :load (load-oasis caravan-cmd caravan-eval)
+                :load (test-example caravan-cmd caravan-eval (:arguments call))
                 :test (test-chuck caravan-cmd)
                 :trace (trace-dump)
+                ;; :sink (create-sink caravan-cmd caravan-eval (:arguments call))
                 :insert (add-cell caravan-eval (:arguments call))
                 :edit (edit-cell caravan-eval (:arguments call))
                 :cut (cut-cell caravan-eval (:arguments call))

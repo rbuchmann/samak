@@ -10,6 +10,7 @@
    :cljs
    [(:refer-clojure :exclude [uuid])
     (:require
+     [goog.async.nextTick]
      [cljs-time.core :as time]
      [cljs-time.format :as time-format]
      [cljs-time.coerce :as time-coerce])]))
@@ -106,3 +107,9 @@
 (defn to-json [x]
   #?(:cljs (clj->js x)
      :clj (json/write-str x)))
+
+(defn debounce
+  ""
+  [f]
+  #?(:cljs (goog.async.nextTick f)
+     :clj (f)))

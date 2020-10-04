@@ -99,7 +99,7 @@
       (when (= :samak.runtime/paket (:samak.runtime/type p))
         (when-let [pipe (get-named-pipe-memo rt (:samak.runtime/target p))]
           (pipes/fire-raw! pipe content))
-        (trace/trace ::render-in
+        (trace/trace ::worker-in
                      (helpers/duration before (helpers/now))
                      content)))
     (recur)))

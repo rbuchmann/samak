@@ -135,7 +135,7 @@
    "(| in a)"
    "(| b out)"
    "(defmodule bar {:depends {:caravan modules/caravan}
-                    :sources {:in in :b b}
+                    :sources {:in in :b b :mod mod}
                     :sinks {:out out}
                     :tests {:t1 {:when {\"in\" [1]}
                                  :then {\"out\" [(incase 2 :success)]}}}})"

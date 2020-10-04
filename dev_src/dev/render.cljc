@@ -75,7 +75,7 @@
         (println msg p))
       (recur))))
 
-(defn sched
+(defn scheduler
   [id]
   (fn [broadcast]
     (println "sched" id)
@@ -106,7 +106,6 @@
   ""
   [rt]
   (fire-event-into-named-pipe rt "oasis-init" "1")
-  (fire-event-into-named-pipe rt "oasis-init" "1")
   (println "oasis started")
   ;; (let [parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
   ;;   (doseq [expression parsed]
@@ -116,8 +115,7 @@
 (defn eval-oasis
   [rt conf cb]
   (let [net (sched/load-bundle @rt 'oasis)]
-    (sched/eval-module rt conf net nil)
-    (println "eval done \\o/")))
+    (helpers/debounce #(sched/eval-module rt conf net nil))))
 
 (defn get-named-pipe
   [rt pipe-name]
@@ -152,21 +150,26 @@
 
 (defn start-oasis
   ""
-  []
-  (run-oasis @rt)
-  )
+  [load]
+  (eval-oasis rt main-conf load)
+  (println "renderer started oasis")
+  (helpers/debounce #(run-oasis @rt)))
+
+(defn init-oasis
+  ""
+  [load]
+  (oasis/store (:store @rt))
+  (helpers/debounce #(start-oasis load)))
 
 
 (defn start-render-runtime
   ""
   [load in out]
-  (reset! rt (run/make-runtime renderer-symbols (sched "main") main-conf))
+  (reset! rt (run/make-runtime renderer-symbols (scheduler "main") main-conf))
   (reset! tracer (trace/init-tracer @rt (:tracer config)))
   (println "renderer started runtime" (:id @rt) @rt)
-  (oasis/store (:store @rt))
-  (eval-oasis rt main-conf load)
-  (println "renderer started oasis")
+  (helpers/debounce #(init-oasis load))
 
-  (pipes/link! (:broadcast @rt) (pipes/pipe out))
+  (pipes/link! (:broadcast @rt) (pipes/sink out))
   (pipes/link! (pipes/source in) (:scheduler @rt))
   )

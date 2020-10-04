@@ -42,21 +42,7 @@
     :default                 (compile-error "unknown token during evaluation: " (str "type: " (or (type value) "nil") " with value: " (str value)))))
 
 (defmethod eval-node ::module [module]
-  (println "evaling module: " module)
-  ;; FIXME: also needs to make this stuff available for resolve?
-
   ((:module *manager*) module *manager*))
-
-(defn foo
-  ""
-  [& args]
-  (println args))
-
-
-(defmethod eval-node ::fuse [{:keys [::module-name ::bindings] :as module}]
-  (foo module)
-  (let [mod (eval-node module-name)]
-    ))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]

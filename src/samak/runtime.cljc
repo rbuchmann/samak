@@ -114,7 +114,7 @@
   (if (not= target :pipe)
     pipe
     (do
-      (println "replacing " pipe)
+      ;; (println "replacing " pipe)
       (let [from-scheduler (:scheduler @resolver)
             trans-in (pipes/transduction-pipe (comp (map (wrap-in pipe (:id @resolver))) (remove #(= % ::ignore))))
             to-world (:broadcast @resolver)
@@ -144,7 +144,7 @@
         c (get (:config man) n)]
     (if c
       (fn []
-        (println "return stub for" n "[" (:db/id module) "] -> " c)
+        ;; (println "return stub for" n "[" (:db/id module) "] -> " c)
         c)
       (fn []
         ;; FIXME

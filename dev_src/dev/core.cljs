@@ -11,8 +11,7 @@
 
 (defn start-main
   [load in out]
-  (render/start-render-runtime load in out)
-  (render/start-oasis))
+  (render/start-render-runtime load in out))
 
 
 (defn update-bar

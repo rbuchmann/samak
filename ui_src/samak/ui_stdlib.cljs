@@ -84,9 +84,9 @@
 
 (defn events [n]
   (let [c (chan)
+        init (atom true)
         elem (if n (js/document.getElementById (str "samak" n)) (.-body js/document))
         bound (.getBoundingClientRect elem)]
-    (println "foobar: " n)
     (set! (.-onresize js/window)
           (fn [e] (do (println "rez: " n)
                       (put-meta! c (let [event (js->clj e :keywordize-keys true)]
@@ -98,7 +98,30 @@
                                  ::view)
                       (println "EVS: " n)
                       false)))
+    (when @init
+      (reset! init false)
+      (put-meta! c
+                 {:data :resize
+                  :width (.-clientWidth (.-documentElement js/document))
+                  :height (.-clientHeight (.-documentElement js/document))}
+                 ::view))
     (pipes/source c)))
+
+(def content (atom nil))
+
+(defn render-cb
+  ""
+  [node]
+  (r/render @content node)
+  (reset! content nil))
+
+(defn render
+  ""
+  [node x events c]
+  (if (not @content)
+    (helpers/debounce #(render-cb node)))
+  (reset! content (if events (transform-element x c) x)))
+
 
 (defn ui
   ([n]
@@ -114,7 +137,7 @@
            (if true ;; (s/valid? ::hiccup x)
              (when-let [node (js/document.getElementById (str "samak" n))]
                ;; (when n (.warn js/console (str "render " n " - " x)))
-               (r/render (if events (transform-element x ui-out) x) node))
+               (render node x events ui-out))
              (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x) "for" x))))
          (when @init
            (reset! init false)
@@ -124,15 +147,15 @@
                        :height (.-clientHeight (.-documentElement js/document))}
                       ::view))
          (recur)))
-     (set! (.-onresize js/window)
-           (fn [e] (do (put-meta! ui-out (let [event (js->clj e :keywordize-keys true)]
-                                           {:data :resize
-                                            :width (.-clientWidth (.-documentElement js/document))
-                                            :height (.-clientHeight (.-documentElement js/document))
-                                            :samak.view/target (.-id (.-target event))}
-                                           )
-                                  ::view)
-                       false)))
+     ;; (set! (.-onresize js/window)
+     ;;       (fn [e] (do (println "uires")(put-meta! ui-out (let [event (js->clj e :keywordize-keys true)]
+     ;;                                       {:data :resize
+     ;;                                        :width (.-clientWidth (.-documentElement js/document))
+     ;;                                        :height (.-clientHeight (.-documentElement js/document))
+     ;;                                        :samak.view/target (.-id (.-target event))}
+     ;;                                       )
+     ;;                              ::view)
+     ;;                   false)))
      (pipes/pipe ui-in ui-out))))
 
 (defn translate-coords
@@ -216,12 +239,12 @@
     (pipes/source c)))
 
 (defn ui-module
-  [id]
+  []
   (println "init ui")
   (fn []
     (let [xid 2
-          render (ui id true)
-          m (mouse id)]
+          render (ui xid true)
+          m (mouse xid)]
       (println "start ui:" m)
       {:sources {:events render
                  :mouse m
