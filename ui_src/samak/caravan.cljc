@@ -222,6 +222,7 @@
             :caravan/id sym
             :caravan/name (:samak.nodes/name fn)
             :caravan/ast ast}})))
+
 (defn add-node
   ""
   [sym fn]
@@ -540,16 +541,16 @@
 
 (defn create-sink
   ""
-  []
-  (fn [x]
-    (println "create sink: " x)
-    (let [pipe-name (:name x)
-          sym (str pipe-name "-" (rand-int 1000000000))
-          exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
-          ast (single! exp)]
-      (println (str "res: " ast))
-      ;; (notify-source ev (add-node (symbol sym) ast)) ;; FIXME
-      :okay)))
+  [cmd ev x]
+  (println "create sink: " x)
+  (let [pipe-name (:name x)
+        sym (str pipe-name "-" (rand-int 1000000000))
+        exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
+        ast (single! exp)]
+    (println (str "res: " ast))
+    (notify-source ev (add-node (:db/id ast) ast)) ;; FIXME
+    (println (str "res: " ast))
+    ::okay))
 
 (defn disconnect
   ""
@@ -571,17 +572,16 @@
 
 (defn link
   ""
-  []
-  (fn [{:keys [:source :sink] :as x}]
-    (println "connect: " x)
-    (let [connector (str "c-" source "-" sink)
-          pipe-key (make-pipe-key source connector sink)
-          existing (contains? @net pipe-key)]
-      (when (and sink source (not= sink source) )
-        (if existing
-          (disconnect)
-          ;; (connect ev source connector sink) ;; FIXME
-          )))))
+  [ev cmd {:keys [:source :sink] :as x}]
+  (println "connect: " x)
+  (let [connector (str "c-" source "-" sink)
+        pipe-key (make-pipe-key source connector sink)
+        existing (contains? @net pipe-key)]
+    (when (and sink source (not= sink source) )
+      (if existing
+        (disconnect)
+        (connect ev source connector sink)
+        ))))
 
 (defn link-pipes
   ""
@@ -926,17 +926,18 @@
           caravan-eval (chan)]
       (go-loop []
         (when-let [x (<! caravan-in)]
-          (tools/log "caravan: " x)
+          (tools/log "caravan-in: " x)
           (when (:ping (:samak.pipes/content x))
             (pong caravan-cmd x))
           (when-let [call (:call (:samak.pipes/content x))]
             (do
-              (tools/log "caravan: " call)
+              (tools/log "caravan-call: " call)
               (case (:action call)
                 :load (test-example caravan-cmd caravan-eval (:arguments call))
                 :test (test-chuck caravan-cmd)
                 :trace (trace-dump)
-                ;; :sink (create-sink caravan-cmd caravan-eval (:arguments call))
+                :create-sink (create-sink caravan-cmd caravan-eval (:arguments call))
+                :link (link caravan-cmd caravan-eval (:arguments call))
                 :insert (add-cell caravan-eval (:arguments call))
                 :edit (edit-cell caravan-eval (:arguments call))
                 :cut (cut-cell caravan-eval (:arguments call))
@@ -952,6 +953,4 @@
 
 (def symbols
   (merge
-   {'create-sink create-sink
-    'connect link
-    'modules/caravan caravan-module}))
+   {'modules/caravan caravan-module}))
