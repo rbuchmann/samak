@@ -539,49 +539,6 @@
               (notify-source ev (add-node (symbol sym) exp))
               :done)))))))
 
-(defn create-sink
-  ""
-  [cmd ev x]
-  (println "create sink: " x)
-  (let [pipe-name (:name x)
-        sym (str pipe-name "-" (rand-int 1000000000))
-        exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
-        ast (single! exp)]
-    (println (str "res: " ast))
-    (notify-source ev (add-node (:db/id ast) ast)) ;; FIXME
-    (println (str "res: " ast))
-    ::okay))
-
-(defn disconnect
-  ""
-  []
-  (println "disconnect"))
-
-(defn connect
-  ""
-  [ev source connector sink]
-  ;; (println (str "connect " source " with " connector " to " sink))
-  (let [fn (api/defexp (symbol connector) (api/symbol '_))
-        fn-ast (single! fn)
-        pipe (api/pipe (api/symbol (symbol source))
-                       (api/symbol (symbol connector))
-                       (api/symbol (symbol sink)))]
-    (notify-source ev (add-node (symbol connector) fn-ast))
-    (notify-source ev (add-pipe pipe))))
-
-
-(defn link
-  ""
-  [ev cmd {:keys [:source :sink] :as x}]
-  (println "connect: " x)
-  (let [connector (str "c-" source "-" sink)
-        pipe-key (make-pipe-key source connector sink)
-        existing (contains? @net pipe-key)]
-    (when (and sink source (not= sink source) )
-      (if existing
-        (disconnect)
-        (connect ev source connector sink)
-        ))))
 
 (defn link-pipes
   ""
@@ -726,8 +683,8 @@
 
 (defn eval-bundle
   ""
-  [sym]
-  (let [bundle (sched/load-bundle @rt-conn sym)
+  [id]
+  (let [bundle (sched/load-bundle-by-id @rt-conn id)
         _ (println "ev b" bundle)
         roots (:roots bundle)
         deps (handle-deps (:deps bundle))
@@ -739,6 +696,7 @@
         _ (println "ev n" a1)]
     (assoc a1 :id (:id bundle))
     ))
+
 
 (defn test-bundle
   ""
@@ -827,8 +785,8 @@
 
 (defn load-lib
   ""
-  [cmd ev sym]
-  (let [bundle (eval-bundle sym)]
+  [cmd ev bundle-id]
+  (let [bundle (eval-bundle bundle-id)]
     ;; (println (str "count: " cnt))
     (doall (map #(notify-source ev %) (:modules bundle)))
     (doall (map #(notify-source ev %) (:nodes bundle)))
@@ -838,11 +796,18 @@
      {::state ::done}
      #(a/put! cmd (pipes/make-paket {::event ::load ::status ::done ::percent 100 ::id (:id bundle)} ::caravan)))))
 
+(defn load-bundle
+  ""
+  [cmd ev sym]
+  (let [bundle-id (rt/resolve-name @rt-conn sym)]
+    (load-lib cmd ev bundle-id)))
+
+
 (defn load-net
   ""
   [cmd ev prog sym]
   (persist-net prog)
-  (helpers/debounce #(load-lib cmd ev sym)))
+  (helpers/debounce #(load-bundle cmd ev sym)))
 
 (defn test-net
   ""
@@ -860,6 +825,25 @@
   ""
   [cmd ev]
   (load-net cmd ev test-programs/test-nested-modules-test 'baz)
+  )
+
+
+(def base-module
+  [
+   "(def in (pipes/debug))"
+   "(def out (pipes/debug))"
+   "(def foo (pipes/debug))"
+   "(defmodule base {:sinks {:in in}
+                     :sources {:in in :out out :foo foo}})"
+   "(| in out)"
+   "(def base-mod (base))"
+   ])
+
+
+(defn load-base
+  ""
+  [cmd ev]
+  (load-net cmd ev base-module 'base)
   )
 
 (defn test-chuck
@@ -881,9 +865,91 @@
   ""
   [cmd ev arg]
   (case arg
-    :load (load-test cmd ev)
+    :test (load-test cmd ev)
+    :base (load-base cmd ev)
     :self (load-oasis cmd ev)
     (tools/log "load unknown: " arg)))
+
+(defn disconnect
+  ""
+  []
+  (println "disconnect"))
+
+(defn connect
+  ""
+  [ev source connector sink]
+  ;; (println (str "connect " source " with " connector " to " sink))
+  (let [fn (api/defexp (symbol connector) (api/symbol '_))
+        fn-ast (single! fn)
+        pipe (api/pipe (api/id-ref (helpers/str-to-int source))
+                       (api/symbol (symbol connector))
+                       (api/id-ref (helpers/str-to-int sink)))
+        pipe-ast (single! pipe)]
+    (notify-source ev (add-node (symbol connector) fn-ast))
+    (notify-source ev (add-pipe pipe-ast))))
+
+(defn get-smap-key
+  ""
+  [key e]
+  (do
+    (println "lu" key (:samak.nodes/value (:samak.nodes/mapkey e)))
+    (= key (:samak.nodes/value (:samak.nodes/mapkey e)))))
+
+
+(defn get-in-smap
+  ""
+  [smap key]
+  (println "get" smap key)
+  (let [mv (:samak.nodes/mapkv-pairs smap)]
+    (println "mv" mv)
+    (first (filter #(get-smap-key key %) mv))))
+
+
+(defn smap-find
+  ""
+  [smap keys]
+  (println "smapu" smap keys)
+  (let [val (get-in-smap smap (first keys))
+        more (next keys)]
+    (if more
+      (smap-find val more)
+      val)))
+
+
+(defn create-sink
+  ""
+  [cmd ev {scope :scope {pipe-name :name} :args :as x}]
+  (println "create sink: " x)
+  (let [sym (str pipe-name "-" (rand-int 1000000000))
+        exp (api/defexp (symbol sym) (api/fn-call (api/symbol (symbol (str "pipes/" pipe-name))) nil))
+        ast (single! exp)
+        mod (load-ast @rt-conn scope)
+        _ (println (str "mod: " mod))
+        bucket (:samak.nodes/mapvalue (smap-find (:samak.nodes/definition mod) [:sources]))
+        _ (println (str "bucket: " bucket))
+        modded (update bucket :samak.nodes/mapkv-pairs conj {:samak.nodes/mapkey (api/keyword (keyword pipe-name))
+                                                             :samak.nodes/mapvalue (api/symbol (symbol sym))})
+        _ (println (str "modded: " modded))
+        mod-alt (persist! @rt-conn [modded])]
+    (println (str "res: " ast))
+    (notify-source ev (add-node (:db/id ast) ast)) ;; FIXME
+    (println (str "res: " ast))
+    (load-lib cmd ev (helpers/str-to-int scope))
+    ))
+
+
+(defn link
+  ""
+  [cmd ev {scope :scope {:keys [:source :sink]} :args :as x}]
+  (println "connect: " x)
+  (let [connector (str "c-" source "-" sink)
+        pipe-key (make-pipe-key source connector sink)
+        existing (contains? @net pipe-key)]
+    (when (and sink source (not= sink source) )
+      (if existing
+        (disconnect)
+        (connect ev source connector sink))
+      (load-lib cmd ev (helpers/str-to-int scope)))))
 
 
 (defn oasis-hook

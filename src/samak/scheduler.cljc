@@ -59,17 +59,24 @@
   )
 
 
-(defn load-bundle
+(defn load-bundle-by-id
   ""
-  [rt sym]
-  (let [_ (print "  V" "Fetching bundle from DB:" sym)
-        bundle-id (run/resolve-name rt sym)
-        _ (print "  V" "Bundle id:" bundle-id)
+  [rt bundle-id]
+  (let [_ (print "  V" "Bundle id:" bundle-id)
         bundle (get (run/load-bundle rt bundle-id) bundle-id)
         _ (println "bundle: " bundle)
         deps (load-deps rt [bundle-id bundle])]
     deps
 ))
+
+(defn load-bundle
+  ""
+  [rt sym]
+  (let [_ (print "  V" "Fetching bundle from DB:" sym)
+        bundle-id (run/resolve-name rt sym)
+        deps (load-bundle-by-id rt bundle-id)]
+    deps
+    ))
 
 (defn eval-module
   ""

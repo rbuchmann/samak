@@ -113,3 +113,7 @@
   [f]
   #?(:cljs (goog.async.nextTick f)
      :clj (f)))
+
+(defn str-to-int [s]
+  #?(:clj (try (Integer/parseInt s) (catch Exception e nil))
+     :cljs (js/parseInt s)))

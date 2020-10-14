@@ -555,7 +555,7 @@
                  (api/map {(api/keyword :command) (api/keyword :load)
                            (api/keyword :type) (api/keyword :immediate)
                            (api/keyword :data) (api/keyword :load)
-                           (api/keyword :load) (api/keyword :load)}))
+                           (api/keyword :load) (api/keyword :base)}))
 
                (defncall 'is-kb-self '->
                  (api/key-fn :key)
@@ -1507,7 +1507,8 @@
                ;; (api/fn-call (api/symbol 'spy) [(api/string "fmod")])
                (api/map {(api/keyword :id) (api/string "root")
                          (api/keyword :layoutOptions) (api/map {(api/string "elk.algorithm") (api/string "layered")})
-                         (api/keyword :children) (api/fn-call (api/symbol 'into) [(api/symbol 'format-modules) (api/symbol 'format-defs)])
+                         (api/keyword :children) (api/fn-call (api/symbol 'into) [(api/symbol 'format-modules) ;; (api/symbol 'format-defs)
+                                                                                  ])
                          ;; (api/keyword :edges) (api/symbol 'format-pipes)
                          }))
 
@@ -1670,7 +1671,8 @@
                                                        (api/map {(api/keyword :action)
                                                                  (api/keyword :create-sink)
                                                                  (api/keyword :arguments)
-                                                                 (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :data)])})})}))
+                                                                 (api/map {(api/keyword :scope) (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :mode) (api/key-fn :scope)])
+                                                                           (api/keyword :args) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :data)])})})})}))
 
              (defncall 'should-connect '->
                (api/key-fn :next)
@@ -1678,12 +1680,15 @@
                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :connect)]))
 
              (defncall 'link '->
+               (api/fn-call (api/symbol 'spy) [(api/string "link")])
                (api/map {(api/keyword :state) (api/key-fn :state)
                          (api/keyword :next) (api/map {(api/keyword :call)
                                                        (api/map {(api/keyword :action)
                                                                  (api/keyword :link)
-                                                                 (api/keyword :arguments)
-                                                                 (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :data)])})})}))
+                                                                 (api/keyword :arguments) (api/map {(api/keyword :scope)
+                                                                                                    (api/fn-call (api/symbol '->) [(api/key-fn :state) (api/key-fn :mode) (api/key-fn :scope)])
+                                                                                                    (api/keyword :args)
+                                                                 (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :data)])})})})}))
 
              (defncall 'should-test '->
                (api/key-fn :next)
