@@ -854,7 +854,7 @@
 (defn load-oasis
   ""
   [cmd ev]
-  (helpers/debounce #(load-lib cmd ev 'oasis)))
+  (helpers/debounce #(load-bundle cmd ev 'oasis)))
 
 (defn test-oasis
   ""

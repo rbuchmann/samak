@@ -636,7 +636,7 @@
 
                (defncall 'is-func '->
                  (api/key-fn :type)
-                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "func")]))
+                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "d")])) ;;FIXME?
 
                (defncall 'handle-func '->
                  (api/key-fn :name)
@@ -644,6 +644,7 @@
                            (api/keyword :data) (api/fn-call (api/symbol 'str) [(api/string "func/")(api/symbol '_)])}))
 
                (defncall 'handle-mouse-click '->
+                 (api/fn-call (api/symbol 'spy) [(api/string "lmb")])
                  (api/key-fn :source)
                  (api/symbol 'make-target)
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-source)
@@ -1072,7 +1073,7 @@
 
              (defncall 'process-scope '->
                (api/map {(api/keyword :state) (api/key-fn :state)
-                          (api/keyword :next) (api/map {(api/keyword :mode) (api/keyword :back)
+                          (api/keyword :next) (api/map {(api/keyword :mode) (api/keyword :navigate)
                                                         (api/keyword :scope) (api/fn-call (api/symbol '->) [(api/key-fn :next) (api/key-fn :scope)])})})
                 (api/fn-call (api/symbol 'spy) [(api/string "scope")])
                )
@@ -2130,6 +2131,7 @@
       (api/keyword :pipe-stroke) (api/string "#a6a28c")
       (api/keyword :pipe-drag) (api/string "#b65611")
       (api/keyword :module-bg) (api/string "#6684e1")
+      (api/keyword :module-border) (api/string "#1fad83")
       (api/keyword :edge-in) (api/string "#6684e1")
       (api/keyword :edge-out) (api/string "#b65611")
       (api/keyword :edge-neutral) (api/string "#a6a28c")
@@ -2842,9 +2844,8 @@
      (api/symbol 'is-same))
 
    (defncall 'is-hovered '->
-     ;; (api/fn-call (api/symbol 'spy) [(api/string "hovered")])
-     (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :name)])
-                  (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)])])
+     (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :id)])
+                  (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :id)])])
      (api/symbol 'is-same))
 
    (defncall 'cell-y '->
@@ -3276,23 +3277,24 @@
                                (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :name)])])]))
 
    (defncall 'is-dragging '->
-     ;; (api/fn-call (api/symbol 'spy) [(api/string "dragging")])
-     (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :editor) (api/key-fn :mode)])
+     (api/key-fn :context)
+     (api/key-fn :editor)
+     (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '=) [(api/key-fn :mode)
                                                                    (api/keyword :navigate)])
-                                     (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :editor) (api/key-fn :activity)])
+                                     (api/fn-call (api/symbol '=) [(api/key-fn :activity)
                                                                    (api/keyword :dragging)])]))
 
    (defncall 'is-pipe-drag-begin '->
-     (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :source)])
-                                   (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/symbol 'pipe-id)])]))
+     (api/vector [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :mouse) (api/key-fn :drag) (api/key-fn :source)])
+                  (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :id)])])
+     (api/symbol 'is-same))
 
    (defncall 'is-pipe-target '->
      (api/key-fn :node)
      (api/key-fn :type)
-     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :caravan/sink)]))
+     (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "sink")]))
 
    (defncall 'is-pipe-hovered '->
-     ;; (api/fn-call (api/symbol 'spy) [(api/string "hover")])
      (api/fn-call (api/symbol 'and) [(api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :type)])
                                                                    (api/string "d")])
                                      (api/fn-call (api/symbol '=) [(api/fn-call (api/symbol '->) [(api/key-fn :context) (api/key-fn :hovered) (api/key-fn :id)])
@@ -3387,8 +3389,7 @@
                                          (api/keyword :fill-opacity) (api/float 0.4)
 
                                          (api/keyword :style) (api/map {(api/keyword :fill) (api/fn-call (api/symbol '->) [(api/keyword :module-bg) (api/symbol 'get-color)])
-                                                                        (api/keyword :stroke) (api/symbol 'get-func-stroke)
-                                                                        (api/keyword :filter) (api/string "url(#shadow)")
+                                                                        (api/keyword :stroke) (api/fn-call (api/symbol '->) [(api/keyword :module-border) (api/symbol 'get-color)])
                                                                         (api/keyword :pointer-events) (api/string "all")})
                                          (api/keyword :rx) (api/integer 10)
                                          ;; (api/keyword :y) (api/fn-call (api/symbol '->) [(api/key-fn :node) (api/key-fn :y)])
@@ -3421,7 +3422,6 @@
      (api/key-fn :value))
 
    (defncall 'graph-inner '->
-     (api/map {(api/keyword :node) (api/symbol '_)})
      (api/fn-call (api/symbol 'incase) [(api/symbol 'is-module)
                                         (api/symbol 'graph-module-stub)])
      (api/fn-call (api/symbol 'incase) [(api/symbol 'is-pipe-node)
@@ -3429,10 +3429,14 @@
      (api/fn-call (api/symbol 'incase) [(api/symbol 'is-func-node)
                                         (api/symbol 'graph-func)]))
 
-
    (defncall 'graph-module-elems '->
-     (api/key-fn :node)
-     (api/key-fn :children)
+     (api/fn-call (api/symbol 'myzip) [(api/fn-call (api/symbol '->) [(api/key-fn :node)
+                                                                      (api/key-fn :children)])
+                                       (api/fn-call (api/symbol 'repeat) [(api/fn-call (api/symbol '->) [(api/key-fn :node)
+                                                                                                         (api/key-fn :children)
+                                                                                                         (api/fn-call (api/symbol 'count) [(api/symbol '_)])])
+                                                                          (api/key-fn :context)])])
+     (api/fn-call (api/symbol 'map) [(api/symbol 'merge-node) (api/symbol '_)])
      (api/fn-call (api/symbol 'map) [(api/symbol 'graph-inner) (api/symbol '_)])
      (api/fn-call (api/symbol 'into) [(api/vector [(api/keyword :g) (api/map {(api/keyword :id) (api/string "inner")})]) (api/symbol '_)])
      )
