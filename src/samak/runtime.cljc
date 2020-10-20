@@ -3,7 +3,7 @@
   (:clj
    [(:require
      [clojure.core.async :as a :refer [<! >! chan go go-loop close! put!]]
-     [clojure.walk :as w]
+     [promesa.core :as p]
      [samak.runtime.stores  :as stores]
      [samak.runtime.servers :as servers]
      [samak.helpers :as helpers]
@@ -17,7 +17,7 @@
    :cljs
    [(:require
      [clojure.core.async :as a :refer [<! >! chan close! put!]]
-     [clojure.walk :as w]
+     [promesa.core :as p]
      [samak.runtime.stores  :as stores]
      [samak.runtime.servers :as servers]
      [samak.helpers :as helpers]
@@ -41,6 +41,8 @@
             (servers/eval-ast server form))
           server forms))
 
+(defn resolve-name [runtime sym]
+  (-> runtime :store (stores/resolve-name sym)))
 
 (defn load-by-id
   ""
@@ -50,13 +52,12 @@
 (defn load-ast
   "loads an ast given by its entity id from the database"
   [rt id]
-  (w/postwalk (fn [form]
-                  (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
-                                    (:db/id form))]
-                    (load-by-id rt sub-id)
-                    form))
-              (load-by-id rt id)))
-
+  (helpers/ppostwalk (fn [form]
+                       (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
+                                         (:db/id form))]
+                         (load-by-id rt sub-id)
+                         form))
+                     (load-by-id rt id)))
 
 (defn cancel?
   ""
@@ -156,37 +157,46 @@
           ;; (println (str "used module: " module "->" evaled))
           evaled)))))
 
+(defn make-store-internal
+  ""
+  [conf inbound broadcast builtins]
+  (if conf
+    (stores/make-piped-store inbound broadcast)
+    (let [store (stores/make-local-store)]
+      (stores/load-builtins! store (keys builtins))
+      (stores/serve-store store inbound broadcast))))
+
+
 (defn make-runtime-internal
   ""
-  [scheduler conf]
-  (let [c (pipes/pipe (chan))]
-     {:id (str "rt-" (helpers/uuid))
-      :store  (stores/make-local-store)
-      :server (servers/make-local-server {:config conf
+  [scheduler conf builtins]
+  (let [[inbound broadcast] (scheduler)]
+     {:id (or (:id conf) (str "rt-" (helpers/uuid)))
+      :store (make-store-internal (:store conf) inbound broadcast builtins)
+      :server (servers/make-local-server {:config (:modules conf)
                                           :resolve resolve-fn
                                           :link link-fn
                                           :cancel? cancel?
                                           :module instanciate-module})
-      :broadcast c
-      :scheduler (when scheduler (scheduler c))}))
+      :broadcast broadcast
+      :scheduler inbound}))
 
 (defn make-runtime
   ([]
-   (make-runtime nil nil))
+   (make-runtime nil))
   ([builtins]
-   (make-runtime builtins nil))
+   (make-runtime builtins #([(pipes/pipe (chan)) (pipes/pipe (chan))])))
   ([builtins scheduler]
    (make-runtime builtins scheduler {}))
   ([builtins scheduler conf]
-   (let [runtime (-> (make-runtime-internal scheduler conf)
-                     (update :store stores/load-builtins! (keys builtins))
-                     (update :server servers/load-builtins! builtins))
-         rt2 (->> (keys builtins)
-                  (map (partial stores/resolve-name (:store runtime)))
-                  (map (partial load-by-id runtime))
-                  (update runtime :server eval-all))]
-     (reset! resolver rt2)
-     rt2)))
+   (println "runtime")
+   (p/let [prep (make-runtime-internal scheduler conf builtins)
+           runtime (update prep :server servers/load-builtins! builtins)
+           build-in-names (p/all (map (partial resolve-name runtime) (keys builtins)))
+           asts (p/all (map (partial load-by-id runtime) build-in-names))
+           rt2 (update runtime :server eval-all asts)]
+     (println "rt done")
+     (reset! resolver rt2))))
 
 (defn link-storage
   ""
@@ -212,30 +222,29 @@
 
 ;; Evaluation - Dumb and without dependency resolution for now
 
-(defn persist-to-ids! [store tx-records]
-  (-> (stores/persist-tree! store tx-records)
-      :tempids
-      (dissoc :db/current-tx)
-      vals))
+(defn persist-to-ids!
+  ""
+  [store tx-records]
+  (stores/persist-tree! store tx-records))
+
 
 (defn store!
   [store tx-records]
-  (->> tx-records
-       (persist-to-ids! store)
-       (map (partial stores/load-by-id store))))
+  (p/let [ids (persist-to-ids! store tx-records)]
+    (p/all (map (partial stores/load-by-id store) ids))))
 
 (defn store-and-eval!
   [{store :store server :server :as rt} tx-records]
   (reset! resolver rt)
-  (->> tx-records
-       (store! store)
-       (eval-all server)))
+  (p/let [asts (store! store tx-records)]
+    (eval-all server asts)))
 
 (defn load-by-sym
   ""
-  [{store :store :as rt} sym]
-  (when-let [ref (stores/resolve-name store sym)]
-    (load-by-id rt ref)))
+  [rt sym]
+  (p/let [ref (resolve-name rt sym)]
+    (when ref
+      (load-by-id rt ref))))
 
 (defn load-network
   "loads the given network from storage"
@@ -261,30 +270,31 @@
 (defn load-def-from-bundle
   ""
   [rt id defns]
-  (let [defs (if (= (:samak.nodes/type defns) :samak.nodes/def)
-                (:samak.nodes/rhs defns)
-                (:samak.nodes/definition defns))
-        ;; _ (println "id" id "- defns" defns)
-        kvs (:samak.nodes/mapkv-pairs defs)
-        ;; _ (println "kvs" kvs)
-        sources (get-ids-from-source-def kvs #{:sources})
-        source-ids (apply sorted-set (map get-id-from-source-val sources))
-        _ (println "source-ids:" source-ids)
-        sinks (get-ids-from-source-def kvs #{:sinks})
-        sink-ids (apply sorted-set (map get-id-from-source-val sinks))
-        _ (println "sink-ids:" sink-ids)
-        deps (get-ids-from-source-def kvs #{:depends})
-        dep-ids (mapv get-id-from-source-val deps)
-        _ (println "dep-ids" dep-ids)
-        deps-source-ids (mapv (fn [dep]
-                                (println "dep" dep)
-                                (load-def-from-bundle rt dep (load-by-id rt dep)))
-                              dep-ids)
-        _ (println "dep-s-id" deps-source-ids)
-        def {id {:depends dep-ids
-                 :dependencies deps-source-ids
-                 :sinks sink-ids
-                 :roots source-ids}}]
+  (p/let [defs (if (= (:samak.nodes/type defns) :samak.nodes/def)
+                 (:samak.nodes/rhs defns)
+                 (:samak.nodes/definition defns))
+          ;; _ (println "id" id "- defns" defns)
+          kvs (:samak.nodes/mapkv-pairs defs)
+          ;; _ (println "kvs" kvs)
+          sources (get-ids-from-source-def kvs #{:sources})
+          source-ids (apply sorted-set (map get-id-from-source-val sources))
+          _ (println "source-ids:" source-ids)
+          sinks (get-ids-from-source-def kvs #{:sinks})
+          sink-ids (apply sorted-set (map get-id-from-source-val sinks))
+          _ (println "sink-ids:" sink-ids)
+          deps (get-ids-from-source-def kvs #{:depends})
+          dep-ids (mapv get-id-from-source-val deps)
+          _ (println "dep-ids" dep-ids)
+          deps-source-ids (p/all (map (fn [dep]
+                                        (println "dep" dep)
+                                        (p/let [ast (load-by-id rt dep)]
+                                          (load-def-from-bundle rt dep ast)))
+                                       dep-ids))
+          _ (println "dep-s-id" deps-source-ids)
+          def {id {:depends dep-ids
+                   :dependencies deps-source-ids
+                   :sinks sink-ids
+                   :roots source-ids}}]
     (println "def: " def)
     def))
 
@@ -292,35 +302,33 @@
 (defn load-bundle
   "loads the definition of a bundle by the given id"
   [rt id]
-  (let [defns (load-by-id rt id)]
+  (p/let [defns (load-by-id rt id)]
     (load-def-from-bundle rt id defns)))
 
 
 (defn eval-expression! [{:keys [store server] :as rt} form]
-  (let [new-server (store-and-eval! rt (rewrite-expression "user" form))]
+  (p/let [new-server (store-and-eval! rt (rewrite-expression "user" form))]
     (assoc rt :server new-server)))
-
-(defn resolve-name [runtime sym]
-  (-> runtime :store (stores/resolve-name sym)))
 
 (defn get-definition-by-id [runtime id]
   (when id
     (-> runtime :server servers/get-defined (get id))))
 
 (defn get-definition-by-name [runtime sym]
-  (let [id (-> runtime :store (stores/resolve-name sym))]
+  (p/let [id (resolve-name runtime sym)]
     (get-definition-by-id runtime id)))
 
 
 (defn fire-into-named-pipe
   ""
   [rt pipe-name data timeout]
-  (let [pipe (get-definition-by-name rt pipe-name)]
-    (if (pipes/pipe? pipe)
-      (let [paket (pipes/make-paket data ::fire)
-            cancel-id (:samak.pipes/cancel (:samak.pipes/meta paket))]
-        (when (> timeout 0)
-          (set-cancellation-condition cancel-id {:timeout (helpers/future-ms timeout)}))
-        (trace/trace ::fire 0 paket)
-        (pipes/fire-raw! pipe paket))
-      {:error (str "could not find pipe " pipe-name)})))
+  (println "firing" pipe-name)
+  (p/let [pipe (get-definition-by-name rt pipe-name)]
+    (do (println (:id rt) "pipeis" pipe) (if (pipes/pipe? pipe)
+       (let [paket (pipes/make-paket data ::fire)
+             cancel-id (:samak.pipes/cancel (:samak.pipes/meta paket))]
+         (when (> timeout 0)
+           (set-cancellation-condition cancel-id {:timeout (helpers/future-ms timeout)}))
+         (trace/trace ::fire 0 paket)
+         (pipes/fire-raw! pipe paket))
+       (ex-info "could not find pipe" {:pipe-name pipe-name})))))

@@ -8,7 +8,6 @@
    :cljs
    [(:require [clojure.core.async :as a]
               [cljs.reader :as edn]
-              [samak.protocols :as p]
               [samak.pipes :as pipes]
               [samak.nodes :as n])]))
 

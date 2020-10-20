@@ -3,6 +3,8 @@
   (:clj
    [(:refer-clojure :exclude [uuid])
     (:require
+     [promesa.core :as p]
+     [clojure.walk :as w]
      [clojure.data.json :as json]
      [clj-time.core :as time]
      [clj-time.format :as time-format]
@@ -11,6 +13,8 @@
    [(:refer-clojure :exclude [uuid])
     (:require
      [goog.async.nextTick]
+     [promesa.core :as p]
+     [clojure.walk :as w]
      [cljs-time.core :as time]
      [cljs-time.format :as time-format]
      [cljs-time.coerce :as time-coerce])]))
@@ -117,3 +121,18 @@
 (defn str-to-int [s]
   #?(:clj (try (Integer/parseInt s) (catch Exception e nil))
      :cljs (js/parseInt s)))
+
+(defn pwalk
+  ""
+  [inner outer form]
+  (cond
+    (p/promise? form) (p/then form #(w/walk inner outer form))
+    (list? form) (outer (apply list (p/all (map inner form))))
+    (seq? form) (outer (p/all (map inner form)))
+    (coll? form) (outer (into (empty form) (p/all (map inner form))))
+    :else (w/walk inner outer form)))
+
+(defn ppostwalk
+  ""
+  [f form]
+  (pwalk (partial ppostwalk f) f form))

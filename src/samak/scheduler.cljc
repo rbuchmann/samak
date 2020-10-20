@@ -4,9 +4,9 @@
    [(:require
      [clojure.string :as str]
      [clojure.core.async :as a :refer [<! >! chan go go-loop close! put! pipe]]
+     [promesa.core :as p]
      [samak.api :as api]
      [samak.helpers :as helpers]
-     [samak.lisparser :as p]
      [samak.builtins :as builtins]
      [samak.stdlib :as std]
      [samak.pipes :as pipes]
@@ -15,6 +15,7 @@
    [(:require
      [clojure.string :as str]
      [clojure.core.async :as a :refer [<! >! chan close! put! pipe]]
+     [promesa.core :as p]
      [samak.api :as api]
      [samak.helpers :as helpers]
      [samak.pipes :as pipes]
@@ -34,15 +35,15 @@
 (defn load-module
   ""
   [rt mod]
-  (let [sources (map #(run/load-network rt %) (:roots mod))
-        net (reduce (fn [a, v]
-                      (let [val (vals v)]
-                        {:nodes (into (:nodes a) (flatten [(map :xf val) (map :ends val)]))
-                         :pipes (into (:pipes a) (map :db/id (flatten (map :pipes val))))
-                         }))
-                    {:nodes (into [] (:roots mod))
-                     :pipes []}
-                    sources)]
+  (p/let [sources (p/all (map #(run/load-network rt %) (:roots mod)))
+          net (reduce (fn [a, v]
+                        (let [val (vals v)]
+                          {:nodes (into (:nodes a) (flatten [(map :xf val) (map :ends val)]))
+                           :pipes (into (:pipes a) (map :db/id (flatten (map :pipes val))))
+                           }))
+                      {:nodes (into [] (:roots mod))
+                       :pipes []}
+                      sources)]
     {:nodes (distinct (:nodes net))
      :pipes (distinct (:pipes net))}))
 
@@ -50,51 +51,50 @@
   ""
   [rt [id mod]]
   (println "load-deps" id mod)
-  (let [deps (:dependencies mod)]
+  (p/let [deps (p/all (mapv (fn [m] (load-deps rt (first m))) (:dependencies mod)))
+          roots (load-module rt mod)]
     {:id id
-     :deps (mapv (fn [m] (load-deps rt (first m))) deps)
+     :deps deps
      :sinks (:sinks mod)
      :sources (:roots mod)
-     :roots (load-module rt mod)})
-  )
+     :roots roots}))
 
 
 (defn load-bundle-by-id
   ""
   [rt bundle-id]
-  (let [_ (print "  V" "Bundle id:" bundle-id)
-        bundle (get (run/load-bundle rt bundle-id) bundle-id)
-        _ (println "bundle: " bundle)
-        deps (load-deps rt [bundle-id bundle])]
-    deps
-))
+  (p/let [_ (print "  V" "Bundle id:" bundle-id)
+          ast (run/load-bundle rt bundle-id)
+          bundle (get ast bundle-id)
+          _ (println "bundle: " bundle)
+          deps (load-deps rt [bundle-id bundle])]
+    deps))
 
 (defn load-bundle
   ""
   [rt sym]
-  (let [_ (print "  V" "Fetching bundle from DB:" sym)
-        bundle-id (run/resolve-name rt sym)
-        deps (load-bundle-by-id rt bundle-id)]
-    deps
-    ))
+  (p/let [_ (print "  V" "Fetching bundle from DB:" sym)
+          bundle-id (run/resolve-name rt sym)
+          deps (load-bundle-by-id rt bundle-id)]
+    deps))
 
 (defn eval-module
   ""
   [rt conf module root]
   (if (contains? conf (:id module))
     (println "skipping" (:id module))
-    (do
-      ;; (println "eval" (:id module) "->" module)
-      (doall (map #(eval-module rt conf % (:id %)) (:deps module)))
-      (println "loading" (:id module))
-      (let [roots (:roots module)
-            base (if root [root] [])
-            root-ids (into (into base (:nodes roots)) (:pipes roots))
-            ;; _ (println "[" (:id module) "] roots" root-ids)
-            asts (doall (map #(run/load-ast @rt %) root-ids))]
-        ;; (println "evaling" (:id module))
-        (reset! rt (update @rt :server run/eval-all asts))
-        (println "done" (:id module))))))
+    (p/do!
+     ;; (println "eval" (:id module) "->" module)
+     (p/all (map #(eval-module rt conf % (:id %)) (:deps module)))
+     (println "loading" (:id module))
+     (p/let [roots (:roots module)
+             base (if root [root] [])
+             root-ids (into (into base (:nodes roots)) (:pipes roots))
+             ;; _ (println "[" (:id module) "] roots" root-ids)
+             asts (p/all (map #(run/load-ast @rt %) root-ids))]
+       ;; (println "evaling" (:id module))
+       (reset! rt (update @rt :server run/eval-all asts))
+       (println "done" (:id module))))))
 
 (defn run-module
   ""
@@ -118,13 +118,19 @@
   (doall (map (partial setup-out rt) (:sinks mod))))
 
 
-(defn start-module
-  [rt conf sym]
-  (let [net (load-bundle @rt sym)
-        mod-name (module-id 'lone)]
+(defn eval-run-module
+  ""
+  [rt conf net sym]
+  (p/let [mod-name (module-id 'lone)]
     (eval-module rt conf net (:id net))
-    (println "module" sym "done \\o/" rt)
+    (println (:id @rt) "module" sym "done \\o/")
     (run-module rt (:id net) mod-name)
     (let [mod (run/resolve-fn @rt mod-name)]
-      (println "mod" mod)
+      (println (:id @rt) "mod" mod-name mod)
       (setup-outs rt mod))))
+
+
+(defn start-module
+  [rt conf sym]
+  (p/let [net (load-bundle @rt sym)]
+    (eval-run-module rt conf net sym)))

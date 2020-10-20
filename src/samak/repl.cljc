@@ -5,6 +5,7 @@
      [clojure.edn :as edn]
      [clojure.string :as str]
      [clojure.core.async :as a :refer [<! >! chan go go-loop close! put!]]
+     [promesa.core :as prom]
      [samak.lisparser :as p]
      [samak.oasis :as oasis]
      [samak.pipes :as pipes]
@@ -23,6 +24,7 @@
      [cljs.reader :as edn]
      [clojure.string :as str]
      [clojure.core.async :as a :refer [<! >! chan close! put!]]
+     [promesa.core :as prom]
      [samak.lisparser :as p]
      [samak.oasis :as oasis]
      [samak.pipes :as pipes]
@@ -65,8 +67,8 @@
 
 (defn fire-event-into-named-pipe
   [pipe-name event]
-  (let [arg (edn/read-string event)
-        res (run/fire-into-named-pipe @rt (symbol pipe-name) arg *default-timeout*)]
+  (prom/let [arg (edn/read-string event)
+             res (run/fire-into-named-pipe @rt (symbol pipe-name) arg *default-timeout*)]
     (if (:error res)
       (println (:error res)))))
 

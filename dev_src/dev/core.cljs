@@ -3,6 +3,7 @@
             [clojure.core.async :as a :refer [<! >! chan close! put!]]
             [cognitect.transit :as t]
             [metosin.transit.dates :as d]
+            [promesa.core :as p]
             [dev.render :as render]
             [samak.runtime :as run]
             [samak.helpers :as helpers]
@@ -53,26 +54,28 @@
 (def json-reader (t/reader :json {:handlers d/readers}))
 (defn make-handler
   ""
-  [load in]
+  [load in out]
   (fn
     [event]
     (let [data (t/read json-reader (.-data event))]
       ;; (println "recv from w" data)
       (condp = (:target data)
+        :bootstrap (put! out :init)
         :load (put! load (:data data))
         (put! in data)))))
+
 
 (defn init
   ""
   []
-  (println "start")
-  (let [in (chan)
-        out (chan)]
-    (let [w (js/Worker. "/js/oasis-worker.js")
+  (p/let [in (chan)
+          out (chan)
           loading (chan)]
-      (handle-update loading #(start-main loading in out))
-      (aset w "onmessage" (make-handler loading in))
+    (render/start-render-runtime loading in out)
+    (let [w (js/Worker. "/js/oasis-worker.js")]
       (handle-send w out)
+      (aset w "onmessage" (make-handler loading in out))
+      (handle-update loading #(render/start-main loading))
       )
     ))
 

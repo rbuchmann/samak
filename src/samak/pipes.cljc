@@ -7,7 +7,6 @@
     [clojure.spec.alpha :as s]
     [com.stuartsierra.dependency :as dep]
     [samak.tools :as t]
-    [samak.trace :as trace]
     [samak.helpers :as help]
     [samak.protocols :as p]
     [samak.transduction-tools :as tt])
@@ -18,7 +17,6 @@
     [com.stuartsierra.dependency :as dep]
     [samak.protocols :as p]
     [samak.tools :as t]
-    [samak.trace :as trace]
     [samak.helpers :as help]
     [samak.transduction-tools :as tt])))
 
@@ -125,7 +123,6 @@
 
 (defn fire! [pipe event db-id]
   (let [paket (make-paket event ::fire)]
-    (trace/trace db-id 42 paket)
     (fire-raw! pipe paket)))
 
 (defrecord CompositePipe [a b]

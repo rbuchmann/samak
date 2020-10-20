@@ -5,6 +5,7 @@
      [clojure.string :as str]
      [clojure.edn :as edn]
      [clojure.core.async :as a :refer [<! >! chan go go-loop close! put! pipe]]
+     [promesa.core :as prom]
      [samak.api :as api]
      [samak.helpers :as helpers]
      [samak.builtins :as builtins]
@@ -22,6 +23,7 @@
      [clojure.string :as str]
      [cljs.reader :as edn]
      [clojure.core.async :as a :refer [<! >! chan close! put! pipe]]
+     [promesa.core :as prom]
      [samak.api :as api]
      [samak.helpers :as helpers]
      [samak.lisparser :as p]
@@ -53,16 +55,17 @@
                       :url "/api/v2/"}})
 (def tracer (atom {}))
 
-(def main-conf {"oasis-core" {:depends {}
-                              :sinks {:state (sched/make-pipe-id {:module :lone :type :sinks :name :state})}
-                              :sources {
-                                        :init (sched/make-pipe-id {:module :lone :type :sources :name :init})
-                                        :kb (sched/make-pipe-id {:module :lone :type :sources :name :kb})
-                                        :drag (sched/make-pipe-id {:module :lone :type :sources :name :drag})
-                                        :hover (sched/make-pipe-id {:module :lone :type :sources :name :hover})
-                                        :events (sched/make-pipe-id {:module :lone :type :sources :name :events})
-                                        }
-                              }})
+(def main-conf {:id "rt-main"
+                :modules {"oasis-core" {:depends {}
+                                        :sinks {:state (sched/make-pipe-id {:module :lone :type :sinks :name :state})}
+                                        :sources {
+                                                  :init (sched/make-pipe-id {:module :lone :type :sources :name :init})
+                                                  :kb (sched/make-pipe-id {:module :lone :type :sources :name :kb})
+                                                  :drag (sched/make-pipe-id {:module :lone :type :sources :name :drag})
+                                                  :hover (sched/make-pipe-id {:module :lone :type :sources :name :hover})
+                                                  :events (sched/make-pipe-id {:module :lone :type :sources :name :events})
+                                                  }
+                                        }}})
 
 
 (defn handle-update
@@ -75,24 +78,13 @@
         (println msg p))
       (recur))))
 
-(defn scheduler
-  [id]
-  (fn [broadcast]
-    (println "sched" id)
-    (let [to-rt (pipes/pipe (chan))]
-      ;; (handle-update (str id " out:") broadcast)
-      ;; (handle-update (str id " in:") to-rt)
-      to-rt)))
-
-
-(defn fire-event-into-named-pipe
-  [rt pipe-name event]
-  (let [pipe (run/get-definition-by-name rt (symbol pipe-name))]
-    (if (pipes/pipe? pipe)
-      (do (let [arg (edn/read-string event)]
-            (pipes/fire! pipe arg pipe-name))
-          {})
-      (println (str "could not find pipe " pipe-name)))))
+(def scheduler
+  (let [broadcast (pipes/pipe (chan))
+        to-rt (pipes/pipe (chan) "worker-scheduler")]
+    (println "sched")
+    ;; (handle-update "out" broadcast)
+    ;; (handle-update "in" to-rt)
+    (fn [] [to-rt broadcast])))
 
 (defn eval-test
   ""
@@ -100,22 +92,18 @@
   (let [code (str/join " " test-programs/tw)
         parsed (p/parse-all code)]
     (swap! rt #(reduce run/eval-expression! % (:value parsed)))
-    (fire-event-into-named-pipe @rt "in" "5")))
+    (run/fire-into-named-pipe @rt 'in "5" 0)))
 
 (defn run-oasis
   ""
-  [rt]
-  (fire-event-into-named-pipe rt "oasis-init" "1")
-  (println "oasis started")
+  []
+
+  (prom/let [res (run/fire-into-named-pipe @rt 'oasis-init "1" 0)]
+    (println "oasis started: " res))
   ;; (let [parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
   ;;   (doseq [expression parsed]
   ;;     (caravan/repl-eval expression)))
   )
-
-(defn eval-oasis
-  [rt conf cb]
-  (let [net (sched/load-bundle @rt 'oasis)]
-    (helpers/debounce #(sched/eval-module rt conf net nil))))
 
 (defn get-named-pipe
   [rt pipe-name]
@@ -151,25 +139,31 @@
 (defn start-oasis
   ""
   [load]
-  (eval-oasis rt main-conf load)
-  (println "renderer started oasis")
-  (helpers/debounce #(run-oasis @rt)))
+  (println "loading oasis")
+  (prom/let [net (sched/load-bundle @rt 'oasis)]
+    (helpers/debounce
+      (fn []
+        (prom/do!
+         (println "evaluating oasis")
+         (sched/eval-module rt main-conf net nil)
+         (println "renderer loaded oasis")
+         (helpers/debounce run-oasis))))))
 
-(defn init-oasis
+(defn start-main
   ""
   [load]
-  (oasis/store (:store @rt))
   (helpers/debounce #(start-oasis load)))
 
 
 (defn start-render-runtime
   ""
   [load in out]
-  (reset! rt (run/make-runtime renderer-symbols (scheduler "main") main-conf))
-  (reset! tracer (trace/init-tracer @rt (:tracer config)))
-  (println "renderer started runtime" (:id @rt) @rt)
-  (helpers/debounce #(init-oasis load))
-
-  (pipes/link! (:broadcast @rt) (pipes/sink out))
-  (pipes/link! (pipes/source in) (:scheduler @rt))
-  )
+  (prom/let [rt-inst (run/make-runtime renderer-symbols scheduler main-conf)]
+    (reset! rt rt-inst)
+    (println "persisting oasis")
+    (oasis/store (:store @rt))
+    (println "persist done")
+    (pipes/link! (:broadcast @rt) (pipes/sink out))
+    (pipes/link! (pipes/source in) (:scheduler @rt))
+    (reset! tracer (trace/init-tracer @rt (:tracer config)))
+    (println "renderer started runtime" (:id @rt))))

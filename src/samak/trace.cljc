@@ -2,19 +2,22 @@
   #?(:clj
      (:require [clojure.spec.alpha   :as s]
                [clojure.walk         :as w]
+               [promesa.core         :as prom]
                [samak.zipkin         :as tracing]
                [samak.trace-db       :as db]
                [samak.helpers        :as helper]
                [samak.tools          :as tools]
                [samak.api            :as api]
-               [samak.runtime.stores :as store])
+               ;; [samak.runtime.stores :as store]
+               )
      :cljs
      (:require [cljs.spec.alpha :as s]
                [clojure.walk :as w]
+               [promesa.core :as prom]
                [samak.zipkin :as tracing]
                [samak.trace-db :as db]
                [samak.helpers :as helper]
-               [samak.runtime.stores :as store]
+               ;; [samak.runtime.stores :as store]
                [samak.api :as api]
                [samak.tools :as tools])))
 
@@ -42,14 +45,16 @@
 (defn node-as-str
   ""
   [node]
-  (if (number? node)
-    (let [ast (store/load-by-id (:store @rt) node)]
-      (if (api/is-def? ast)
-        (str "(" node ") " (:samak.nodes/name ast))
-        (if (api/is-def? (:samak.nodes/fn ast))
-          (str "(" node ") " (:samak.nodes/name (:samak.nodes/fn ast)))
-          (str ast))))
-    node))
+  ;; (if (number? node)  ;; split into own ns
+  ;;   (prom/let [ast (store/load-by-id (:store @rt) node)]
+  ;;     (if (api/is-def? ast)
+  ;;       (str "(" node ") " (:samak.nodes/name ast))
+  ;;       (if (api/is-def? (:samak.nodes/fn ast))
+  ;;         (str "(" node ") " (:samak.nodes/name (:samak.nodes/fn ast)))
+  ;;         (str ast))))
+  ;;   node)
+  node
+  )
 
 (defn make-trace
   ""
@@ -73,7 +78,8 @@
   ""
   [db-id duration event]
   (if-not (:samak.pipes/uuid (:samak.pipes/meta event))
-    (println "assert failed:" event))
+    (when event
+      (println "no traceable event:" event)))
   (when @tracer
     (let [data (make-trace db-id duration event)]
       (reset! tracer ((:trace-fn @tracer) @tracer (to-tracer data)))))
