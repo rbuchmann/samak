@@ -90,9 +90,9 @@
      (p/let [roots (:roots module)
              base (if root [root] [])
              root-ids (into (into base (:nodes roots)) (:pipes roots))
-             ;; _ (println "[" (:id module) "] roots" root-ids)
+             _ (println "[" (:id module) "] roots" root-ids)
              asts (p/all (map #(run/load-ast @rt %) root-ids))]
-       ;; (println "evaling" (:id module))
+       (println "evaling" (:id module))
        (reset! rt (update @rt :server run/eval-all asts))
        (println "done" (:id module))))))
 

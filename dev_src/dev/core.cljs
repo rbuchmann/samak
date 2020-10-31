@@ -10,11 +10,6 @@
             [samak.builtins :as builtins])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(defn start-main
-  [load in out]
-  (render/start-render-runtime load in out))
-
-
 (defn update-bar
   ""
   [a]
@@ -44,7 +39,7 @@
     (go-loop []
       (let [p (<! c)
             before (helpers/now)]
-        ;; (println "to worker" p)
+        (println "to worker" p)
         (.postMessage worker (t/write w p))
         (render/trace ::render-out
                     (helpers/duration before (helpers/now))
@@ -54,29 +49,37 @@
 (def json-reader (t/reader :json {:handlers d/readers}))
 (defn make-handler
   ""
-  [load in out]
+  [load to-main to-worker]
   (fn
     [event]
     (let [data (t/read json-reader (.-data event))]
-      ;; (println "recv from w" data)
+      (println "recv from w" data)
       (condp = (:target data)
-        :bootstrap (put! out :init)
         :load (put! load (:data data))
-        (put! in data)))))
+        :bootstrap (put! to-worker :init)
+        (put! to-main data)))))
 
 
 (defn init
   ""
   []
-  (p/let [in (chan)
-          out (chan)
+  (p/let [in-main (chan)
+          out-main (chan)
+          out-mult (a/mult out-main)
+          in-worker (chan)
+          in-preview (chan)
           loading (chan)]
-    (render/start-render-runtime loading in out)
+    (a/tap out-mult in-worker)
+    (render/start-render-runtime loading in-main out-main)
     (let [w (js/Worker. "/js/oasis-worker.js")]
-      (handle-send w out)
-      (aset w "onmessage" (make-handler loading in out))
-      (handle-update loading #(render/start-main loading))
-      )
+      (handle-send w in-worker)
+      (aset w "onmessage" (make-handler loading in-main in-worker))
+      (render/start-main loading)
+      (handle-update loading
+                     (fn [] (p/do! ;; (a/tap out-mult in-preview)
+                                   ;; (render/start-preview-runtime in-preview in-main)
+                                   (render/start-main loading)
+                                   ))))
     ))
 
 (init)

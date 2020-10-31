@@ -79,7 +79,7 @@
         p (sut/transduction-pipe (map vector))
         in-spec {}
         out-spec {}
-        checked (sut/checked-pipe p ::in-spec ::out-spec)]
+        checked (sut/checked-pipe p ::in-spec ::out-spec ::test)]
     (a/tap (sut/out-port checked) test-c)
     (t/is (sut/pipe? checked))
     (sut/fire-raw! checked (sut/make-paket "foo" ::test))

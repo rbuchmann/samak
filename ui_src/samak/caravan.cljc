@@ -686,8 +686,8 @@
 
 (defn eval-bundle
   ""
-  [id]
-  (prom/let [bundle (sched/load-bundle-by-id @rt-conn id)
+  [rt id]
+  (prom/let [bundle (sched/load-bundle-by-id @rt id)
              _ (println "ev b" bundle)
              roots (:roots bundle)
              deps (handle-deps (:deps bundle))
@@ -789,7 +789,7 @@
 (defn load-lib
   ""
   [cmd ev bundle-id]
-  (prom/let [bundle (eval-bundle bundle-id)]
+  (prom/let [bundle (eval-bundle rt-conn bundle-id)]
     ;; (println (str "count: " cnt))
     (doall (map #(notify-source ev %) (:modules bundle)))
     (doall (map #(notify-source ev %) (:nodes bundle)))
@@ -964,11 +964,7 @@
 
 (defn init
   [rt]
-  (reset! rt-conn rt)
-  ;; (reset! rt-preview (rt/make-runtime (merge builtins/samak-symbols
-  ;;                                            symbols
-  ;;                                            std/pipe-symbols)))
-  )
+  (reset! rt-conn rt))
 
 
 (defn pong

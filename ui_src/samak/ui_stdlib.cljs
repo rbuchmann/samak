@@ -107,20 +107,20 @@
                  ::view))
     (pipes/source c)))
 
-(def content (atom nil))
+(def content (atom {}))
 
 (defn render-cb
   ""
-  [node]
-  (r/render @content node)
-  (reset! content nil))
+  [n node]
+  (r/render (get @content n) node)
+  (swap! content dissoc n))
 
 (defn render
   ""
-  [node x events c]
-  (if (not @content)
-    (helpers/debounce #(render-cb node)))
-  (reset! content (if events (transform-element x c) x)))
+  [n node x events c]
+  (if (not (get @content n))
+    (helpers/debounce #(render-cb n node)))
+  (swap! content assoc n (if events (transform-element x c) x)))
 
 
 (defn ui
@@ -136,8 +136,9 @@
          (let [x (or (:samak.pipes/content i) i)]
            (if true ;; (s/valid? ::hiccup x)
              (when-let [node (js/document.getElementById (str "samak" n))]
-               ;; (when n (.warn js/console (str "render " n " - " x)))
-               (render node x events ui-out))
+               ;; (when (= 1 n))
+               (.warn js/console (str "render " n " - ") x)
+               (render n node x events ui-out))
              (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x) "for" x))))
          (when @init
            (reset! init false)

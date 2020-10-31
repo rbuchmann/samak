@@ -56,7 +56,7 @@
         out (chan)]
     (handle-update loading)
     (handle-request out)
-    (aset js/self "onmessage" (make-handler in #(worker/start-rt loading in out)))
+    ;; (aset js/self "onmessage" (make-handler in #(worker/start-rt loading in out)))
     (put! out {:target :bootstrap})
     ))
 

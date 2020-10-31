@@ -50,7 +50,6 @@
          #?(:cljs uistd/ui-symbols)))
 
 (def rt (atom {}))
-(def rt2 (atom {}))
 (def config {:tracer {:backend :none
                       :url "/api/v2/"}})
 (def tracer (atom {}))
@@ -86,6 +85,14 @@
     ;; (handle-update "in" to-rt)
     (fn [] [to-rt broadcast])))
 
+(def scheduler2
+  (let [broadcast (pipes/pipe (chan))
+        to-rt (pipes/pipe (chan) "preview-scheduler")]
+    (println "sched2")
+    (handle-update "out2" broadcast)
+    (handle-update "in2" to-rt)
+    (fn [] [to-rt broadcast])))
+
 (defn eval-test
   ""
   []
@@ -97,7 +104,6 @@
 (defn run-oasis
   ""
   []
-
   (prom/let [res (run/fire-into-named-pipe @rt 'oasis-init "1" 0)]
     (println "oasis started: " res))
   ;; (let [parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
@@ -154,6 +160,22 @@
   [load]
   (helpers/debounce #(start-oasis load)))
 
+(defn start-preview-runtime
+  ""
+  [in-c out-c]
+  (println "renderer starting preview")
+  (let [[to-rt to-out] (scheduler2)
+        in-mult (a/mult in-c)
+        rt-c (chan)
+        paket-c (chan)]
+    (a/tap in-mult rt-c)
+    (pipes/link! to-out (pipes/sink out-c))
+    (pipes/link! (pipes/source rt-c) to-rt)
+    (prom/let [rt-inst (run/make-runtime renderer-symbols scheduler2 {:store :remote :id "rt-preview"})
+               rt-atom (atom rt-inst)]
+      ;; (a/tap in-mult paket-c)
+      ;; (handle-render rt-atom paket-c)
+      (println "renderer started preview"))))
 
 (defn start-render-runtime
   ""

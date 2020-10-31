@@ -31,12 +31,10 @@
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 
-(def resolver (atom {}))
 (def cancel-conditions (atom {}))
 
 (defn eval-all [server forms]
   (reduce (fn [server form]
-            (swap! resolver #(assoc % :server server))
             ;; (println "form" (:db/id form) "->" form)
             (servers/eval-ast server form))
           server forms))
@@ -75,18 +73,8 @@
 
 
 (defn resolve-fn
-  ([id]
-   (resolve-fn @resolver id))
   ([rt id]
-   (let [defs (servers/get-defined (:server rt))
-         fn (get defs id)]
-     fn
-     ;; (if fn
-     ;;   (do
-     ;;     ;; (println "resolved " id "-> " fn)
-     ;;     fn)
-     ;;   (println "not evaluated: " id " -> " (stores/load-by-id (:store rt) id)))
-     )))
+   (get (servers/get-defined (:server rt)) id)))
 
 (defn wrap-out
   ""
@@ -111,32 +99,31 @@
 
 (defn replace-piped
   ""
-  [{target :target :as pipe}]
+  [{target :target :as pipe} id broadcast inbound]
   (if (not= target :pipe)
     pipe
     (do
-      ;; (println "replacing " pipe)
-      (let [from-scheduler (:scheduler @resolver)
-            trans-in (pipes/transduction-pipe (comp (map (wrap-in pipe (:id @resolver))) (remove #(= % ::ignore))))
-            to-world (:broadcast @resolver)
-            trans-out (pipes/transduction-pipe (map (wrap-out pipe (:id @resolver))))
-            in-mapped (pipes/link! from-scheduler trans-in)
-            out-mapped (pipes/link! trans-out to-world)]
+      (println "replacing " pipe)
+      (let [trans-in (pipes/transduction-pipe (comp (map (wrap-in pipe id)) (remove #(= % ::ignore))))
+            trans-out (pipes/transduction-pipe (map (wrap-out pipe id)))
+            in-mapped (pipes/link! inbound trans-in)
+            out-mapped (pipes/link! trans-out broadcast)]
         (pipes/composite-pipe out-mapped in-mapped)))))
 
 (defn link-fn
   ""
-  [from to xf]
-  ;; (println "linking" from to)
-  (let [a (replace-piped from)
-        c (replace-piped to)]
-    (when (not (pipes/pipe? a))
-      (fail "cant link from " from))
-    (when (not (pipes/pipe? c))
-      (fail "cant link to " to))
-    (if xf
-      (pipes/link! (pipes/link! a xf) c)
-      (pipes/link! a c))))
+  [id broadcast inbound]
+  (fn [from to xf]
+    (println "linking" from to)
+    (let [a (replace-piped from id broadcast inbound)
+          c (replace-piped to id broadcast inbound)]
+      (when (not (pipes/pipe? a))
+        (fail "cant link from " from))
+      (when (not (pipes/pipe? c))
+        (fail "cant link to " to))
+      (if xf
+        (pipes/link! (pipes/link! a xf) c)
+        (pipes/link! a c)))))
 
 (defn instanciate-module
   ""
@@ -152,9 +139,9 @@
         ;; needs to prep resolve magic when instanciating pipes, to select same runtime
         ;; maybe simply do so explicitly
         ;; (if (:config man))
-        ;; (println  (str "about to eval module: " module))
+        (println  (str "about to eval module: " module))
         (let [evaled (n/eval-env man nil definition (:db/id module))]
-          ;; (println (str "used module: " module "->" evaled))
+          (println (str "used module: " module "->" evaled))
           evaled)))))
 
 (defn make-store-internal
@@ -170,33 +157,38 @@
 (defn make-runtime-internal
   ""
   [scheduler conf builtins]
-  (let [[inbound broadcast] (scheduler)]
-     {:id (or (:id conf) (str "rt-" (helpers/uuid)))
-      :store (make-store-internal (:store conf) inbound broadcast builtins)
-      :server (servers/make-local-server {:config (:modules conf)
-                                          :resolve resolve-fn
-                                          :link link-fn
-                                          :cancel? cancel?
-                                          :module instanciate-module})
-      :broadcast broadcast
-      :scheduler inbound}))
+  (let [[inbound broadcast] (scheduler)
+        id (or (:id conf) (str "rt-" (helpers/uuid)))]
+   (println "rt-in")
+    {:id id
+     :store (make-store-internal (:store conf) inbound broadcast builtins)
+     :server (servers/make-local-server {:config (:modules conf)
+                                         :link (link-fn id broadcast inbound)
+                                         :cancel? cancel?
+                                         :module instanciate-module})
+     :broadcast broadcast
+     :scheduler inbound}))
 
 (defn make-runtime
   ([]
    (make-runtime nil))
   ([builtins]
-   (make-runtime builtins #([(pipes/pipe (chan)) (pipes/pipe (chan))])))
+   (make-runtime builtins (fn [] [(pipes/pipe (chan)) (pipes/pipe (chan))])))
   ([builtins scheduler]
    (make-runtime builtins scheduler {}))
   ([builtins scheduler conf]
-   (println "runtime")
+   (println "rt")
    (p/let [prep (make-runtime-internal scheduler conf builtins)
+           _ (println "1a")
            runtime (update prep :server servers/load-builtins! builtins)
+           _ (println "2")
            build-in-names (p/all (map (partial resolve-name runtime) (keys builtins)))
+           _ (println "3")
            asts (p/all (map (partial load-by-id runtime) build-in-names))
-           rt2 (update runtime :server eval-all asts)]
+           _ (println "4")
+           rt (update runtime :server eval-all asts)]
      (println "rt done")
-     (reset! resolver rt2))))
+     rt)))
 
 (defn link-storage
   ""
@@ -235,7 +227,6 @@
 
 (defn store-and-eval!
   [{store :store server :server :as rt} tx-records]
-  (reset! resolver rt)
   (p/let [asts (store! store tx-records)]
     (eval-all server asts)))
 
