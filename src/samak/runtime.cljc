@@ -32,6 +32,7 @@
 
 
 (def cancel-conditions (atom {}))
+(def pipe-links (atom {}))
 
 (defn eval-all [server forms]
   (reduce (fn [server form]
@@ -74,6 +75,7 @@
 
 (defn resolve-fn
   ([rt id]
+   (println "resolve" (:uuid rt) id)
    (get (servers/get-defined (:server rt)) id)))
 
 (defn wrap-out
@@ -103,9 +105,9 @@
   (if (not= target :pipe)
     pipe
     (do
-      (println "replacing " pipe)
-      (let [trans-in (pipes/transduction-pipe (comp (map (wrap-in pipe id)) (remove #(= % ::ignore))))
-            trans-out (pipes/transduction-pipe (map (wrap-out pipe id)))
+      (println "### replacing " pipe)
+      (let [trans-in (pipes/transduction-pipe (comp (map (wrap-in pipe id)) (remove #(= % ::ignore))) (str "trans-in-" pipe))
+            trans-out (pipes/transduction-pipe (map (wrap-out pipe id)) (str "trans-out-" pipe))
             in-mapped (pipes/link! inbound trans-in)
             out-mapped (pipes/link! trans-out broadcast)]
         (pipes/composite-pipe out-mapped in-mapped)))))
@@ -114,16 +116,18 @@
   ""
   [id broadcast inbound]
   (fn [from to xf]
-    (println "linking" from to)
+    (println "### linking" (:uuid from) (:uuid to))
     (let [a (replace-piped from id broadcast inbound)
-          c (replace-piped to id broadcast inbound)]
-      (when (not (pipes/pipe? a))
-        (fail "cant link from " from))
-      (when (not (pipes/pipe? c))
-        (fail "cant link to " to))
-      (if xf
-        (pipes/link! (pipes/link! a xf) c)
-        (pipes/link! a c)))))
+          c (replace-piped to id broadcast inbound)
+          _ (when (not (pipes/pipe? a))
+              (fail "cant link from " from))
+          _ (when (not (pipes/pipe? c))
+              (fail "cant link to " to))
+          l (if xf
+              (pipes/link! (pipes/link! a xf) c)
+              (pipes/link! a c))]
+      (swap! pipe-links assoc (str (pipes/uuid from) "-" (pipes/uuid to)) id)
+      l)))
 
 (defn instanciate-module
   ""
@@ -139,9 +143,9 @@
         ;; needs to prep resolve magic when instanciating pipes, to select same runtime
         ;; maybe simply do so explicitly
         ;; (if (:config man))
-        (println  (str "about to eval module: " module))
+        (println  (str "### about to eval module: " module))
         (let [evaled (n/eval-env man nil definition (:db/id module))]
-          (println (str "used module: " module "->" evaled))
+          (println (str "### used module: " module "->" evaled))
           evaled)))))
 
 (defn make-store-internal
@@ -158,14 +162,15 @@
   ""
   [scheduler conf builtins]
   (let [[inbound broadcast] (scheduler)
-        id (or (:id conf) (str "rt-" (helpers/uuid)))]
-   (println "rt-in")
+        id (or (:id conf) (str "rt-" (helpers/uuid)))
+        manager {:config (:modules conf)
+                 :link (link-fn id broadcast inbound)
+                 :cancel? cancel?
+                 :module instanciate-module}]
     {:id id
      :store (make-store-internal (:store conf) inbound broadcast builtins)
-     :server (servers/make-local-server {:config (:modules conf)
-                                         :link (link-fn id broadcast inbound)
-                                         :cancel? cancel?
-                                         :module instanciate-module})
+     :manager manager
+     :server (servers/make-local-server manager)
      :broadcast broadcast
      :scheduler inbound}))
 
@@ -173,22 +178,15 @@
   ([]
    (make-runtime nil))
   ([builtins]
-   (make-runtime builtins (fn [] [(pipes/pipe (chan)) (pipes/pipe (chan))])))
+   (make-runtime builtins (fn [] [(pipes/pipe (chan) ::broken) (pipes/pipe (chan) ::broken)])))
   ([builtins scheduler]
    (make-runtime builtins scheduler {}))
   ([builtins scheduler conf]
-   (println "rt")
    (p/let [prep (make-runtime-internal scheduler conf builtins)
-           _ (println "1a")
            runtime (update prep :server servers/load-builtins! builtins)
-           _ (println "2")
            build-in-names (p/all (map (partial resolve-name runtime) (keys builtins)))
-           _ (println "3")
-           asts (p/all (map (partial load-by-id runtime) build-in-names))
-           _ (println "4")
-           rt (update runtime :server eval-all asts)]
-     (println "rt done")
-     rt)))
+           asts (p/all (map (partial load-by-id runtime) build-in-names))]
+     (update runtime :server eval-all asts))))
 
 (defn link-storage
   ""
@@ -264,29 +262,27 @@
   (p/let [defs (if (= (:samak.nodes/type defns) :samak.nodes/def)
                  (:samak.nodes/rhs defns)
                  (:samak.nodes/definition defns))
-          ;; _ (println "id" id "- defns" defns)
           kvs (:samak.nodes/mapkv-pairs defs)
-          ;; _ (println "kvs" kvs)
           sources (get-ids-from-source-def kvs #{:sources})
           source-ids (apply sorted-set (map get-id-from-source-val sources))
-          _ (println "source-ids:" source-ids)
+          _ (println "### source-ids:" source-ids)
           sinks (get-ids-from-source-def kvs #{:sinks})
           sink-ids (apply sorted-set (map get-id-from-source-val sinks))
-          _ (println "sink-ids:" sink-ids)
+          _ (println "### sink-ids:" sink-ids)
           deps (get-ids-from-source-def kvs #{:depends})
           dep-ids (mapv get-id-from-source-val deps)
-          _ (println "dep-ids" dep-ids)
+          _ (println "### dep-ids" dep-ids)
           deps-source-ids (p/all (map (fn [dep]
-                                        (println "dep" dep)
+                                        (println "### dep" dep)
                                         (p/let [ast (load-by-id rt dep)]
                                           (load-def-from-bundle rt dep ast)))
                                        dep-ids))
-          _ (println "dep-s-id" deps-source-ids)
+          _ (println "### dep-s-id" deps-source-ids)
           def {id {:depends dep-ids
                    :dependencies deps-source-ids
                    :sinks sink-ids
                    :roots source-ids}}]
-    (println "def: " def)
+    (println "### def: " def)
     def))
 
 

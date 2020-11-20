@@ -61,8 +61,8 @@
       (recur))))
 
 (def scheduler
-  (let [broadcast (pipes/pipe (chan))
-        to-rt (pipes/pipe (chan) "worker-scheduler")]
+  (let [broadcast (pipes/pipe (chan) ::worker-broadcast)
+        to-rt (pipes/pipe (chan) ::worker-scheduler)]
     (println "sched")
     ;; (handle-update "out" broadcast)
     ;; (handle-update "in" to-rt)

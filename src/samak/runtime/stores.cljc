@@ -52,9 +52,11 @@
       (put! (pipes/in-port out) {:samak.runtime/type :samak.runtime/store :cmd :persist-tree :args {:id id :tree tree}})
       (go-loop [] ;;FIXME timeouts leak
         (when-let [i (<! c)]
-          (when (and (= (:cmd i) :persist-tree) (= (:id (:args i)) id))
-            (p/resolve! prom (:ids (:args i))))
-          (recur)))
+          (if (and (= (:cmd i) :persist-tree) (= (:id (:args i)) id))
+            (do
+              (a/untap (pipes/out-port in) c)
+              (p/resolve! prom (:ids (:args i))))
+            (recur))))
       prom))
 
   (load-by-id [_ db-id]
@@ -107,7 +109,6 @@
 (defn serve-store
   ""
   [store in out]
-  (println "serve" in out)
   (let [c (chan)]
     (a/tap (pipes/out-port in) c)
     (go-loop []
@@ -144,11 +145,9 @@
   (persist-tree! store (mapv (fn [s] (api/defexp s (api/builtin s))) builtins)))
 
 (defn make-local-store []
-  (println "local")
   (LocalSamakStore. (db/create-empty-db)))
 
 (defn make-piped-store
   ""
   [in out]
-  (println "piped")
   (RemoteSamakStore. (db/create-empty-db) in out (atom 0)))

@@ -81,7 +81,7 @@
 ;;     (caravan/run-testsuite c 'oasis-ui {:timeout 3000})
 ;;     (utils/test-async
 ;;      (go
-;;        (let [[raw port] (a/alts! [c (a/timeout 300000)])
+;;        (let [[raw port] (a/alts! [c (a/timeout 10000)])
 ;;              val (if (= port c) raw :timeout-overall)]
 ;;          (println (str "\ntraces: "))
 ;;          (caravan/trace-dump)

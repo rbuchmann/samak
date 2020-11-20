@@ -74,7 +74,6 @@
     (let [w (js/Worker. "/js/oasis-worker.js")]
       (handle-send w in-worker)
       (aset w "onmessage" (make-handler loading in-main in-worker))
-      (render/start-main loading)
       (handle-update loading
                      (fn [] (p/do! ;; (a/tap out-mult in-preview)
                                    ;; (render/start-preview-runtime in-preview in-main)

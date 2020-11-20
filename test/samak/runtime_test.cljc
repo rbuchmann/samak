@@ -8,7 +8,9 @@
             [samak.runtime.servers :as servers]
             [samak.utils           :as utils]
             [promesa.core          :as p]
-            [datascript.core       :as d]))
+            [datascript.core       :as d]
+            [samak.api :as api]
+            [samak.core :as core]))
 
 
 (def def-node
@@ -65,13 +67,13 @@
                 :rhs  [:samak.nodes/name 'quux]})
 
 (deftest should-resolve-symbols
-(p/let [rt (-> (sut/make-runtime)
-               (sut/eval-expression! def-node)
-               (sut/eval-expression! referring-node))
-        vs (-> rt
-               :server
-               servers/get-defined
-               vals)]
+  (p/let [rt (-> (sut/make-runtime)
+                 (sut/eval-expression! def-node)
+                 (sut/eval-expression! referring-node))
+          vs (-> rt
+                 :server
+                 servers/get-defined
+                 vals)]
     (is (= 2 (count vs)))
     (is (apply = vs))))
 
@@ -84,10 +86,19 @@
 
 (deftest should-persist-builtins
   (utils/test-promise (p/then (sut/make-runtime {'inc inc 'dec dec})
-                              #(do (println "?")
-                                   (is (=
+                              #(is (=
                                     inc
                                     (-> %
                                         :server
                                         servers/get-defined
-                                        (get 1))))))))
+                                        (get 1)))))))
+
+
+(deftest should-load-def-from-bundle
+  (utils/test-promise
+   (p/let [code [(api/defmodule 'test (api/map {(api/keyword :sources) (api/map {(api/keyword :test1) (api/symbol 'inc)})}))]
+           rt (sut/make-runtime core/samak-symbols)
+           _ (sut/persist-to-ids! (:store rt) code)
+           defns (sut/load-by-sym rt 'test)
+           def (sut/load-def-from-bundle rt 'test defns)]
+     (is (= {'test {:depends [], :dependencies [], :sinks #{}, :roots #{151}}} def)))))

@@ -78,16 +78,16 @@
       (recur))))
 
 (def scheduler
-  (let [broadcast (pipes/pipe (chan))
-        to-rt (pipes/pipe (chan) "worker-scheduler")]
+  (let [broadcast (pipes/pipe (chan) ::main-broadcast)
+        to-rt (pipes/pipe (chan) ::main-scheduler)]
     (println "sched")
     ;; (handle-update "out" broadcast)
     ;; (handle-update "in" to-rt)
     (fn [] [to-rt broadcast])))
 
 (def scheduler2
-  (let [broadcast (pipes/pipe (chan))
-        to-rt (pipes/pipe (chan) "preview-scheduler")]
+  (let [broadcast (pipes/pipe (chan) ::preview-broadcast)
+        to-rt (pipes/pipe (chan) ::preview-scheduler)]
     (println "sched2")
     (handle-update "out2" broadcast)
     (handle-update "in2" to-rt)
@@ -158,6 +158,7 @@
 (defn start-main
   ""
   [load]
+  (println "start-main")
   (helpers/debounce #(start-oasis load)))
 
 (defn start-preview-runtime

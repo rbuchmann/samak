@@ -149,9 +149,9 @@
                                                                                 (api/key-fn :button)
                                                                                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :primary)])])]))
 
-               (defncall 'raw-events 'pipes/debug)
-               (defncall 'reduced-events 'pipes/debug)
-               (defncall 'events 'pipes/debug)
+               (defncall 'raw-events 'pipes/debug (api/string "raw-events"))
+               (defncall 'reduced-events 'pipes/debug (api/string "reduced-events"))
+               (defncall 'events 'pipes/debug (api/string "events"))
 
                (defncall 'merge-state '->
                  (api/vector [(api/key-fn :state) (api/key-fn :next)])
@@ -267,7 +267,7 @@
                  (api/key-fn :which)
                  (api/fn-call (api/symbol '>) [(api/integer 31) (api/symbol '_)]))
 
-               (defncall 'keyboard-filtered 'pipes/debug)
+               (defncall 'keyboard-filtered 'pipes/debug (api/string "keyboard-filtered"))
 
                (defncall 'filter-key-input 'except (api/fn-call (api/symbol 'and) [(api/symbol 'is-target-input)
                                                                                    (api/symbol 'is-key-common)]))
@@ -754,7 +754,7 @@
                  (api/vector [(api/vector [(api/symbol 'eval-id) (api/symbol '_)])])
                  (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)]))
 
-               (defncall 'eval-events 'pipes/debug ;; (api/keyword :oasis.spec/eval-state)
+               (defncall 'eval-events 'pipes/debug (api/string "eval-events") ;; (api/keyword :oasis.spec/eval-state)
                  )
 
                ;; (defncall 'extract-eval '->
@@ -770,32 +770,32 @@
                                (api/fn-call (api/symbol 'into) [(api/map {}) (api/symbol '_)])])
                  (api/map {}))
 
-               (defncall 'eval-raw 'pipes/debug ;; (api/keyword :oasis.spec/eval-state)
+               (defncall 'eval-raw 'pipes/debug (api/string "eval-raw") ;; (api/keyword :oasis.spec/eval-state)
                  )
 
                (defncall 'tag-eval '->
                  ;; (api/fn-call (api/symbol 'spy) [(api/string "evaled")])
                  (api/map {(api/keyword :eval) (api/symbol '_)}))
 
-               (defncall 'eval-state 'pipes/debug ;; (api/keyword :oasis.spec/eval-state)
+               (defncall 'eval-state 'pipes/debug (api/string "eval-state") ;; (api/keyword :oasis.spec/eval-state)
                  )])
 (def oasis2 [
               ;; commands
 
-              (defncall 'editor-commands 'pipes/debug)
-              (defncall 'editor-events 'pipes/debug)
-              (defncall 'editor-cooked 'pipes/debug)
-              (defncall 'editor-immediate 'pipes/debug)
-              (defncall 'editor-actions 'pipes/debug)
-              (defncall 'editor-state 'pipes/debug)
-              (defncall 'select-events 'pipes/debug)
+              (defncall 'editor-commands 'pipes/debug (api/string "editor-commands"))
+              (defncall 'editor-events 'pipes/debug (api/string "editor-events"))
+              (defncall 'editor-cooked 'pipes/debug (api/string "editor-cooked"))
+              (defncall 'editor-immediate 'pipes/debug (api/string "editor-immediate"))
+              (defncall 'editor-actions 'pipes/debug (api/string "editor-actions"))
+              (defncall 'editor-state 'pipes/debug (api/string "editor-state"))
+              (defncall 'select-events 'pipes/debug (api/string "select-events"))
 
-              (defncall 'be-commands 'pipes/debug)
+              (defncall 'be-commands 'pipes/debug (api/string "be-commands"))
 
                (defncall 'filter-call 'only (api/key-fn :call))
 
-              (defncall 'mode-state 'pipes/debug)
-              (defncall 'mode-raw 'pipes/debug)
+              (defncall 'mode-state 'pipes/debug (api/string "mode-state"))
+              (defncall 'mode-raw 'pipes/debug (api/string "mode-raw"))
 
               (defncall 'is-immediate-command '->
                 (api/key-fn :type)
@@ -1193,10 +1193,10 @@
                           (api/keyword :hovered) (api/map {})
                           (api/keyword :hover) (api/vector [])}))
 
-             (defncall 'source-menu 'pipes/debug)
-             (defncall 'source-menu-items 'pipes/debug)
-             (defncall 'source-menu-events 'pipes/debug)
-             (defncall 'source-menu-state 'pipes/debug)
+             (defncall 'source-menu 'pipes/debug (api/string "source-menu"))
+             (defncall 'source-menu-items 'pipes/debug (api/string "source-menu-items"))
+             (defncall 'source-menu-events 'pipes/debug (api/string "source-menu-events"))
+             (defncall 'source-menu-state 'pipes/debug (api/string "source-menu-state"))
 
 
              (defncall 'source-menu-const '->
@@ -1205,10 +1205,10 @@
                             (api/string "http")])
                (api/symbol 'many))
 
-             (defncall 'sink-menu 'pipes/debug)
-             (defncall 'sink-menu-items 'pipes/debug)
-             (defncall 'sink-menu-events 'pipes/debug)
-             (defncall 'sink-menu-state 'pipes/debug)
+             (defncall 'sink-menu 'pipes/debug (api/string "sink-menu"))
+             (defncall 'sink-menu-items 'pipes/debug (api/string "sink-menu-items"))
+             (defncall 'sink-menu-events 'pipes/debug (api/string "sink-menu-events"))
+             (defncall 'sink-menu-state 'pipes/debug (api/string "sink-menu-state"))
 
              (defncall 'sink-menu-const '->
                (api/vector [(api/string "debug")
@@ -1297,9 +1297,9 @@
 
               ;; global state
 
-              (defncall 'load-state 'pipes/debug ;; (api/keyword :oasis.spec/state)
+              (defncall 'load-state 'pipes/debug (api/string "load-state") ;; (api/keyword :oasis.spec/state)
                 )
-              (defncall 'loaded-state 'pipes/debug ;; (api/keyword :oasis.spec/state)
+              (defncall 'loaded-state 'pipes/debug (api/string "loaded-state") ;; (api/keyword :oasis.spec/state)
                 )
 
               (defncall 'load-reduce 'pipes/reductions
@@ -1317,7 +1317,7 @@
               (defncall 'tag-layout '->
                 (api/map {(api/keyword :layout) (api/key-fn :success)}))
 
-              (defncall 'layout-state 'pipes/debug ;; (api/keyword :oasis.spec/state)
+              (defncall 'layout-state 'pipes/debug (api/string "layout-state") ;; (api/keyword :oasis.spec/state)
                 )
 
 
@@ -1514,7 +1514,7 @@
                          }))
 
 
-              (defncall 'lay-in 'pipes/debug)
+              (defncall 'lay-in 'pipes/debug (api/string "lay-in"))
 
 
               (defncall 'edit-information '->
@@ -1947,14 +1947,14 @@
              ])
 
 (def oasis-core-defs
-  [(defncall 'oasis-core-init 'pipes/debug)
-   (defncall 'oasis-kb 'pipes/debug)
-   (defncall 'oasis-hover-state 'pipes/debug)
-   (defncall 'oasis-hover-in 'pipes/debug)
-   (defncall 'oasis-scroll-state 'pipes/debug)
-   (defncall 'oasis-drag-state 'pipes/debug)
-   (defncall 'oasis-core-events 'pipes/debug)
-   (defncall 'oasis-core-out 'pipes/debug)
+  [(defncall 'oasis-core-init 'pipes/debug (api/string "oasis-core-init"))
+   (defncall 'oasis-kb 'pipes/debug (api/string "oasis-kb"))
+   (defncall 'oasis-hover-state 'pipes/debug (api/string "oasis-hover-state"))
+   (defncall 'oasis-hover-in 'pipes/debug (api/string "oasis-hover-in"))
+   (defncall 'oasis-scroll-state 'pipes/debug (api/string "oasis-scroll-state"))
+   (defncall 'oasis-drag-state 'pipes/debug (api/string "oasis-drag-state"))
+   (defncall 'oasis-core-events 'pipes/debug (api/string "oasis-core-events"))
+   (defncall 'oasis-core-out 'pipes/debug (api/string "oasis-core-out"))
 
    (defncall 'log-drag 'pipes/log (api/string "drag: "))
    (defncall 'log-hover 'pipes/log (api/string "hover: "))
@@ -2095,15 +2095,15 @@
 
 (def oasis-render-defs
   [
-   (defncall 'oasis-render-in 'pipes/debug)
-   (defncall 'oasis-render-init 'pipes/debug)
-   (defncall 'oasis-render-mouse-in 'pipes/debug)
-   (defncall 'oasis-render-kb-in 'pipes/debug)
-   (defncall 'oasis-render-kb-out 'pipes/debug)
-   (defncall 'oasis-render-drag-out 'pipes/debug)
-   (defncall 'oasis-render-hover-out 'pipes/debug)
-   (defncall 'oasis-render-out 'pipes/debug)
-   (defncall 'scroll-state 'pipes/debug)
+   (defncall 'oasis-render-in 'pipes/debug (api/string "oasis-render-in"))
+   (defncall 'oasis-render-init 'pipes/debug (api/string "oasis-render-init"))
+   (defncall 'oasis-render-mouse-in 'pipes/debug (api/string "oasis-render-mouse-in"))
+   (defncall 'oasis-render-kb-in 'pipes/debug (api/string "oasis-render-kb-in"))
+   (defncall 'oasis-render-kb-out 'pipes/debug (api/string "oasis-render-kb-out"))
+   (defncall 'oasis-render-drag-out 'pipes/debug (api/string "oasis-render-drag-out"))
+   (defncall 'oasis-render-hover-out 'pipes/debug (api/string "oasis-render-hover-out"))
+   (defncall 'oasis-render-out 'pipes/debug (api/string "oasis-render-out"))
+   (defncall 'scroll-state 'pipes/debug (api/string "scroll-state"))
    (defncall 'log-view 'pipes/log (api/string "view: "))
    (defncall 'log-mouse2 'pipes/log (api/string "mouse2: "))
    (defncall 'log-hov 'pipes/log (api/string "hov: "))
@@ -2168,15 +2168,15 @@
 
    ;; View handling
 
-   (defncall 'view-raw 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+   (defncall 'view-raw 'pipes/debug (api/string "view-raw") ;; (api/keyword :oasis.spec/mouse-state)
      )
-   (defncall 'view-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+   (defncall 'view-state 'pipes/debug (api/string "view-state") ;; (api/keyword :oasis.spec/mouse-state)
      )
-   (defncall 'view-deltas 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+   (defncall 'view-deltas 'pipes/debug (api/string "view-deltas") ;; (api/keyword :oasis.spec/mouse-state)
      )
-   (defncall 'view-commands 'pipes/debug)
-   (defncall 'view-events 'pipes/debug)
-   (defncall 'zoom-events 'pipes/debug)
+   (defncall 'view-commands 'pipes/debug (api/string "view-commands"))
+   (defncall 'view-events 'pipes/debug (api/string "view-events"))
+   (defncall 'zoom-events 'pipes/debug (api/string "zoom-events"))
 
    (defncall 'init-view '->
      (api/map {(api/keyword :zoom) (api/integer 1)
@@ -2235,7 +2235,7 @@
 
 
    ;; Mouse handling
-   (defncall 'drag-events 'pipes/debug)
+   (defncall 'drag-events 'pipes/debug (api/string "drag-events"))
 
    (defncall 'is-mouse-move '->
      (api/key-fn :next)
@@ -2309,7 +2309,7 @@
                    (api/map {(api/keyword :mouse) (api/symbol '_)})])
      (api/map {(api/keyword :mouse) (api/map {})}))
 
-   (defncall 'mouse-state 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+   (defncall 'mouse-state 'pipes/debug (api/string "mouse-state") ;; (api/keyword :oasis.spec/mouse-state)
      )
 
    (defncall 'is-drag '->
@@ -2379,7 +2379,7 @@
                                              (api/keyword :name) (api/string "none")
                                              (api/keyword :id) (api/string "none")})}))
 
-   (defncall 'target-events 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+   (defncall 'target-events 'pipes/debug (api/string "target-events") ;; (api/keyword :oasis.spec/mouse-state)
      )
 
    (defncall 'only-different '->
@@ -2388,9 +2388,9 @@
                                                                        (api/fn-call (api/symbol 'count) [(api/symbol '_)])
                                                                        (api/fn-call (api/symbol '=) [(api/symbol '_) (api/integer 1)])])]))
 
-   (defncall 'hover-events 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+   (defncall 'hover-events 'pipes/debug (api/string "hover-events") ;; (api/keyword :oasis.spec/mouse-state)
      )
-   (defncall 'hover-out 'pipes/debug ;; (api/keyword :oasis.spec/mouse-state)
+   (defncall 'hover-out 'pipes/debug (api/string "hover-out") ;; (api/keyword :oasis.spec/mouse-state)
      )
    (defncall 'tag-hover '->
      (api/map {(api/keyword :hover) (api/symbol '_)}))
@@ -2820,7 +2820,7 @@
                                     (api/fn-call (api/symbol '->) [(api/fn-call (api/symbol 'spy) [(api/string "DROP")])
                                                                    (api/symbol 'ignore)])]))
 
-   (defncall 'condensed-state 'pipes/debug ;; (api/keyword :oasis.spec/state)
+   (defncall 'condensed-state 'pipes/debug (api/string "condensed-state") ;; (api/keyword :oasis.spec/state)
      )
 
    (defncall 'only-resize '->
@@ -3625,7 +3625,7 @@
 
    ;; render elements to hiccup
 
-   (defncall 'svg-reduced 'pipes/debug  ;; (api/keyword :oasis.spec/render)
+   (defncall 'svg-reduced 'pipes/debug (api/string "svg-reduced")  ;; (api/keyword :oasis.spec/render)
      )
 
    (defncall 'svg-defs '->
@@ -3702,7 +3702,7 @@
 
 
    ;; render SVG components
-   (defncall 'svg-render 'pipes/debug)
+   (defncall 'svg-render 'pipes/debug (api/string "svg-render"))
    (defncall 'render-svg '->
      (api/map {(api/keyword :svg)
                (api/map {(api/keyword :oasis.gui/order)
@@ -3839,13 +3839,13 @@
    (defncall 'oasis-ui-events 'pipes/events (api/integer 2))
    (defncall 'oasis-ui-mouse 'pipes/mouse)
    (defncall 'oasis-ui-kb 'pipes/keyboard)
-   (defncall 'oasis-ev 'pipes/debug)
-   (defncall 'oasis-ui-mouse-out 'pipes/debug)
-   (defncall 'oasis-ui-kb-out 'pipes/debug)
-   (defncall 'oasis-ui-in 'pipes/debug)
-   (defncall 'render 'pipes/debug ;; (api/keyword :oasis.spec/render)
+   (defncall 'oasis-ev 'pipes/debug (api/string "oasis-ev"))
+   (defncall 'oasis-ui-mouse-out 'pipes/debug (api/string "oasis-ui-mouse-out"))
+   (defncall 'oasis-ui-kb-out 'pipes/debug (api/string "oasis-ui-kb-out"))
+   (defncall 'oasis-ui-in 'pipes/debug (api/string "oasis-ui-in"))
+   (defncall 'render 'pipes/debug (api/string "render") ;; (api/keyword :oasis.spec/render)
      )
-   (defncall 'reducer 'pipes/debug ;; (api/keyword :oasis.spec/gui)
+   (defncall 'reducer 'pipes/debug (api/string "reducer") ;; (api/keyword :oasis.spec/gui)
      )
    (defncall 'elements-reduce 'pipes/reductions
      (api/fn-call (api/symbol 'into) [(api/key-fn :state) (api/key-fn :next)])
@@ -3893,12 +3893,12 @@
 
 (def oasis-ui-net
   [
-   ;; (pipe 'oasis-ui-in 'render)
+   (pipe 'oasis-ui-in 'render)
    (pipe 'oasis-ui-in 'log-render2)
-   ;; (pipe 'render 'elements-reduce)
-   ;; (pipe 'elements-reduce 'reducer)
+   (pipe 'render 'elements-reduce)
+   (pipe 'elements-reduce 'reducer)
 
-   ;; (pipe 'reducer 'render-elements 'oasis-ui-render)
+   (pipe 'reducer 'render-elements 'oasis-ui-render)
    ;; (pipe 'oasis-ui-events 'oasis-ev)
 
    ;; (pipe 'oasis-ui-mouse 'oasis-ui-mouse-out)
@@ -4028,7 +4028,7 @@
                          (api/vector [(api/keyword :h1)
                                       (api/string "사막 Oasis")])})}))
 
-   (defncall 'oasis-init 'pipes/debug)
+   (defncall 'oasis-init 'pipes/debug (api/string "oasis-init"))
    (api/defmodule 'oasis (api/map {(api/keyword :depends) (api/map {;; (api/keyword :oasis-core) (api/symbol 'oasis-core)
 
                                                                     ;; (api/keyword :oasis-render) (api/symbol 'oasis-render)
@@ -4063,7 +4063,7 @@
    ;;                                                                      (api/keyword :layout) (api/symbol 'oasis-layout)
    ;;                                                                      })
    ;;                                     ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
-   ;;                                     (api/keyword :tests) (api/map {(api/keyword ::test)
+   ;;                                     (api/keyword :tests) (api/map {(api/keyword (api/string "test)
    ;;                                                                    (api/map {(api/keyword :when) (api/map {(api/string "init")
    ;;                                                                                                            (api/vector [(api/integer 1)])})
    ;;                                                                              (api/keyword :then) (api/map {(api/string "oasis-ui-out")

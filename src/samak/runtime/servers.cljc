@@ -21,8 +21,15 @@
 (defrecord LocalSamakServer [defined-ids builtins manager]
   SamakServer
   (eval-ast [this {:keys [db/id] :as ast}]
-    (let [man (assoc (get this :manager) :resolve #(get defined-ids %))]
-      (update this :defined-ids assoc id (n/eval-env man builtins ast id))))
+    ;; (println "eval <-" id ast)
+    (let [defs (atom (get-defined this))
+          man (merge (get this :manager)
+                     {:resolve (fn [x] (get @defs x))
+                      :register (fn [did def] (swap! defs assoc did def))})
+          def (n/eval-env man builtins ast id)]
+      (swap! defs assoc id def)
+      ;; (println "eval ->" id def)
+      (assoc this :defined-ids @defs)))
   (get-defined [this]
     (get this :defined-ids))
   (load-builtins [this builtins]
@@ -45,7 +52,6 @@
 (defn load-builtins!
   ""
   [server builtins]
-  (println "load-builtins" server builtins)
   (load-builtins server builtins))
 
 (defn make-local-server [manager]

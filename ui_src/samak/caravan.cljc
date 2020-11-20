@@ -44,7 +44,9 @@
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 (def rt-conn (atom {:state :uninited}))
-(def rt-preview (atom {}))
+
+(def rt-link-fn (atom nil))
+
 (def fns (atom {}))
 (def net (atom {}))
 
@@ -231,8 +233,6 @@
   ;; (println (str "function cache: " (keys @fns)))
   (swap! fns assoc sym fn)
   (swap! rt-conn #(update % :server rt/eval-all [fn]))
-  ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
-  ;; (reset-rt rt-preview)
   (format-node sym fn))
 
 (defn name-of-node
@@ -282,9 +282,7 @@
     (println (str "adding pipe from " source " with " func " to " sink))
     (when (and source func sink)
       ;; (swap! net assoc key pipe)
-      ;; (swap! rt-preview rt/link-storage (:store @rt-conn))
       (swap! rt-conn #(update % :server rt/eval-all [pipe]))
-      ;; (reset-rt rt-preview)
       (format-pipe pipe))))
 
 
@@ -311,7 +309,7 @@
   ""
   [exp]
   (prom/let [loaded (persist! @rt-conn [(assoc exp :db/id -1)])
-             _ (println "single" loaded)
+             _ (println "### single" loaded)
              ast (load-ast @rt-conn (:db/id (first loaded)))]
     ast))
 
@@ -407,7 +405,7 @@
 (defn add-cell
   ""
   [ev {:keys [sym cell type] :as x}]
-  (println (str "adding: " x))
+  (println (str "### adding: " x))
   (let [src (get @fns (symbol sym))
         idx (dec cell)]
     (when (and sym src idx type)
@@ -542,42 +540,45 @@
               (notify-source ev (add-node (symbol sym) exp))
               :done)))))))
 
-
 (defn link-pipes
   ""
   [from to xf]
-  (rt/link-fn from
-              to
-              (when xf (pipes/transduction-pipe (pipes/instrument :caravan/adhoc nil xf)))))
+  ((:link (:manager @rt-conn))
+   from
+   to
+   (when xf (pipes/transduction-pipe (pipes/instrument :caravan/adhoc nil xf) (str (pipes/uuid from) "-" (pipes/uuid to))))))
 
 
 (defn find-tests
   ""
   [conf]
-  (println "conf " conf)
+  (println "### conf " conf)
   (when conf
     (prom/let [is-module (= (:samak.nodes/type conf) :samak.nodes/module)
-            sym (if is-module (symbol (str "test-" (:samak.nodes/name conf))) (symbol (:samak.nodes/name conf)))
-            conf (if is-module
-                   (api/defexp sym (api/fn-call conf []))
-                   conf)
-            rt2 (update @rt-conn :server #(rt/eval-all % [conf]))
-            evaled (rt/get-definition-by-name rt2 sym)]
-      (println "evaled " evaled)
+               sym (if is-module (symbol (str "test-" (:samak.nodes/name conf))) (symbol (:samak.nodes/name conf)))
+               conf (if is-module
+                      (assoc (api/defexp sym (api/fn-call conf [])) :db/id sym)
+                      conf)
+               rt2 (update @rt-conn :server #(rt/eval-all % [conf]))
+               evaled (if is-module
+                        (rt/get-definition-by-id rt2 sym)
+                        (rt/get-definition-by-name rt2 sym))]
       ;; (println "evaled " (:samak.nodes/definition evaled))
       (:tests evaled))))
 
 (defn attach-assert
   ""
   [verify source-pipe xf-fn test-fn]
-  (prom/let [assert-name (str "assert-" (rand-int 1000000))
-             assert-exp (api/defexp (symbol assert-name) (api/fn-call (api/symbol 'pipes/debug) []))
+  (prom/let [assert-name (symbol (str "assert-" (rand-int 1000000)))
+             assert-exp (api/defexp assert-name (api/fn-call (api/symbol 'pipes/debug) []))
              assert-ast (single! assert-exp)]
-    (add-node (symbol assert-name) assert-ast)
-    (prom/let [assert-pipe (rt/get-definition-by-name @rt-conn (symbol assert-name))
-               verify-pipe (rt/get-definition-by-name @rt-conn (symbol verify))]
-      (link-pipes source-pipe assert-pipe xf-fn)
-      (link-pipes assert-pipe verify-pipe test-fn))))
+    (prom/do!
+     (add-node assert-name assert-ast)
+     (prom/let [assert-pipe (rt/get-definition-by-id @rt-conn (:db/id assert-ast))
+                verify-pipe (rt/get-definition-by-id @rt-conn verify)]
+       (prom/do!
+        (link-pipes source-pipe assert-pipe xf-fn)
+        (link-pipes assert-pipe verify-pipe test-fn))))))
 
 (defn resolve-sym-or-fn
   ""
@@ -587,11 +588,11 @@
     (do
       (println exp)
       (prom/let [ast (load-ast @rt-conn (:db/id exp))]
-        (println "loaded" ast)
+        (println "### loaded" ast)
         (swap! rt-conn #(update % :server rt/eval-all [ast])))
-      (println "evaled" exp)
+      (println "### evaled" exp)
       (let [r (rt/resolve-fn @rt-conn (:db/id exp))]
-        (println "resolved " r)
+        (println "### resolved " r)
         r)
       )))
 
@@ -610,11 +611,12 @@
                       (str "[" (:db/id xf) "] " (:samak.nodes/name xf))
                       "~none~")
              "to" sink-name)
-    (let [xf-pipe (get (servers/get-defined (:server @rt-conn)) (:db/id xf))]
-      (when test-ref
-        (println "  V" "Verifying pipe:" sink-name "with" test-ref)
-        (attach-assert verify source xf-pipe (first test-ref)))
-      (link-pipes source sink xf-pipe))))
+    (prom/let [xf-pipe (get (servers/get-defined (:server @rt-conn)) (:db/id xf))]
+      (prom/do!
+       (when test-ref
+         (println "  V" "Verifying pipe:" sink-name "with" test-ref)
+         (attach-assert verify source xf-pipe (first test-ref)))
+       (link-pipes source sink xf-pipe)))))
 
 
 (defn setup-verify
@@ -625,7 +627,7 @@
              verify-exp (api/defexp verify-name (api/fn-call (api/symbol 'pipes/debug) []))
              verify-ast (single! verify-exp)]
     (add-node verify-name verify-ast)
-    verify-name))
+    (:db/id verify-ast)))
 
 
 (defn handle-source
@@ -645,7 +647,7 @@
 (defn handle-mod
   ""
   [module]
-  (println "mod" module)
+  (println "### mod" module)
   (let [id (:id module)
         root (:roots module)]
     {id {:caravan/type :caravan/module
@@ -674,30 +676,31 @@
 (defn handle-deps
   ""
   [deps]
-  (reduce (fn [acc x]
-            (let [roots (database-net (:roots x))]
-              {:nodes (into [] (concat (:nodes acc) (:nodes roots)))
-               :pipes (into [] (concat (:pipes acc) (:pipes roots)))
-               :modules (conj (:modules acc) (handle-mod x))}))
-          {:nodes []
-           :pipes []
-           :modules []}
-          deps))
+  (prom/let [init (prom/resolved {:nodes []
+                                  :pipes []
+                                  :modules []})]
+    (reduce (fn [promise x] (prom/handle promise
+                                         (fn [acc _]
+                                           (prom/let [roots (database-net (:roots x))]
+                                             {:nodes (into [] (concat (:nodes acc) (:nodes roots)))
+                                              :pipes (into [] (concat (:pipes acc) (:pipes roots)))
+                                              :modules (conj (:modules acc) (handle-mod x))}))))
+            init
+            deps)))
 
 (defn eval-bundle
   ""
-  [rt id]
-  (prom/let [bundle (sched/load-bundle-by-id @rt id)
-             _ (println "ev b" bundle)
+  [bundle]
+  (prom/let [_ (println "### ev b" bundle)
              roots (:roots bundle)
              deps (handle-deps (:deps bundle))
-             _ (println "deps" deps)
+             _ (println "### deps" deps)
              net (database-net roots)
              rootnotify (assoc net :modules [(handle-mod bundle)])
              ;; rootnotify  (database-net roots)
-             _ (println "root" rootnotify)
+             _ (println "### root" rootnotify)
              a1 (merge-with into rootnotify deps)
-             _ (println "ev n" a1)]
+             _ (println "### ev n" a1)]
     (assoc a1 :id (:id bundle))
     ))
 
@@ -707,8 +710,9 @@
   [sym test]
   (prom/let [verify (setup-verify)
              bundle (sched/load-bundle @rt-conn sym)]
-    (runtime-net (:roots bundle) test verify)
-    verify))
+    (prom/do!
+     (runtime-net (:roots bundle) test verify)
+     verify)))
 
 (defn trace-dump
   ""
@@ -741,21 +745,20 @@
   [c sym [name tst]]
   (println (str "test " name " - " tst))
 
-  (let [verify (test-bundle sym tst)]
-    (go (prom/let [pipe (rt/get-definition-by-name @rt-conn verify)
-                   listener (chan 1)]
-          (a/tap (.-out pipe) listener) ;; TODO: FIX protocol?
-          (loop [results []]
-            (let [msg (<! listener)
-                  results (conj results msg)
-                  runs (count (flatten (vals (:then tst))))]
-              (println (str (count results) "/" runs " - " msg))
-              (if (= (count results) runs)
-                (>! c (or (some #(when (not= :success (:samak.pipes/content %)) %) results) :success))
-                (recur results))))))
+  (prom/let [verify (test-bundle sym tst)
+             pipe (rt/get-definition-by-id @rt-conn verify)
+             listener (pipes/pipe-chan ::listener 100)]
+    (go-loop [results []]
+      (let [msg (<! listener)
+            results (conj results msg)
+            runs (count (flatten (vals (:then tst))))]
+        (if (= (count results) runs)
+          (>! c (or (some #(when (not= :success (:samak.pipes/content %)) %) results) :success))
+          (recur results))))
+    (a/tap (.-out pipe) listener)
     (doall (map (fn [[pipe-name values]]
-                  (println (str "pipe " (str pipe-name) " values: " values))
                   (prom/let [pipe (rt/get-definition-by-name @rt-conn (symbol pipe-name))]
+                    (println (str "### pipe [" (str pipe-name) "] " pipe " values: " values))
                     (if (nil? pipe)
                       (println "no such pipe: " pipe-name)
                       (doall (map #(run-event pipe pipe-name %) values)))))
@@ -772,7 +775,7 @@
               _ (println "Loading test definitions")
               tests (find-tests net)
               test-num (count tests)
-              test-results-chan (chan 1)]
+              test-results-chan (pipes/pipe-chan ::result 100)]
      (if (zero? test-num)
        (a/put! c :no-tests)
        (go-loop [results []
@@ -789,7 +792,8 @@
 (defn load-lib
   ""
   [cmd ev bundle-id]
-  (prom/let [bundle (eval-bundle rt-conn bundle-id)]
+  (prom/let [bundle-code (sched/load-bundle-by-id @rt-conn bundle-id)
+             bundle (eval-bundle bundle-code)]
     ;; (println (str "count: " cnt))
     (doall (map #(notify-source ev %) (:modules bundle)))
     (doall (map #(notify-source ev %) (:nodes bundle)))
@@ -815,8 +819,8 @@
 (defn test-net
   ""
   [c prog sym]
-  (persist-net prog)
-  (run-testsuite c sym {:timeout 3000}))
+  (prom/do! (persist-net prog)
+            (run-testsuite c sym {:timeout 10000})))
 
 (defn load-chuck
   ""
@@ -970,8 +974,7 @@
 (defn pong
   ""
   [caravan-out x]
-  (tools/log "ponging: " x caravan-out)
-  (a/put! caravan-out (pipes/make-paket {::event ::pong} ::caravan)))
+  (a/put! caravan-out (pipes/make-paket {:event :pong} ::caravan)))
 
 
 (defn caravan-module
@@ -979,18 +982,22 @@
   []
   (println "def caravan")
   (fn []
-    (println "init caravan")
-    (let [caravan-in (chan)
-          caravan-cmd (chan)
-          caravan-eval (chan)]
+    (let [inst (helpers/uuid)
+          caravan-in (pipes/pipe-chan ::in nil)
+          caravan-cmd (pipes/pipe-chan ::cmd nil)
+          caravan-eval (pipes/pipe-chan ::eval nil)
+          caravan-in-pipe (pipes/sink caravan-in)
+          caravan-cmd-pipe (pipes/source caravan-cmd)
+          caravan-eval-pipe (pipes/source caravan-eval)]
+      (println "init caravan" inst)
       (go-loop []
         (when-let [x (<! caravan-in)]
-          (tools/log "caravan-in: " x)
-          (when (:ping (:samak.pipes/content x))
+          (tools/log "caravan-in: " inst x)
+          (when (= :ping (:samak.pipes/content x))
             (pong caravan-cmd x))
           (when-let [call (:call (:samak.pipes/content x))]
             (do
-              (tools/log "caravan-call: " call)
+              (tools/log "caravan-call: " inst call)
               (case (:action call)
                 :load (test-example caravan-cmd caravan-eval (:arguments call))
                 :test (test-chuck caravan-cmd)
@@ -1004,9 +1011,10 @@
                 :indent (indent-cell caravan-eval (:arguments call))
                 (tools/log "actions unknown: " call))))
           (recur)))
-      (let [foo {:sources {:commands (pipes/source caravan-cmd)
-                           :eval (pipes/source caravan-eval)}
-                 :sinks {:actions (pipes/sink caravan-in)}}]
+      (let [foo {:sources {:commands caravan-cmd-pipe
+                           :eval caravan-eval-pipe}
+                 :sinks {:actions caravan-in-pipe}}]
+        (println "caravan is" inst "->" foo)
         foo))))
 
 

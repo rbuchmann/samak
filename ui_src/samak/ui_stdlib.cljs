@@ -83,7 +83,7 @@
     x))
 
 (defn events [n]
-  (let [c (chan)
+  (let [c (pipes/pipe-chan ::events nil)
         init (atom true)
         elem (if n (js/document.getElementById (str "samak" n)) (.-body js/document))
         bound (.getBoundingClientRect elem)]
@@ -132,6 +132,7 @@
          init (atom true)]
      (go-loop []
        (when-some [i (<! ui-in)]
+         (println "ui-in" i)
          (trace/trace ::ui 0 i)
          (let [x (or (:samak.pipes/content i) i)]
            (if true ;; (s/valid? ::hiccup x)
@@ -157,7 +158,7 @@
      ;;                                       )
      ;;                              ::view)
      ;;                   false)))
-     (pipes/pipe ui-in ui-out))))
+     (pipes/pipe ui-in ui-out (str "render-" n)))))
 
 (defn translate-coords
   ""
@@ -167,7 +168,7 @@
 
 
 (defn mouse [n]
-  (let [c (chan)
+  (let [c (pipes/pipe-chan ::mouse nil)
         elem (if n (js/document.getElementById (str "samak" n)) (.-body js/document))
         bound (.getBoundingClientRect elem)]
     (set! (.-onmousedown elem)
@@ -228,7 +229,7 @@
 
 
 (defn keyboard []
-  (let [c (chan)]
+  (let [c (pipes/pipe-chan ::keyboard nil)]
     (set! (.-onkeypress js/document)
           (fn [e] (do (let [event (js->clj e :keywordize-keys true)]
                         (put-meta! c (convert-key-event event :press) ::keyboard)

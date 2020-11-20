@@ -50,7 +50,7 @@
 (defn load-deps
   ""
   [rt [id mod]]
-  (println "load-deps" id mod)
+  (println "### load-deps" id mod)
   (p/let [deps (p/all (mapv (fn [m] (load-deps rt (first m))) (:dependencies mod)))
           roots (load-module rt mod)]
     {:id id
@@ -63,17 +63,17 @@
 (defn load-bundle-by-id
   ""
   [rt bundle-id]
-  (p/let [_ (print "  V" "Bundle id:" bundle-id)
+  (p/let [_ (println "  V" "Bundle id:" bundle-id)
           ast (run/load-bundle rt bundle-id)
           bundle (get ast bundle-id)
-          _ (println "bundle: " bundle)
+          _ (println "### bundle: " bundle)
           deps (load-deps rt [bundle-id bundle])]
     deps))
 
 (defn load-bundle
   ""
   [rt sym]
-  (p/let [_ (print "  V" "Fetching bundle from DB:" sym)
+  (p/let [_ (println "  V" "Fetching bundle from DB:" sym)
           bundle-id (run/resolve-name rt sym)
           deps (load-bundle-by-id rt bundle-id)]
     deps))
@@ -82,19 +82,19 @@
   ""
   [rt conf module root]
   (if (contains? conf (:id module))
-    (println "skipping" (:id module))
+    (println "### skipping" (:id module))
     (p/do!
      ;; (println "eval" (:id module) "->" module)
      (p/all (map #(eval-module rt conf % (:id %)) (:deps module)))
-     (println "loading" (:id module))
+     (println "### loading" (:id module))
      (p/let [roots (:roots module)
              base (if root [root] [])
              root-ids (into (into base (:nodes roots)) (:pipes roots))
              _ (println "[" (:id module) "] roots" root-ids)
              asts (p/all (map #(run/load-ast @rt %) root-ids))]
-       (println "evaling" (:id module))
+       (println "### evaling" (:id module))
        (reset! rt (update @rt :server run/eval-all asts))
-       (println "done" (:id module))))))
+       (println "### done" (:id module))))))
 
 (defn run-module
   ""
@@ -106,8 +106,8 @@
 (defn setup-out
   ""
   [rt [key pipe]]
-  (println (:id @rt) "setup out" key)
-  (let [wrap (pipes/transduction-pipe (map (run/wrap-out {:named key} :setup)))]
+  (println (:id @rt) "### setup out" key)
+  (let [wrap (pipes/transduction-pipe (map (run/wrap-out {:named key} :setup)) (str "scheduler-out-" key))]
     (pipes/link! pipe wrap)
     (pipes/link! wrap (:broadcast @rt))))
 
@@ -123,7 +123,7 @@
   [rt conf net sym]
   (p/let [mod-name (module-id 'lone)]
     (eval-module rt conf net (:id net))
-    (println (:id @rt) "module" sym "done \\o/")
+    (println (:id @rt) "### module" sym "done \\o/")
     (run-module rt (:id net) mod-name)
     (let [mod (run/resolve-fn @rt mod-name)]
       (println (:id @rt) "mod" mod-name mod)

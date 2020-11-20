@@ -1,24 +1,48 @@
 (ns samak.pipes
   (:refer-clojure :exclude [uuid])
-  #?
+  #?@
   (:clj
-   (:require
-    [clojure.core.async :as a :refer [chan put!]]
+   [(:require
+    [clojure.core.async :as a :refer [chan put! <! go-loop]]
     [clojure.spec.alpha :as s]
     [com.stuartsierra.dependency :as dep]
     [samak.tools :as t]
     [samak.helpers :as help]
     [samak.protocols :as p]
-    [samak.transduction-tools :as tt])
+    [samak.transduction-tools :as tt])]
    :cljs
-   (:require
-    [cljs.core.async :as a :refer [chan put!]]
+   [(:require
+    [cljs.core.async :as a :refer [chan put! <!]]
     [cljs.spec.alpha :as s]
     [com.stuartsierra.dependency :as dep]
     [samak.protocols :as p]
     [samak.tools :as t]
     [samak.helpers :as help]
-    [samak.transduction-tools :as tt])))
+    [samak.transduction-tools :as tt])
+    (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
+
+(def buffs (atom {}))
+
+
+(defn pipe-buf
+  ""
+  [n size]
+  (let [buf (a/buffer size)]
+    (swap! buffs assoc n buf)
+    buf))
+
+(defn exh
+  ""
+  [n]
+  (fn [e]
+    (let [msg (str "exception in pipe" n e)]
+      (t/log msg)
+    (throw (ex-info msg {} e)))))
+
+(defn pipe-chan
+  ""
+  [id size]
+  (chan (when size (pipe-buf id size)) nil (exh id)))
 
 ;; Pipes and flow control
 
@@ -76,16 +100,23 @@
 (defn pipe
   ([ch] (pipe ch nil nil (help/uuid)))
   ([ch uuid] (pipe ch nil nil uuid))
-  ([ch in-spec out-spec uuid]
-   (Pipethrough. ch (a/mult ch) in-spec out-spec uuid))
+  ([ch in-spec out-spec uuid] (pipe ch ch in-spec out-spec uuid))
   ([in out uuid] (pipe in out nil nil uuid))
   ([in out in-spec out-spec uuid]
-   (Pipethrough. in (a/mult out) in-spec out-spec uuid)))
+   (let [m (a/mult out)
+         c (pipe-chan ::drop nil)]
+     ;; (go-loop []
+     ;;     (let [msg (<! c)]
+     ;;       (when msg (t/log "%%% drip pipe [" (or uuid "-") "] " msg))
+     ;;       (recur)))
+     ;; (a/tap m c)
+     (Pipethrough. in m in-spec out-spec uuid))))
 
 
 (defn transduction-pipe
-  ([xf] (transduction-pipe xf nil))
-  ([xf uuid] (pipe (chan 1 xf) uuid)))
+  ([xf] (transduction-pipe xf ::xf))
+  ([xf uuid] (pipe (chan 1 xf) uuid);; (pipe (chan (pipe-buf uuid 1) xf (exh uuid)) uuid)
+   ))
 
 (defn async-pipe [xf in-spec out-spec]
   (let [in-chan  (chan)
@@ -140,6 +171,9 @@
 (defn link! [from to]
   (let [source (out-port from)
         sink   (in-port to)]
+    ;; (when-let [default (untapped? source)]
+    ;;   (a/untap source default)
+    ;;   (a/tap source sink))
     (a/tap source sink)
     (composite-pipe from to)))
 
@@ -167,19 +201,20 @@
   ""
   [state spec paket]
   (let [x (::content paket)]
-  (when (not (s/valid? spec x))
-    (println "spec error in state" state)
-    (let [reason (s/explain spec x)]
-      (println "reason for" x ":" reason)
-      reason)))
+    (if x
+      (when (not (s/valid? spec x))
+        (let [reason (s/explain spec x)]
+          (println "spec error in state" state)
+          (println "reason for" x ":" reason)
+          reason))
+      (println "no content: " paket)))
   paket)
 
 (defn checked-pipe
   ""
   [pipe in-spec out-spec uuid]
-  (println "checked setup:" uuid (help/uuid))
-  (let [in-checked (transduction-pipe (map #(check-values (str uuid "-in") in-spec %)))
-        out-checked (transduction-pipe (map #(check-values (str uuid "-out") out-spec %)))]
+  (let [in-checked (transduction-pipe (map #(check-values (str uuid "-in") in-spec %)) (str uuid "-in"))
+        out-checked (transduction-pipe (map #(check-values (str uuid "-out") out-spec %)) (str uuid "-out"))]
     (link! in-checked pipe)
     (link! pipe out-checked)
     (Pipethrough. (in-port in-checked) (out-port out-checked) in-spec out-spec uuid)))

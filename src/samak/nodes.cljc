@@ -60,18 +60,22 @@
 (defmethod eval-node ::float   [{:keys [::value]}] value)
 (defmethod eval-node ::builtin [{:keys [::value]}] (get *builtins* value))
 
-(defmethod eval-node ::def [{:keys [::rhs]}] (eval-node rhs))
+(defmethod eval-node ::def [{:keys [::rhs] :as fn}]
+  (let [res (eval-node rhs)
+        id (:db/id fn)]
+    ((:register *manager*) id res)
+    res))
 
 (defmethod eval-node ::pipe [{:keys [::from ::to ::xf] :as p}]
   (let [a (eval-node from)
+        c (eval-node to)
         b (when xf
             (let [db-id (:db/id xf)]
               (binding [*db-id* db-id]
                 (-> xf
                     eval-node
                     ((partial pipes/instrument db-id (:cancel? *manager*)))
-                    pipes/transduction-pipe))))
-        c (eval-node to)]
+                    (#(pipes/transduction-pipe % (str (pipes/uuid a) "-" db-id "-" (pipes/uuid c))))))))]
     ((:link *manager*) a c b)))
 
 (defmethod eval-node ::fn-ref [{:keys [::fn] :as f}]
