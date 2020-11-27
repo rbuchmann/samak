@@ -8,7 +8,7 @@
 
 (defn builtin [identifier]
   (assoc (literal 'builtin identifier)
-         :name identifier))
+         :samak.nodes/name identifier))
 
 (def keyword (partial literal 'keyword))
 (def key-fn  (partial literal 'key-fn))
