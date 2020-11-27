@@ -1,6 +1,8 @@
 (ns samak.types
-  (:require [samak.nodes :as n]
-            [samak.tools :as tools]))
+  (:require [samak.nodes     :as n]
+            [samak.tools     :as tools]
+            [samak.lisparser :as p]
+            [samak.api       :refer [builtin]]))
 
 (defn make [name & kv-pairs]
   (into {::name name}
@@ -66,22 +68,51 @@
 (defmethod node->type-fn ::n/fn-ref [node]
   (node->type-fn (::n/fn node)))
 
-(defmethod node->type-fn ::n/fn-call [{:keys [n/fn-expression]} node]
-  (let [called (follow-refs (::n/fn-expression node))]))
+(defmethod node->type-fn ::n/fn-call [{:keys [::n/fn-expression ::n/arguments] :as node}]
+  (let [called (follow-refs fn-expression)]
+    (builtin->type-fn called (map ::n/node arguments))))
 
 (defn type-error [& args]
   (apply tools/fail "Type Error:" args))
 
-(def type-annotation (comp ::n/type-annotation follow-refs))
+(defmethod node->type-fn ::n/builtin [node]
+  (if (= (::n/name node) '_)
+    identity
+    (type-error "Tried taking the type-fn of an uncalled builtin")))
+
+(def type-annotation ::n/type-annotation)
 
 (defmulti builtin->type-fn (fn [node args] (::n/name node)))
 
 (defmethod builtin->type-fn 'inc [node [lens]]
   (fn [input-type]
-    (let [transformed (lens input-type)]
+    (let [transformed ((node->type-fn lens) input-type)]
       (if (subtype? transformed tnumber)
         input-type
         (type-error transformed "is not a subtype of number!")))))
+
+(defmethod builtin->type-fn 'test [node _]
+  (print node))
+
+(def tp '((def in (pipes/debug))
+          (def out (pipes/log))
+          (| in (inc _) out)))
+
+(def pipe-node #:samak.nodes{:type :samak.nodes/pipe,
+                             :from
+                             #:samak.nodes{:type :samak.nodes/fn-ref,
+                                           :fn [:samak.nodes/name 'in]
+                                           :type-annotation tnumber},
+                             :to
+                             #:samak.nodes{:type :samak.nodes/fn-ref,
+                                           :fn [:samak.nodes/name 'out]
+                                           :type-annotation tnumber},
+                             :xf
+                             #:samak.nodes{:type :samak.nodes/fn-call,
+                                           :fn-expression (builtin 'inc) ,
+                                           :arguments
+                                           [{:order 0,
+                                             :samak.nodes/node (builtin '_)}]}})
 
 (defn typecheck-pipe [pipe-node]
   (let [{:keys [::n/from
