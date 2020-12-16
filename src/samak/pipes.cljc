@@ -22,7 +22,7 @@
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 (def buffs (atom {}))
-
+(def pipes (atom {}))
 
 (defn pipe-buf
   ""
@@ -103,6 +103,10 @@
   ([ch in-spec out-spec uuid] (pipe ch ch in-spec out-spec uuid))
   ([in out uuid] (pipe in out nil nil uuid))
   ([in out in-spec out-spec uuid]
+   (let [[old _] (swap-vals! pipes assoc uuid uuid)]
+     (if (get old uuid)
+       (println "!!!1 mult" uuid)
+       (println "!!!2 reg" uuid)))
    (let [m (a/mult out)
          c (pipe-chan ::drop nil)]
      ;; (go-loop []
@@ -171,9 +175,6 @@
 (defn link! [from to]
   (let [source (out-port from)
         sink   (in-port to)]
-    ;; (when-let [default (untapped? source)]
-    ;;   (a/untap source default)
-    ;;   (a/tap source sink))
     (a/tap source sink)
     (composite-pipe from to)))
 

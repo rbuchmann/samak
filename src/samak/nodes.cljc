@@ -8,6 +8,7 @@
 
 (def ^:dynamic *manager* nil)
 (def ^:dynamic *builtins* {})
+(def ^:dynamic *ctx* nil)
 
 
 (defn compile-error
@@ -42,7 +43,8 @@
     :default                 (compile-error "unknown token during evaluation: " (str "type: " (or (type value) "nil") " with value: " (str value)))))
 
 (defmethod eval-node ::module [module]
-  ((:module *manager*) module *manager*))
+  (println "modulectx" *ctx*)
+  ((:module *manager*) module *manager* *ctx*))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]
@@ -99,8 +101,9 @@
 (defmethod eval-node ::link [{:keys [::from ::to]}]
   (pipes/link! (eval-node from) (eval-node to)))
 
-(defn eval-env [manager builtins ast db-id]
+(defn eval-env [manager builtins ast {db-id :db-id ctx :ctx}]
   (binding [*manager* manager
             *builtins* builtins
-            *db-id* db-id]
+            *db-id* db-id
+            *ctx* ctx]
     (eval-node ast)))

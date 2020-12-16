@@ -93,18 +93,18 @@
     (handle-update "in2" to-rt)
     (fn [] [to-rt broadcast])))
 
-(defn eval-test
-  ""
-  []
-  (let [code (str/join " " test-programs/tw)
-        parsed (p/parse-all code)]
-    (swap! rt #(reduce run/eval-expression! % (:value parsed)))
-    (run/fire-into-named-pipe @rt 'in "5" 0)))
+;; (defn eval-test
+;;   ""
+;;   []
+;;   (let [code (str/join " " test-programs/tw)
+;;         parsed (p/parse-all code)]
+;;     (swap! rt #(reduce run/eval-expression! % (:value parsed)))
+;;     (run/fire-into-named-pipe @rt 'in "5" 0)))
 
 (defn run-oasis
   ""
-  []
-  (prom/let [res (run/fire-into-named-pipe @rt 'oasis-init "1" 0)]
+  [id]
+  (prom/let [res (run/fire-into-named-pipe @rt id 'oasis-init "1" 0)]
     (println "oasis started: " res))
   ;; (let [parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
   ;;   (doseq [expression parsed]
@@ -149,11 +149,12 @@
   (prom/let [net (sched/load-bundle @rt 'oasis)]
     (helpers/debounce
       (fn []
-        (prom/do!
-         (println "evaluating oasis")
-         (sched/eval-module rt main-conf net nil)
-         (println "renderer loaded oasis")
-         (helpers/debounce run-oasis))))))
+        (let [id (str "moasis-" (helpers/uuid))]
+          (prom/do!
+           (println "evaluating oasis")
+           (sched/eval-module rt main-conf net nil id)
+           (println "renderer loaded oasis")
+           (helpers/debounce #(run-oasis id))))))))
 
 (defn start-main
   ""

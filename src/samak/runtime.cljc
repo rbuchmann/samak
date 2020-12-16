@@ -34,10 +34,11 @@
 (def cancel-conditions (atom {}))
 (def pipe-links (atom {}))
 
-(defn eval-all [server forms]
+(defn eval-all
+  [server forms ctx]
   (reduce (fn [server form]
             ;; (println "form" (:db/id form) "->" form)
-            (servers/eval-ast server form))
+            (servers/eval-ast server form ctx))
           server forms))
 
 (defn resolve-name [runtime sym]
@@ -126,27 +127,32 @@
           l (if xf
               (pipes/link! (pipes/link! a xf) c)
               (pipes/link! a c))]
-      (swap! pipe-links assoc (str (pipes/uuid from) "-" (pipes/uuid to)) id)
+      (swap! pipe-links assoc (str (pipes/uuid from) "|" (pipes/uuid to)) l)
       l)))
 
 (defn instanciate-module
   ""
-  [{:keys [:samak.nodes/definition] :as module} man]
+  [{:keys [:samak.nodes/definition] :as module} man ctx]
   (let [n (str (:samak.nodes/name module))
-        c (get (:config man) n)]
+        c (get (:config man) n)
+        id (str n "-" (helpers/uuid))]
+    (println "inst mod ->" id ctx)
     (if c
       (fn []
         ;; (println "return stub for" n "[" (:db/id module) "] -> " c)
         c)
-      (fn []
-        ;; FIXME
-        ;; needs to prep resolve magic when instanciating pipes, to select same runtime
-        ;; maybe simply do so explicitly
-        ;; (if (:config man))
-        (println  (str "### about to eval module: " module))
-        (let [evaled (n/eval-env man nil definition (:db/id module))]
-          (println (str "### used module: " module "->" evaled))
-          evaled)))))
+      (do (println  (str "### about to eval module: " id module))
+          (let [ns-reg #(do (println "ns reg ->" id %1 %2) ((:register man) (str id "/" %1) %2))
+                ns-res #(do (println "ns res ->" id %1) (or ((:resolve man) (str id "/" %1)) ((:resolve man) %1)))
+                ns-man (merge man {:register ns-reg :resolve ns-res})
+                evaled (n/eval-env man nil definition {:db-id (:db/id module) :ctx id})] ;;;FIXME should be server/eval-ast?
+            (fn [a]
+              ;; FIXME
+              ;; needs to prep resolve magic when instanciating pipes, to select same runtime
+              ;; maybe simply do so explicitly
+              ;; (if (:config man))
+              (println (str "### used module: " a "---" module "->" evaled))
+              evaled))))))
 
 (defn make-store-internal
   ""
@@ -186,7 +192,7 @@
            runtime (update prep :server servers/load-builtins! builtins)
            build-in-names (p/all (map (partial resolve-name runtime) (keys builtins)))
            asts (p/all (map (partial load-by-id runtime) build-in-names))]
-     (update runtime :server eval-all asts))))
+     (update runtime :server eval-all asts ""))))
 
 (defn link-storage
   ""
@@ -224,9 +230,9 @@
     (p/all (map (partial stores/load-by-id store) ids))))
 
 (defn store-and-eval!
-  [{store :store server :server :as rt} tx-records]
+  [{store :store server :server :as rt} tx-records ctx]
   (p/let [asts (store! store tx-records)]
-    (eval-all server asts)))
+    (eval-all server asts ctx)))
 
 (defn load-by-sym
   ""
@@ -293,24 +299,25 @@
     (load-def-from-bundle rt id defns)))
 
 
-(defn eval-expression! [{:keys [store server] :as rt} form]
-  (p/let [new-server (store-and-eval! rt (rewrite-expression "user" form))]
+(defn eval-expression! [{:keys [store server] :as rt} form ctx]
+  (p/let [new-server (store-and-eval! rt (rewrite-expression "user" form) ctx)]
     (assoc rt :server new-server)))
 
 (defn get-definition-by-id [runtime id]
   (when id
     (-> runtime :server servers/get-defined (get id))))
 
-(defn get-definition-by-name [runtime sym]
+(defn get-definition-by-name [runtime ctx sym]
   (p/let [id (resolve-name runtime sym)]
-    (get-definition-by-id runtime id)))
+    (get-definition-by-id runtime (str ctx "/" id))))
 
 
 (defn fire-into-named-pipe
   ""
-  [rt pipe-name data timeout]
+  [rt ctx pipe-name data timeout]
+  (println "pipes" @pipe-links)
   (println "firing" pipe-name)
-  (p/let [pipe (get-definition-by-name rt pipe-name)]
+  (p/let [pipe (get-definition-by-name rt ctx pipe-name)]
     (do (println (:id rt) "pipeis" pipe) (if (pipes/pipe? pipe)
        (let [paket (pipes/make-paket data ::fire)
              cancel-id (:samak.pipes/cancel (:samak.pipes/meta paket))]

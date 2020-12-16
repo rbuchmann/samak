@@ -559,10 +559,10 @@
                conf (if is-module
                       (assoc (api/defexp sym (api/fn-call conf [])) :db/id sym)
                       conf)
-               rt2 (update @rt-conn :server #(rt/eval-all % [conf]))
+               rt2 (update @rt-conn :server #(rt/eval-all % [conf] :caravan-broken)) ;;FIXME
                evaled (if is-module
-                        (rt/get-definition-by-id rt2 sym)
-                        (rt/get-definition-by-name rt2 sym))]
+                        (rt/get-definition-by-id rt2 sym) ;;FIXME
+                        (rt/get-definition-by-name rt2 :broken sym))]
       ;; (println "evaled " (:samak.nodes/definition evaled))
       (:tests evaled))))
 
@@ -584,7 +584,7 @@
   ""
   [exp]
   (if (= (:samak.nodes/type exp) :samak.nodes/fn-ref)
-    (rt/get-definition-by-name @rt-conn (get-in exp [:samak.nodes/fn :samak.nodes/name]))
+    (rt/get-definition-by-name @rt-conn :broken (get-in exp [:samak.nodes/fn :samak.nodes/name])) ;;FIXME
     (do
       (println exp)
       (prom/let [ast (load-ast @rt-conn (:db/id exp))]
@@ -757,7 +757,7 @@
           (recur results))))
     (a/tap (.-out pipe) listener)
     (doall (map (fn [[pipe-name values]]
-                  (prom/let [pipe (rt/get-definition-by-name @rt-conn (symbol pipe-name))]
+                  (prom/let [pipe (rt/get-definition-by-name @rt-conn :broken (symbol pipe-name))] ;;FIXME
                     (println (str "### pipe [" (str pipe-name) "] " pipe " values: " values))
                     (if (nil? pipe)
                       (println "no such pipe: " pipe-name)

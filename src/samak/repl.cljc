@@ -60,7 +60,7 @@
 
 (defn eval-exp
   [runtime expression]
-  (let [new-symbols (:defined-ids (run/eval-expression! runtime expression))]
+  (let [new-symbols (:defined-ids (run/eval-expression! runtime expression :broken))]
     (when-let [latest (:latest new-symbols)]
       (print "EVALED:" latest))
     new-symbols))
@@ -68,46 +68,13 @@
 (defn fire-event-into-named-pipe
   [pipe-name event]
   (prom/let [arg (edn/read-string event)
-             res (run/fire-into-named-pipe @rt (symbol pipe-name) arg *default-timeout*)]
+             res (run/fire-into-named-pipe @rt "" (symbol pipe-name) arg *default-timeout*)]
     (if (:error res)
       (println (:error res)))))
-
-(defn eval-oasis
-  ""
-  [length cb state [nr exp]]
-  (let [progress (int (* (/ nr length) 100))]
-    (when (= 0 (mod progress 10))
-      (go (>! cb progress))
-      (println (str progress "%")))
-    (run/eval-expression! state exp)))
-
-(defn run-oasis
-  ""
-  [state]
-  (let [parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
-    ;; (println "oasis loaded: " (str net))
-    (reset! rt state)
-    (caravan/init @rt)
-    (fire-event-into-named-pipe "init" "1")
-    (println "oasis started")
-    (doseq [expression parsed]
-      (caravan/repl-eval expression))
-    (servers/get-defined (:server @rt))))
-
-
-(defn start-oasis
-  [cb]
-  (let [exps (oasis/start)
-        numbered (map-indexed vector exps)
-        cnt (count numbered)
-        prt (prom/resolved @rt)
-        state (reduce (fn [rt exp] (prom/handle rt (fn [rt _] (eval-oasis cnt cb rt exp)))) prt numbered)]
-    (run-oasis state)))
 
 (def repl-prefixes
   {\f (fn [in] (let [[pipe-name event] (str/split in #" " 2)]
                         (fire-event-into-named-pipe pipe-name event)))
-   \o (fn [_] (start-oasis #()))
    \e (fn [_] (println "Defined symbols:\n" (->> @rt
                                                 :server
                                                 servers/get-defined
@@ -127,7 +94,7 @@
     (prom/resolved (run-repl-cmd input))
     (prom/let [parsed (parse-samak-string input)
                prt (prom/resolved @rt)
-               new (reduce (fn [rt exp] (prom/handle rt (fn [res _] (run/eval-expression! res exp)))) prt parsed)]
+               new (reduce (fn [rt exp] (prom/handle rt (fn [res _] (run/eval-expression! res exp :repl)))) prt parsed)]
       (reset! rt new))))
 
 (defn group-repl-cmds [lines]

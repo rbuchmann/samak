@@ -3859,7 +3859,7 @@
                                       (api/symbol '_)]))
    (defncall 'log-render2 'pipes/log (api/string "render2: "))
 
-   (api/defmodule 'oasis-ui (api/map {;; (api/keyword :depends) (api/map {(api/keyword :ui) (api/symbol 'modules/ui)})
+   (api/defmodule 'oasis-ui (api/map {(api/keyword :depends) (api/map {(api/keyword :ui) (api/symbol 'modules/ui)})
                                       (api/keyword :sources) (api/map {(api/keyword :render) (api/symbol 'oasis-ui-in)
                                                                        ;; (api/keyword :m-ui) (api/symbol 'm-ui)
                                                                        ;; (api/keyword :ui-mod) (api/symbol 'ui-mod)

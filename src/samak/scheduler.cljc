@@ -80,28 +80,35 @@
 
 (defn eval-module
   ""
-  [rt conf module root]
+  [rt conf module root ctx]
   (if (contains? conf (:id module))
     (println "### skipping" (:id module))
     (p/do!
-     ;; (println "eval" (:id module) "->" module)
-     (p/all (map #(eval-module rt conf % (:id %)) (:deps module)))
+     (println "eval-module" (:id module) "->" module)
+     (p/all (map #(eval-module rt conf % (:id %) ctx) (:deps module)))
      (println "### loading" (:id module))
+     ;; (p/let [ast (run/load-ast @rt root)]
+     ;;   (reset! rt (update @rt :server run/eval-all [ast]))
+     ;;   (println "### done" (:id module)))
      (p/let [roots (:roots module)
              base (if root [root] [])
-             root-ids (into (into base (:nodes roots)) (:pipes roots))
+             _nodes (into base (:nodes roots))
+             root-ids (into base (:pipes roots))
              _ (println "[" (:id module) "] roots" root-ids)
              asts (p/all (map #(run/load-ast @rt %) root-ids))]
        (println "### evaling" (:id module))
-       (reset! rt (update @rt :server run/eval-all asts))
-       (println "### done" (:id module))))))
+       (reset! rt (update @rt :server run/eval-all asts ctx)) ;;; FIXME
+       (println "### done" (:id module)))
+     )))
 
 (defn run-module
   ""
-  [rt id sym]
+  [rt id sym ctx]
   (let [mod (run/get-definition-by-id @rt id)
-        exp [(assoc (api/fn-call {:db/id id} []) :db/id sym)]]
-    (reset! rt (update @rt :server run/eval-all exp))))
+        _ (println "run-module")
+        exp [(assoc (api/fn-call {:db/id id} [(api/string "test")]) :db/id sym)]]
+    (println "run-module2" exp)
+    (reset! rt (update @rt :server run/eval-all exp ctx))))
 
 (defn setup-out
   ""
@@ -121,10 +128,11 @@
 (defn eval-run-module
   ""
   [rt conf net sym]
-  (p/let [mod-name (module-id 'lone)]
-    (eval-module rt conf net (:id net))
+  (p/let [mod-name (module-id 'lone)
+          mod-id (helpers/uuid)]
+    (eval-module rt conf net (:id net) mod-id)
     (println (:id @rt) "### module" sym "done \\o/")
-    (run-module rt (:id net) mod-name)
+    (run-module rt (:id net) mod-name mod-id)
     (let [mod (run/resolve-fn @rt mod-name)]
       (println (:id @rt) "mod" mod-name mod)
       (setup-outs rt mod))))
