@@ -104,8 +104,7 @@
 (defn run-module
   ""
   [rt id sym ctx]
-  (let [mod (run/get-definition-by-id @rt id)
-        _ (println "run-module")
+  (let [_ (println "run-module" sym id)
         exp [(assoc (api/fn-call {:db/id id} [(api/string "test")]) :db/id sym)]]
     (println "run-module2" exp)
     (reset! rt (update @rt :server run/eval-all exp ctx))))
@@ -127,18 +126,20 @@
 
 (defn eval-run-module
   ""
-  [rt conf net sym]
-  (p/let [mod-name (module-id 'lone)
-          mod-id (helpers/uuid)]
+  [rt conf net id]
+  (p/let [mod-name (module-id id)
+          mod-id (helpers/uuid)
+          mod-sym (str mod-id "/" mod-name)]
     (eval-module rt conf net (:id net) mod-id)
-    (println (:id @rt) "### module" sym "done \\o/")
+    (println (:id @rt) "### module" id (:id net) "done \\o/")
     (run-module rt (:id net) mod-name mod-id)
-    (let [mod (run/resolve-fn @rt mod-name)]
-      (println (:id @rt) "mod" mod-name mod)
-      (setup-outs rt mod))))
+    (let [mod (run/resolve-fn @rt mod-sym)]
+      (println (:id @rt) "mod" mod-sym mod)
+      (setup-outs rt mod))
+    mod-sym))
 
 
 (defn start-module
-  [rt conf sym]
+  [rt conf sym id]
   (p/let [net (load-bundle @rt sym)]
-    (eval-run-module rt conf net sym)))
+    (eval-run-module rt conf net id)))

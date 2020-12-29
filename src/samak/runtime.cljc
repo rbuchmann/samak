@@ -117,7 +117,6 @@
   ""
   [id broadcast inbound]
   (fn [from to xf]
-    (println "### linking" (:uuid from) (:uuid to))
     (let [a (replace-piped from id broadcast inbound)
           c (replace-piped to id broadcast inbound)
           _ (when (not (pipes/pipe? a))
@@ -126,8 +125,11 @@
               (fail "cant link to " to))
           l (if xf
               (pipes/link! (pipes/link! a xf) c)
-              (pipes/link! a c))]
-      (swap! pipe-links assoc (str (pipes/uuid from) "|" (pipes/uuid to)) l)
+              (pipes/link! a c))
+          from-uuid (if (pipes/pipe? from) (pipes/uuid from) (or (:named from) from))
+          to-uuid (if (pipes/pipe? to) (pipes/uuid to) (or (:named to) to))]
+      (println "### linking" from-uuid to-uuid)
+      (swap! pipe-links assoc (str from-uuid "|" to-uuid) l)
       l)))
 
 (defn instanciate-module
