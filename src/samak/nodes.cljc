@@ -39,21 +39,10 @@
     (ref? value)             (let [id (:db/id value)]
                                (or ((:resolve *manager*) id)
                                    (compile-error "Referenced id " id " was undefined")))
-    :default                 (compile-error "unknown token during evaluation: " (str value))))
+    :default                 (compile-error "unknown token during evaluation: " (str "type: " (or (type value) "nil") " with value: " (str value)))))
 
-(defmethod eval-node ::module [{:keys [::definition] :as module}]
-  ;; (println "evaling module: " module)
-  ;; FIXME: also needs to make this stuff available for resolve?
-
-    (fn []
-    ;; FIXME
-    ;; needs to prep resolve magic when instanciating pipes, to select same runtime
-    ;; maybe simply do so explicitly
-
-        (println  (str "about to eval module: " module))
-        (let [evaled (eval-node definition)]
-          (println (str "used module: " module "->" evaled))
-          evaled)))
+(defmethod eval-node ::module [module]
+  ((:module *manager*) module *manager*))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]
@@ -71,29 +60,40 @@
 (defmethod eval-node ::float   [{:keys [::value]}] value)
 (defmethod eval-node ::builtin [{:keys [::value]}] (get *builtins* value))
 
-(defmethod eval-node ::def [{:keys [::rhs]}] (eval-node rhs))
+(defmethod eval-node ::def [{:keys [::rhs] :as fn}]
+  (let [res (eval-node rhs)
+        id (:db/id fn)]
+    ((:register *manager*) id res)
+    res))
 
 (defmethod eval-node ::pipe [{:keys [::from ::to ::xf] :as p}]
   (let [a (eval-node from)
+        c (eval-node to)
         b (when xf
             (let [db-id (:db/id xf)]
               (binding [*db-id* db-id]
                 (-> xf
                     eval-node
                     ((partial pipes/instrument db-id (:cancel? *manager*)))
-                    pipes/transduction-pipe))))
-        c (eval-node to)]
+                    (#(pipes/transduction-pipe % (str (pipes/uuid a) "-" db-id "-" (pipes/uuid c))))))))]
     ((:link *manager*) a c b)))
 
 (defmethod eval-node ::fn-ref [{:keys [::fn] :as f}]
-  (or (when (api/is-def? fn) (eval-node fn))
-      ((:resolve *manager*) (:db/id fn))
-      (compile-error "Undefined reference " fn " in " *manager*)))
+  (or ((:resolve *manager*) (:db/id fn))
+      (when (api/is-def? fn)
+        (let [res (eval-node fn)]
+          ;; (println "evaling" (:db/id fn) "->" res "def" fn)
+          res))
+      ;; (when (api/is-module? fn)
+      ;;   (let [res (eval-node fn)]
+      ;;     (println "evaling" (:db/id fn) "->" res "mod" fn) res))
+      (println "type:" (::type fn) (:db/id fn))
+      (compile-error "Undefined reference for evaling " *db-id* " fn " fn)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
   (let [func (eval-node fn-expression)]
     (try (apply (p/eval-as-fn func) (eval-reordered arguments))
-         (catch clojure.lang.ArityException ex
+         (catch #?(:clj clojure.lang.ArityException :cljs js/Error) ex
            (compile-error "wrong args: " (eval-reordered arguments) " for fn " func " -> " ex)))))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]

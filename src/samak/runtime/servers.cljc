@@ -8,23 +8,30 @@
    :cljs
    [(:require [clojure.core.async :as a]
               [cljs.reader :as edn]
-              [samak.protocols :as p]
               [samak.pipes :as pipes]
               [samak.nodes :as n])]))
 
 (defprotocol SamakServer
-  (add-manager [this man])
   (eval-ast [this ast])
   (get-defined [this])
   (load-builtins [this builtins])
   (unload [this ids]))
 
+
 (defrecord LocalSamakServer [defined-ids builtins manager]
   SamakServer
   (eval-ast [this {:keys [db/id] :as ast}]
-    (update this :defined-ids assoc id (n/eval-env (get this :manager) builtins ast id)))
-  (get-defined [_]
-    defined-ids)
+    ;; (println "eval <-" id ast)
+    (let [defs (atom (get-defined this))
+          man (merge (get this :manager)
+                     {:resolve (fn [x] (get @defs x))
+                      :register (fn [did def] (swap! defs assoc did def))})
+          def (n/eval-env man builtins ast id)]
+      (swap! defs assoc id def)
+      ;; (println "eval ->" id def)
+      (assoc this :defined-ids @defs)))
+  (get-defined [this]
+    (get this :defined-ids))
   (load-builtins [this builtins]
     (update this :builtins merge builtins))
   (unload [this ids]
