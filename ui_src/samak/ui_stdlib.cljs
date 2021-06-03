@@ -229,16 +229,25 @@
 
 
 (defn keyboard []
-  (let [c (pipes/pipe-chan ::keyboard nil)]
+  (let [c (pipes/pipe-chan (str ::keyboard (helpers/hex)) nil)]
     (set! (.-onkeypress js/document)
-          (fn [e] (do (let [event (js->clj e :keywordize-keys true)]
+          (fn [e] (do (.warn js/console e) (let [event (js->clj e :keywordize-keys true)]
                         (put-meta! c (convert-key-event event :press) ::keyboard)
                         (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
     (set! (.-onkeyup js/document)
-          (fn [e] (do (let [event (js->clj e :keywordize-keys true)]
+          (fn [e] (do (.warn js/console e) (let [event (js->clj e :keywordize-keys true)]
                         (put-meta! c (convert-key-event event :up) ::keyboard)
                         (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
-    (pipes/source c)))
+    (let [x (a/chan)
+          y (a/chan)
+          m (a/mult c)]
+      (go-loop []
+        (let [msg (<! x)]
+          (when msg (.log js/console (str "%%% drip2 kb - " msg)))
+          (recur)))
+      (a/tap m x)
+      (a/tap m y)
+      (pipes/source y nil (str ::keyfoo (helpers/hex))))))
 
 (defn ui-module
   []

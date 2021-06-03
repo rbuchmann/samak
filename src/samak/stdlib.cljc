@@ -56,13 +56,14 @@
 (defn log
   ([] (log (rand-int 100000)))
   ([prefix]
-   (let [log-chan (pipes/pipe-chan prefix nil)]
+   (let [log-chan (pipes/pipe-chan prefix 42)]
      (go-loop []
        (when-let [x (<! log-chan)]
+         (println "log" x)
          (trace/trace ::log 1337 x)
-         (if prefix
-           (tools/log prefix " " x)
-           (tools/log x))
+         ;; (if prefix
+         ;;   (tools/log prefix " " x)
+         ;;   (tools/log x))
          (recur)))
      (pipes/sink log-chan nil (str "log-" prefix)))))
 

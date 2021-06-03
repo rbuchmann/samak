@@ -87,9 +87,7 @@
   [rt pipe-name]
   (let [mod-name (sched/module-id (:module pipe-name))
         mod-alias (get @named-modules (:module pipe-name))
-        _ (println "alias" (or mod-alias mod-name))
         mod (run/resolve-fn @rt (or mod-alias mod-name))
-        _ (println "mod is" mod)
         pipe (get-in mod [(:type pipe-name) (:name pipe-name)])]
     (if (pipes/pipe? pipe)
       pipe
@@ -104,8 +102,6 @@
   ;; (pipes/link! (pipes/source in) (:scheduler @rt))
   (p/let [id (sched/start-module rt {} 'oasis-core 'lone)]
     (swap! named-modules assoc :lone id)
-    (println "foo" (get @named-modules :lone))
-    (println "foo" (get-named-pipe-memo rt {:module :lone :type :sources :name :init}))
     (caravan/init @rt)
     (println "worker started core")))
 

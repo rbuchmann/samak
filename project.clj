@@ -9,7 +9,7 @@
                  [reagent "0.6.1"]
                  [garden "1.3.2"]
                  [ring/ring-core "1.6.1"]
-                 [org.clojure/core.async "0.3.443"]
+                 [org.clojure/core.async "0.3.443" :scope "provided"] ;;forked for debugging
                  [org.clojure/core.logic "0.8.11"]
                  [datascript "0.16.1"]
                  [com.stuartsierra/dependency "0.2.0"]

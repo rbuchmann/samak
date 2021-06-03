@@ -109,11 +109,11 @@
        (println "!!!2 reg" uuid)))
    (let [m (a/mult out)
          c (pipe-chan ::drop nil)]
-     ;; (go-loop []
-     ;;     (let [msg (<! c)]
-     ;;       (when msg (t/log "%%% drip pipe [" (or uuid "-") "] " msg))
-     ;;       (recur)))
-     ;; (a/tap m c)
+     (go-loop []
+         (let [msg (<! c)]
+           (when msg (t/log "%%% drip pipe [" (or uuid "-") "] " msg))
+           (recur)))
+     (a/tap m c)
      (Pipethrough. in m in-spec out-spec uuid))))
 
 
