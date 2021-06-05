@@ -100,7 +100,7 @@
   []
   (println "worker oasis")
   ;; (pipes/link! (pipes/source in) (:scheduler @rt))
-  (p/let [id (sched/start-module rt {} 'oasis-core 'lone)]
+  (p/let [id (sched/start-module rt {} 'kbn-core 'lone)]
     (swap! named-modules assoc :lone id)
     (caravan/init @rt)
     (println "worker started core")))

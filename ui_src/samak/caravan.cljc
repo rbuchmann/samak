@@ -44,6 +44,7 @@
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 (def rt-conn (atom {:state :uninited}))
+(def tracepipe (atom nil))
 
 (def rt-link-fn (atom nil))
 
@@ -714,6 +715,11 @@
      (runtime-net (:roots bundle) test verify)
      verify)))
 
+(defn trace-stream
+  ""
+  []
+  (trace/init-tracer @rt-conn {:backend :samak :chan (pipes/in-port @tracepipe)}))
+
 (defn trace-dump
   ""
   []
@@ -724,6 +730,7 @@
 (defn persist-net
   ""
   [code]
+  (println (str "%%%%% " code))
   (prom/let [parsed (p/parse-all (s/join " " code))
              _ (rt/persist-to-ids! (:store @rt-conn) (:value parsed))]
     :done))
@@ -968,6 +975,7 @@
 
 (defn init
   [rt]
+  (println "quux" rt)
   (reset! rt-conn rt))
 
 
@@ -988,7 +996,11 @@
           caravan-eval (pipes/pipe-chan ::eval nil)
           caravan-in-pipe (pipes/sink caravan-in)
           caravan-cmd-pipe (pipes/source caravan-cmd)
-          caravan-eval-pipe (pipes/source caravan-eval)]
+          caravan-eval-pipe (pipes/source caravan-eval)
+          caravan-trace (pipes/pipe-chan ::trace nil)
+          caravan-trace-pipe (pipes/pipe caravan-trace)]
+      (reset! tracepipe caravan-trace-pipe)
+      (trace-stream)
       (println "init caravan" inst)
       (go-loop []
         (when-let [x (<! caravan-in)]
@@ -1002,6 +1014,7 @@
                 :load (test-example caravan-cmd caravan-eval (:arguments call))
                 :test (test-chuck caravan-cmd)
                 :trace (trace-dump)
+                :stream (trace-stream)
                 :create-sink (create-sink caravan-cmd caravan-eval (:arguments call))
                 :link (link caravan-cmd caravan-eval (:arguments call))
                 :insert (add-cell caravan-eval (:arguments call))
@@ -1012,7 +1025,8 @@
                 (tools/log "actions unknown: " call))))
           (recur)))
       (let [foo {:sources {:commands caravan-cmd-pipe
-                           :eval caravan-eval-pipe}
+                           :eval caravan-eval-pipe
+                           :trace caravan-trace-pipe}
                  :sinks {:actions caravan-in-pipe}}]
         (println "caravan is" inst "->" foo)
         foo))))

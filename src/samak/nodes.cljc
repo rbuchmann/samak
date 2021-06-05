@@ -65,7 +65,7 @@
 (defmethod eval-node ::def [{:keys [::rhs] :as fn}]
   (let [res (eval-node rhs)
         id (:db/id fn)]
-    ((:register *manager*) id res)
+    (when-let [r (:register *manager*)] (r id res))
     res))
 
 (defmethod eval-node ::pipe [{:keys [::from ::to ::xf] :as p}]

@@ -46,25 +46,26 @@
     (assert (not (nil? val)) "Can't put nil in on a channel")
     ;; bug in CLJS compiler boolean inference - David
     (let [^boolean closed closed]
-      (println "putting" val this closed (impl/active? handler))
+      ;; (println "putting" val this closed (impl/active? handler))
       (if (or closed (not ^boolean (impl/active? handler)))
         (box (not closed))
         (if (and buf (not (impl/full? buf)))
           (do
             (impl/commit handler)
             (let [done? (reduced? (add! buf val))
-                  _ (println "bufcnt" (count buf) (.-length takes))
+                  ;; _ (println "bufcnt" (count buf) (.-length takes))
                   take-cbs (loop [takers []]
                              (if (and (pos? (.-length takes)) (pos? (count buf)))
                                (let [^not-native taker (.pop takes)
-                                     _ (println "buffed put")]
+                                     ;; _ (println "buffed put")
+                                     ]
                                  (if ^boolean (impl/active? taker)
                                    (let [ret (impl/commit taker)
                                          val (impl/remove! buf)]
                                      (recur (conj takers (fn [] (ret val)))))
                                    (recur takers)))
                                takers))]
-              (println "got take-cbs" take-cbs)
+              ;; (println "got take-cbs" take-cbs)
               (when done? (abort this))
               (when (seq take-cbs)
                 (doseq [f take-cbs]
@@ -78,7 +79,7 @@
                               (recur)))))]
             (if taker
               (let [take-cb (impl/commit taker)]
-                (println "direct")
+                ;; (println "direct")
                 (impl/commit handler)
                 (dispatch/run (fn [] (take-cb val)))
                 (box true))

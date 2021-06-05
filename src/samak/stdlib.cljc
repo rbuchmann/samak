@@ -59,7 +59,7 @@
    (let [log-chan (pipes/pipe-chan prefix 42)]
      (go-loop []
        (when-let [x (<! log-chan)]
-         (println "log" x)
+         (println "log" prefix x)
          (trace/trace ::log 1337 x)
          ;; (if prefix
          ;;   (tools/log prefix " " x)

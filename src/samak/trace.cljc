@@ -1,25 +1,29 @@
 (ns samak.trace
   #?(:clj
-     (:require [clojure.spec.alpha   :as s]
-               [clojure.walk         :as w]
-               [promesa.core         :as prom]
-               [samak.zipkin         :as tracing]
-               [samak.trace-db       :as db]
-               [samak.helpers        :as helper]
-               [samak.tools          :as tools]
-               [samak.api            :as api]
-               ;; [samak.runtime.stores :as store]
-               )
+     (:require
+      [clojure.core.async :as a :refer [chan put! <! go-loop]]
+      [clojure.spec.alpha   :as s]
+      [clojure.walk         :as w]
+      [promesa.core         :as prom]
+      [samak.zipkin         :as tracing]
+      [samak.trace-db       :as db]
+      [samak.helpers        :as helper]
+      [samak.tools          :as tools]
+      [samak.api            :as api]
+      ;; [samak.runtime.stores :as store]
+      )
      :cljs
-     (:require [cljs.spec.alpha :as s]
-               [clojure.walk :as w]
-               [promesa.core :as prom]
-               [samak.zipkin :as tracing]
-               [samak.trace-db :as db]
-               [samak.helpers :as helper]
-               ;; [samak.runtime.stores :as store]
-               [samak.api :as api]
-               [samak.tools :as tools])))
+     (:require
+      [cljs.core.async :as a :refer [chan put! <!]]
+      [cljs.spec.alpha :as s]
+      [clojure.walk :as w]
+      [promesa.core :as prom]
+      [samak.zipkin :as tracing]
+      [samak.trace-db :as db]
+      [samak.helpers :as helper]
+      ;; [samak.runtime.stores :as store]
+      [samak.api :as api]
+      [samak.tools :as tools])))
 
 (def ^:dynamic *db-id* nil)
 (def ^:dynamic *code* nil)
@@ -37,6 +41,8 @@
   (reset! rt rt-in)
   (when (= :zipkin (:backend config))
     (reset! tracer (tracing/init config)))
+  (when (= :samak (:backend config))
+    (reset! tracer {:trace-fn (fn [t x] (when (= 1 (rand-int 100)) (put! (:chan config) {:samak.pipes/content x})) t)}))
   (when (= :logging (:backend config))
     (let [pre (or (:prefix config) "TRACE -")]
       (reset! tracer {:trace-fn (fn [t x] (println pre x) t)}))))

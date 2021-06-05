@@ -13,7 +13,7 @@
 (defn process-messages []
   (set! running? true)
   (set! queued? false)
-  (println "size " (.-length tasks))
+  ;; (println "size " (.-length tasks))
   (loop [count 0]
     (let [m (.pop tasks)]
       (when-not (nil? m)

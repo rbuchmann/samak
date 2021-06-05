@@ -186,7 +186,7 @@
   ([]
    (make-runtime nil))
   ([builtins]
-   (make-runtime builtins (fn [] [(pipes/pipe (chan) ::broken) (pipes/pipe (chan) ::broken)])))
+   (make-runtime builtins (fn [] [(pipes/pipe (chan) identity) (pipes/pipe (chan) identity)])))
   ([builtins scheduler]
    (make-runtime builtins scheduler {}))
   ([builtins scheduler conf]
