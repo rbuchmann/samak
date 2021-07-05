@@ -82,37 +82,83 @@
             (map #(transform-element % ch) children)))
     x))
 
-(defn ui [n events]
-  (let [ui-in (chan (a/sliding-buffer 1))
-        ui-out (chan (a/sliding-buffer 1000))
-        init (atom true)]
-    (go-loop []
-      (when-some [i (<! ui-in)]
-        (trace/trace ::ui 0 i)
-        (let [x (or (:samak.pipes/content i) i)]
-          (if (s/valid? ::hiccup x)
-            (when-let [node (js/document.getElementById (str "samak" n))]
-              ;; (when n (.warn js/console (str "render " n " - " x)))
-              (r/render (if events (transform-element x ui-out) x) node))
-            (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x)))))
-        (when @init
-          (reset! init false)
-          (put-meta! ui-out
-                     {:data :resize
-                      :width (.-clientWidth (.-documentElement js/document))
-                      :height (.-clientHeight (.-documentElement js/document))}
-                     ::view))
-        (recur)))
+(defn events [n]
+  (let [c (pipes/pipe-chan ::events nil)
+        init (atom true)
+        elem (if n (js/document.getElementById (str "samak" n)) (.-body js/document))
+        bound (.getBoundingClientRect elem)]
     (set! (.-onresize js/window)
-          (fn [e] (do (put-meta! ui-out (let [event (js->clj e :keywordize-keys true)]
+          (fn [e] (do (println "rez: " n)
+                      (put-meta! c (let [event (js->clj e :keywordize-keys true)]
                                      {:data :resize
                                       :width (.-clientWidth (.-documentElement js/document))
                                       :height (.-clientHeight (.-documentElement js/document))
                                       :samak.view/target (.-id (.-target event))}
                                      )
                                  ::view)
-                     false)))
-    (pipes/pipe ui-in ui-out)))
+                      (println "EVS: " n)
+                      false)))
+    (when @init
+      (reset! init false)
+      (put-meta! c
+                 {:data :resize
+                  :width (.-clientWidth (.-documentElement js/document))
+                  :height (.-clientHeight (.-documentElement js/document))}
+                 ::view))
+    (pipes/source c)))
+
+(def content (atom {}))
+
+(defn render-cb
+  ""
+  [n node]
+  (r/render (get @content n) node)
+  (swap! content dissoc n))
+
+(defn render
+  ""
+  [n node x events c]
+  (if (not (get @content n))
+    (helpers/debounce #(render-cb n node)))
+  (swap! content assoc n (if events (transform-element x c) x)))
+
+
+(defn ui
+  ([n]
+   (ui n false)) ;;FIXME
+  ([n events]
+   (let [ui-in (chan (a/sliding-buffer 1))
+         ui-out (chan (a/sliding-buffer 1000))
+         init (atom true)]
+     (go-loop []
+       (when-some [i (<! ui-in)]
+         (println "ui-in" i)
+         (trace/trace ::ui 0 i)
+         (let [x (or (:samak.pipes/content i) i)]
+           (if true ;; (s/valid? ::hiccup x)
+             (when-let [node (js/document.getElementById (str "samak" n))]
+               ;; (when (= 1 n))
+               (.warn js/console (str "render " n " - ") x)
+               (render n node x events ui-out))
+             (.warn js/console (str "invalid " n " - " (expound/expound-str ::hiccup x) "for" x))))
+         (when @init
+           (reset! init false)
+           (put-meta! ui-out
+                      {:data :resize
+                       :width (.-clientWidth (.-documentElement js/document))
+                       :height (.-clientHeight (.-documentElement js/document))}
+                      ::view))
+         (recur)))
+     ;; (set! (.-onresize js/window)
+     ;;       (fn [e] (do (println "uires")(put-meta! ui-out (let [event (js->clj e :keywordize-keys true)]
+     ;;                                       {:data :resize
+     ;;                                        :width (.-clientWidth (.-documentElement js/document))
+     ;;                                        :height (.-clientHeight (.-documentElement js/document))
+     ;;                                        :samak.view/target (.-id (.-target event))}
+     ;;                                       )
+     ;;                              ::view)
+     ;;                   false)))
+     (pipes/pipe ui-in ui-out (str "render-" n)))))
 
 (defn translate-coords
   ""
@@ -122,7 +168,7 @@
 
 
 (defn mouse [n]
-  (let [c (chan)
+  (let [c (pipes/pipe-chan ::mouse nil)
         elem (if n (js/document.getElementById (str "samak" n)) (.-body js/document))
         bound (.getBoundingClientRect elem)]
     (set! (.-onmousedown elem)
@@ -183,7 +229,7 @@
 
 
 (defn keyboard []
-  (let [c (chan)]
+  (let [c (pipes/pipe-chan ::keyboard nil)]
     (set! (.-onkeypress js/document)
           (fn [e] (do (let [event (js->clj e :keywordize-keys true)]
                         (put-meta! c (convert-key-event event :press) ::keyboard)
@@ -195,12 +241,17 @@
     (pipes/source c)))
 
 (defn ui-module
-  [id]
-  (let [render (ui id true)]
-    {:sources {:events render
-               :mouse (mouse id)
-               :keyboard (keyboard)}
-     :sinks {:render render}}))
+  []
+  (println "init ui")
+  (fn []
+    (let [xid 2
+          render (ui xid true)
+          m (mouse xid)]
+      (println "start ui:" m)
+      {:sources {:events render
+                 :mouse m
+                 :keyboard (keyboard)}
+       :sinks {:render render}})))
 
 
 ;; Exported symbols
@@ -208,5 +259,6 @@
 (def ui-symbols
   {'modules/ui     ui-module
    'pipes/ui       ui
+   'pipes/events   events
    'pipes/mouse    mouse
    'pipes/keyboard keyboard})

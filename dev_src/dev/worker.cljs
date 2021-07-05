@@ -24,6 +24,7 @@
     (go-loop []
       (let [p (<! c)
             before (helpers/now)]
+        ;; (println "to main" p)
         (.postMessage js/self (t/write w p))
         (worker/trace ::worker-out
                     (helpers/duration before (helpers/now))
@@ -33,12 +34,15 @@
 (def json-reader (t/reader :json {:handlers d/readers}))
 (defn make-handler
   ""
-  [in]
+  [in init]
   (fn
     [event]
     (let [before (helpers/now)
           data (t/read json-reader (.-data event))]
-      (put! in data)
+      ;; (println "worker in" data)
+      (if (= data :init)
+        (helpers/debounce init)
+        (put! in data))
       (worker/trace ::worker-in
                     (helpers/duration before (helpers/now))
                     (:samak.runtime/content data)))))
@@ -52,7 +56,8 @@
         out (chan)]
     (handle-update loading)
     (handle-request out)
-    (worker/start-rt loading in out)
-    (aset js/self "onmessage" (make-handler in))))
+    (aset js/self "onmessage" (make-handler in #(worker/start-rt loading in out)))
+    (put! out {:target :bootstrap})
+    ))
 
 (bootstrap)

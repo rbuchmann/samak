@@ -76,11 +76,11 @@
 
 (t/deftest should-check-pipe
   (let [test-c (chan 1)
-        p (sut/transduction-pipe (map vector))
+        p (sut/transduction-pipe (map (fn [x] (hash-map :samak.pipes/content (vector (:samak.pipes/content x))))))
         in-spec {}
         out-spec {}
-        checked (sut/checked-pipe p ::in-spec ::out-spec)]
-    (a/tap (sut/out-port checked) test-c)
+        checked (sut/checked-pipe p ::in-spec ::out-spec ::test)]
     (t/is (sut/pipe? checked))
+    (a/tap (sut/out-port checked) test-c)
     (sut/fire-raw! checked (sut/make-paket "foo" ::test))
-    (t/is (= "foo" (:samak.pipes/content (first (<!! test-c)))))))
+    (t/is (= ["foo"] (:samak.pipes/content (<!! test-c))))))

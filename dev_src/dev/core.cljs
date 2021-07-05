@@ -3,12 +3,12 @@
             [clojure.core.async :as a :refer [<! >! chan close! put!]]
             [cognitect.transit :as t]
             [metosin.transit.dates :as d]
+            [promesa.core :as p]
             [dev.render :as render]
             [samak.runtime :as run]
             [samak.helpers :as helpers]
             [samak.builtins :as builtins])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
-
 
 (defn update-bar
   ""
@@ -22,10 +22,14 @@
 
 (defn handle-update
   ""
-  [c]
+  [c done]
   (go-loop []
     (let [p (<! c)]
-      (update-bar p))
+      (do
+        (update-bar p)
+        (when (= p 100)
+          (println "done core")
+          (done))))
     (recur)))
 
 (defn handle-send
@@ -35,6 +39,7 @@
     (go-loop []
       (let [p (<! c)
             before (helpers/now)]
+        (println "to worker" p)
         (.postMessage worker (t/write w p))
         (render/trace ::render-out
                     (helpers/duration before (helpers/now))
@@ -44,28 +49,36 @@
 (def json-reader (t/reader :json {:handlers d/readers}))
 (defn make-handler
   ""
-  [load in]
+  [load to-main to-worker]
   (fn
     [event]
     (let [data (t/read json-reader (.-data event))]
+      (println "recv from w" data)
       (condp = (:target data)
         :load (put! load (:data data))
-        (put! in data)))))
+        :bootstrap (put! to-worker :init)
+        (put! to-main data)))))
+
 
 (defn init
   ""
   []
-  (println "start")
-  (let [in (chan)
-        out (chan)]
-    (render/start-render-runtime in out)
-    (let [w (js/Worker. "/js/oasis-worker.js")
+  (p/let [in-main (chan)
+          out-main (chan)
+          out-mult (a/mult out-main)
+          in-worker (chan)
+          in-preview (chan)
           loading (chan)]
-      (handle-update loading)
-      (aset w "onmessage" (make-handler loading in))
-      (handle-send w out)
-      ;; (.postMessage w (pr-str {:cmd "init" :args {:name "tl"}}))
-      )
+    (a/tap out-mult in-worker)
+    (render/start-render-runtime loading in-main out-main)
+    (let [w (js/Worker. "/js/oasis-worker.js")]
+      (handle-send w in-worker)
+      (aset w "onmessage" (make-handler loading in-main in-worker))
+      (handle-update loading
+                     (fn [] (p/do! ;; (a/tap out-mult in-preview)
+                                   ;; (render/start-preview-runtime in-preview in-main)
+                                   (render/start-main loading)
+                                   ))))
     ))
 
 (init)

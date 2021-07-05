@@ -20,6 +20,10 @@
   #:samak.nodes{:type :samak.nodes/fn-ref
                 :fn   [:samak.nodes/name identifier]})
 
+(defn id-ref [identifier]
+  #:samak.nodes{:type :samak.nodes/fn-ref
+                :fn   {:db/id identifier}})
+
 (defn pipe
   ([from to]
    #:samak.nodes {:type :samak.nodes/pipe

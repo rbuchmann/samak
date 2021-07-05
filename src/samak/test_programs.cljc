@@ -72,15 +72,15 @@
    "(def out (pipes/log))"
    "(def out2 (pipes/log))"
    "(def incinc (-> (inc _) (inc _)))"
-   "(| in incinc out2)"
    "(| in incinc out)"
-   "(def tl {:source {:main in}
-             :tests {:test {:when {\"in\" [1]}
-                            :then {\"out\" [(-> (incase (= 3 _) :success))]
-                                   \"out2\" [(-> (incase (= 3 _) :success))]}}
-                     :test2 {:when {\"in\" [3]}
-                             :then {\"out\" [(-> (incase (= 5 _) :success))]}}
+   "(| in incinc out2)"
+   "(defmodule tl {:sources {:main in :out out :out2 out2} :sinks {:out out :out2 out2}
+                   :tests {:test {:when {\"in\" [1]}
+                                  :then {\"out\" [(-> (incase (= 3 _) :success))]
+                                         \"out2\" [(-> (incase (= 3 _) :success))]}}
                      }})"])
+                     ;; :test2 {:when {\"in\" [3]}
+                     ;;         :then {\"out\" [(-> (incase (= 5 _) :success))]}}
 
 (def test-local-modules
   [
@@ -93,25 +93,56 @@
 
 (def test-builtin-modules
   ["(def in (pipes/debug))"
-   "(def mod (modules/caravan))"
-   "(def a (-> mod :-sinks :-actions))"
-   "(| in (a 42))"
-   "!f in \"!!!\""
+   "(def out (pipes/log))"
+   "(def mod ((modules/caravan)))"
+   "(def a ((-> mod :-sinks :-actions) 42))"
+   "(def b ((-> mod :-sources :-commands) 42))"
+   "(| in a)"
+   "(| b out)"
+   "!f in {:ping 1}"
    ])
 
 (def test-local-modules-test
-  [
-   "(def in (pipes/debug))"
+  ["(def in (pipes/debug))"
    "(def out (pipes/debug))"
    "(| in (inc _) out)"
    "(defmodule bar {:sources {:in in}
                     :sinks {:out out}
                     :tests {:t1 {:when {\"in\" [1]}
-                                 :then {\"out\" [(incase 2 :success)]}}}
+                                 :then {\"out\" [(incase (= 2 _) :success)]}}}
    })"
    ])
 
+
 (def test-builtin-modules-test
+  ["(def in (pipes/debug))"
+   "(def out (pipes/debug))"
+   "(def mod ((modules/caravan)))"
+   "(def act (-> mod :-sinks :-actions))"
+   "(def cmd (-> mod :-sources :-commands))"
+   "(def a (act 42))"
+   "(def b (cmd 42))"
+   "(| in a)"
+   "(| b out)"
+   "(defmodule bar {:sources {:in in :b b}
+                    :sinks {:out out}
+                    :tests {:t1 {:when {\"in\" [:ping]}
+                                 :then {\"out\" [(-> (spy \"pong\") (incase (= :pong :-event) :success))]}}}
+   })"
+   ])
+
+(def test-local-modules-multi-test
+  ["(def in (pipes/debug))"
+   "(def out (pipes/debug))"
+   "(| in (inc _) out)"
+   "(defmodule bar {:sources {:in in}
+                    :sinks {:out out}
+                    :tests {:t1 {:when {\"in\" [1]}
+                                 :then {\"out\" [(incase (= 2 _) :success)]}}}
+   })"
+   ])
+
+(def test-nested-modules-test
   ["(def in (pipes/debug))"
    "(def out (pipes/debug))"
    "(def mod ((modules/caravan) 42))"
@@ -119,9 +150,57 @@
    "(def b ((-> mod :-sources :-commands) 42))"
    "(| in a)"
    "(| b out)"
-   "(def bar {:sources {:in in :fake b}
-              :tests {:test {:when {\"in\" [{:ping :me}]}
-                             :then {\"out\" [(incase (:-pong _) :success)]}}}})"
+   "(defmodule bar {:depends {:caravan modules/caravan}
+                    :sources {:in in :b b :mod mod}
+                    :sinks {:out out}
+                    :tests {:t1 {:when {\"in\" [1]}
+                                 :then {\"out\" [(incase (= 2 _) :success)]}}}})"
+   "(def s (pipes/debug))"
+   "(def t (pipes/debug))"
+   "(| s t)"
+   "(defmodule quux {:sources {:s s}
+                     :sinks {:t t}
+                     :tests {:t1 {:when {\"s\" [1]}
+                                  :then {\"t\" [(incase 1 :success)]}}}})"
+   "(def barmod (bar))"
+   "(def quuxmod (quux))"
+   "(def x (pipes/debug))"
+   "(def quuxin ((-> barmod :-sources :-in) 42))"
+   "(def quuxout ((-> barmod :-sources :-in) 42))"
+   "(def barin ((-> barmod :-sources :-in) 42))"
+   "(def barout ((-> barmod :-sinks :-out) 42))"
+   "(| x quuxin)"
+   "(| x barin)"
+   "(defmodule baz {:depends {:bar bar :quux quux}
+                    :sources {:x x :barmod barmod}
+                    :tests {:t1 {:when {\"in\" [1]}
+                                 :then {\"out\" [(incase 2 :success)]}}}})"
+   ;; "!f in \"!!!\""
+   ])
+
+(def test-nested-modules-multi-test
+  ["(def in (pipes/debug))"
+   "(def out (pipes/debug))"
+   "(def red (pipes/reductions (+ :-next :-state) 0))"
+   "(| in red)"
+   "(| red out)"
+   "(defmodule bar {:sources {:in in :b b :mod mod}
+                    :sinks {:out out}
+                    :tests {:t1 {:when {\"in\" [1]}
+                                 :then {\"out\" [(incase (= 2 _) :success)]}}}})"
+   "(def x (pipes/debug))"
+   "(def barmod (bar))"
+   "(def barin ((-> barmod :-sources :-in) 42))"
+   "(def barout ((-> barmod :-sinks :-out) 42))"
+   "(def barmod2 (bar))"
+   "(def barin2 ((-> barmod2 :-sources :-in) 42))"
+   "(def barout2 ((-> barmod2 :-sinks :-out) 42))"
+   "(| x barin)"
+   "(| x barin2)"
+   "(defmodule baz {:depends {:bar bar}
+                    :sources {:x x :barmod barmod :barmod2 barmod2}
+                    :tests {:t1 {:when {\"x\" [1]}
+                                 :then {\"barin\" [(incase false :success)]}}}})"
    ;; "!f in \"!!!\""
    ])
 
@@ -163,7 +242,7 @@
    (| in joke-list)
 
    (| joke-list render-ui ui-out)
-   (def chuck {:sources {:main in
+   (defmodule chuck {:sources {:main in
                          :ui-in ui-in
                          :http-in http-in}
                 :tests {

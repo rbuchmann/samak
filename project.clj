@@ -28,6 +28,7 @@
                  [ring/ring-defaults "0.3.2"]
                  [derekchiang/ring-proxy "1.0.1"]
                  [camel-snake-kebab "0.4.0"]
+                 [funcool/promesa "6.0.0"]
                  [keybind "2.1.0"]
                  [expound "0.7.2"]
                  [org.clojure/test.check "0.9.0"]]
