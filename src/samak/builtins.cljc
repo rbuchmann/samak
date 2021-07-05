@@ -57,7 +57,7 @@
   (into [] (map vec (partition 2 (interleave c1 c2)))))
 
 (defn lookup [m x d]
-  (get x m d))
+  (get m x d))
 
 (def samakified-builtins
   (samakify-all
@@ -89,6 +89,7 @@
    (remove     [!f col])
    (filter     [!f col])
    (map        [!f col])
+   (mapv        [!f col])
    (mapcat     [!f col])
    (concat     [& args])
    (flatten    [col])
@@ -144,6 +145,9 @@
    (min   [& args])
    (odd?  [x])
    (even? [x])
+
+   ;; random functions
+   (rand-int [x])
    ))
 
 
@@ -244,7 +248,6 @@
   (merge
    samakified-builtins
    {'->            chain
-    '|>            (comp pipes/instrument chain)
     '_             identity
     'reduce        reduce*
     'only          #(if* % identity tt/ignore)

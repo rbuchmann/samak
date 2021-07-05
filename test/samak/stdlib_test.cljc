@@ -15,8 +15,8 @@
   (let [debug (sut/debug)
         listener (chan 1)]
       (a/tap (.out-port debug) listener)
-      (pipes/fire! debug :foo)
-      (take! listener (fn [x] (is (= :foo x))))))
+      (pipes/fire! debug :foo :foo)
+      (take! listener (fn [x] (is (= :foo (:samak.pipes/content x)))))))
 
 ;; (deftest should-call
 ;;   (let [out (chan 1)]
@@ -30,7 +30,7 @@
         listener (chan 1)]
     (a/tap (.out-port result) listener)
     (take! listener (fn [x] (is (= [] x))) true)
-    (pipes/fire! result :foo)))
+    (pipes/fire! result :foo :foo)))
 
 
 #_(deftest should-query-db
@@ -39,5 +39,5 @@
         listener (chan 1)]
     ;; (is (pipes/pipe? result))
     (a/tap (.out-port result) listener)
-    (pipes/fire! result :foo)
+    (pipes/fire! result :foo :foo)
     (take! listener (fn [x] (is (= [] x))) true)))

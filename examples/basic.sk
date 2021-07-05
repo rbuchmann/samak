@@ -1,4 +1,4 @@
 (def in (pipes/debug))
 (def out (pipes/log))
-(| in (|> (inc _)) out)
+(| in (inc _) out)
 !f in 5

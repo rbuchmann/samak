@@ -20,6 +20,10 @@
   #:samak.nodes{:type :samak.nodes/fn-ref
                 :fn   [:samak.nodes/name identifier]})
 
+(defn id-ref [identifier]
+  #:samak.nodes{:type :samak.nodes/fn-ref
+                :fn   {:db/id identifier}})
+
 (defn pipe
   ([from to]
    #:samak.nodes {:type :samak.nodes/pipe
@@ -39,13 +43,8 @@
 
 
 (defn map [kvs]
-  #:samak.nodes {:type     :samak.nodes/map
+  #:samak.nodes {:type        :samak.nodes/map
                  :mapkv-pairs (vec (clojure.core/map map-entry kvs))})
-
-(defn network [network-name forms]
-  #:samak.nodes {:type     :samak.nodes/network
-                 :name     network-name
-                 :children (tools/ordered forms)})
 
 (defn vector [items]
   #:samak.nodes {:type     :samak.nodes/vector
@@ -60,6 +59,11 @@
   #:samak.nodes{:type :samak.nodes/def
                 :name expression-name
                 :rhs  rhs})
+
+(defn defmodule [module-name definition]
+  #:samak.nodes{:type :samak.nodes/module
+                :name module-name
+                :definition definition})
 
 (defn symbol-node? [s]
   (and (= :samak.nodes/symbol (:samak.nodes/type s))
@@ -89,6 +93,18 @@
   [node]
   (= (:samak.nodes/type node) :samak.nodes/pipe))
 
-(defn is-network?
+(defn is-module?
   [node]
-  (= (:samak.nodes/type node) :samak.nodes/network))
+  (= (:samak.nodes/type node) :samak.nodes/module))
+
+(defn get-pipe-source-name
+  [ast]
+  (get-in ast [:samak.nodes/from :samak.nodes/fn :samak.nodes/name]))
+
+(defn get-pipe-sink-name
+  [ast]
+  (get-in ast [:samak.nodes/to :samak.nodes/fn :samak.nodes/name]))
+
+(defn get-pipe-xf-fn
+  [ast]
+  (get-in ast [:samak.nodes/xf :samak.nodes/fn]))

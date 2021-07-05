@@ -6,10 +6,13 @@
      (:require [cljs.spec.alpha :as s]
                [cljs.pprint :refer [pprint]])))
 
+
 (defn log [& args]
   (let [msg (apply str args)]
     #?(:cljs (.log js/console msg)
        :clj (println msg))))
+
+
 
 (defn fail [& args]
   (let [msg (->> args (interpose " ") (apply str))]

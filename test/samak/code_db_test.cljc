@@ -12,7 +12,7 @@
                       (api/keyword :foo)  (api/integer 42)})]
     (is (some? (db/parse-tree->db! (db/create-empty-db) [ast])))))
 
-(def builtins ['inc 'dec 'pipes/debug '|>])
+(def builtins ['inc 'dec 'pipes/debug '->])
 
 (defn make-example-db [load-example?]
   (let [db (db/create-empty-db)]
@@ -75,7 +75,9 @@
 (deftest should-load-one-link-network
   (let [base   (make-example-db true)
         named-id (db/resolve-name base 'input)
-        loaded (first (vals (db/load-network base named-id)))]
+        network (vals (db/load-network base named-id))
+        loaded (first network)]
+    (is (= 1 (count network)))
     (is (= 1 (count (:ends loaded))))
     (is (= 1 (count (:pipes loaded))))
     (is (= :samak.nodes/def (:samak.nodes/type (db/load-by-id base (first (:ends loaded))))))))

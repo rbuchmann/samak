@@ -5,7 +5,14 @@
             [samak.oasis          :as oasis]
             [samak.core           :as core]
             [samak.runtime        :as rt]
+            [samak.test-programs  :as test-programs]
             [samak.code-db        :as db]
+            [samak.utils          :as utils]
+            [samak.trace          :as trace]
+            [samak.scheduler      :as sched]
+            [promesa.core         :as p]
+            #?(:clj [clojure.core.async :as a :refer [<! chan go go-loop]]
+               :cljs [clojure.core.async :as a :refer [<! chan go go-loop]])
             #?(:clj [clojure.test :as t :refer [deftest is]]
                :cljs [cljs.test   :as t :include-macros true])))
 
@@ -19,7 +26,6 @@
                       (api/fn-call (api/symbol '=)
                                    [(api/integer 1)])
                       (api/string "foo")
-                      (api/symbol 'bar)
                       (api/float 23.1)
                       (api/key-fn :baz)])})])))
 
@@ -32,10 +38,9 @@
                   {:type :caravan/func  :display "func"  :value "="     :level 5 :counter 6}
                     {:type :caravan/int   :display "int"   :value "1"     :level 6 :counter 7}
                   {:type :caravan/str   :display "str"   :value "foo"   :level 5 :counter 8}
-                  {:type "unknown: :samak.nodes/fn-ref" :level 5 :counter 9}
                   ;; {:type :caravan/sym   :display "sym"   :value "bar"   :level 5 :counter 9} ;; TODO: unbreak symbol handling
-                  {:type :caravan/float :display "float" :value "23.1"  :level 5 :counter 10}
-                  {:type :caravan/acc   :display "acc"   :value ":-baz" :level 5 :counter 11}]
+                  {:type :caravan/float :display "float" :value "23.1"  :level 5 :counter 9}
+                  {:type :caravan/acc   :display "acc"   :value ":-baz" :level 5 :counter 10}]
          (sut/make-cell-list all-things-samak))))
 
 (deftest shoquld-find-cell-root
@@ -144,7 +149,7 @@
                                         (is (= 5 (count (:samak.nodes/children l))))))}
       #(is (= :done ((sut/cut-cell) {:sym "test" :cell-idx 5}))))))
 
-(deftest should-load-network
+#_(deftest should-load-network
   (let [syms (merge {'pipes/ui       pipes/debug
                      'pipes/mouse    pipes/debug
                      'pipes/keyboard pipes/debug
@@ -160,3 +165,66 @@
                                       )}
       #(is (= 2 (count (keys (sut/load-oasis)))))))
   )
+
+(deftest should-run-tests
+  (p/let [syms (merge {'pipes/ui    pipes/debug
+                       'pipes/http  pipes/debug}
+                      core/samak-symbols)
+        c (chan 1)
+        rt (rt/make-runtime syms)
+        ;; _ (trace/init-tracer rt {:backend :logging})
+        _ (sut/init rt)
+        _ (sut/test-net c test-programs/tl6 'tl)]
+    (utils/test-async
+      (go
+        (let [val (<! c)]
+          (println (str "\ntraces: "))
+          (sut/trace-dump)
+          (is (= :success val)))))))
+
+
+(deftest should-test-chuck
+  (p/let [syms (merge {'pipes/ui    pipes/debug
+                     'pipes/http  pipes/debug}
+                    core/samak-symbols)
+        c (chan 1)
+        rt (rt/make-runtime syms)]
+    ;; (trace/init-tracer rt {:backend :logging})
+    (sut/init rt)
+    (sut/test-chuck c)
+    (utils/test-async
+     (go
+       (let [[raw port] (a/alts! [c (a/timeout 30000)])
+             val (if (= port c) raw :timeout-overall)]
+         (println (str "\ntraces: "))
+         (sut/trace-dump)
+         (is (= :success val)))))))
+
+(deftest should-test-builtin-modules
+  (p/let [syms core/samak-symbols
+          c (chan 1)
+          rt (rt/make-runtime syms)]
+    ;; (trace/init-tracer rt {:backend :logging})
+    (sut/init rt)
+    (sut/test-net c test-programs/test-builtin-modules-test 'bar)
+    (utils/test-async
+     (go
+       (let [[raw port] (a/alts! [c (a/timeout 5000)])
+             val (if (= port c) raw :timeout-overall)]
+         (println (str "\ntraces: "))
+         (sut/trace-dump)
+         (is (= :success val)))))))
+
+(deftest should-eval-lib
+  (utils/test-promise
+   (p/then (p/let [syms core/samak-symbols
+                   c (chan 1)
+                   rt (rt/make-runtime syms)
+                   ;; (trace/init-tracer rt {:backend :logging})
+                   _ (sut/init rt)
+                   _ (sut/persist-net test-programs/test-nested-modules-test)
+                   bundle (sched/load-bundle rt 'baz)]
+             (sut/eval-bundle bundle))
+           #(and (is (= 3 (count (:modules %))))
+                 (is (= 5 (count (:pipes %))))
+                 (is (= 11 (count (:nodes %))))))))

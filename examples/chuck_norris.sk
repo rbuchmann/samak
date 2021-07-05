@@ -12,7 +12,6 @@
                  [:input {:on-change :change}]]
                 (into [:ul] (map render-joke _))])
 
-
 (def joke-input-state (pipes/reductions
                        (if (= (-> :-next :-data) :change)
                          {:event :change
@@ -24,21 +23,19 @@
 
 (| ui joke-input-state)
 (| joke-input-state
-   (|> (if (= :submit :-event)
-         {:url (str "http://api.icndb.com/jokes/" :-value)}
-         ignore))
+   (if (= :submit :-event)
+     {:url (str "http://api.icndb.com/jokes/" :-value)}
+     ignore)
    http)
-
 
 (def joke-list (pipes/reductions (conj :-state :-next) []))
 
-(| http (|> (if (= "success" :-type)
-              :-value
-              {:id -1 :joke "Failed fetching joke"})) joke-list)
-
+(| http (if (= "success" :-type)
+          :-value
+          {:id -1 :joke "Failed fetching joke"}) joke-list)
 
 (| start joke-list)
 
-(| joke-list (|> render-ui) ui)
+(| joke-list render-ui ui)
 
 !f start {:id 1 :joke "Test joke"}

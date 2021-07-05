@@ -4,6 +4,8 @@
    [(:require
      [clojure.edn :as edn]
      [clojure.string :as str]
+     [clojure.core.async :as a :refer [<! >! chan go go-loop close! put!]]
+     [promesa.core :as prom]
      [samak.lisparser :as p]
      [samak.oasis :as oasis]
      [samak.pipes :as pipes]
@@ -12,13 +14,17 @@
      [samak.caravan :as caravan]
      [samak.api :as api]
      [samak.tools :as t]
+     [samak.trace :as trace]
      [samak.core :as core]
+     [samak.test-programs :as test-programs]
      [samak.runtime.servers :as servers]
      [samak.runtime.stores :as stores])]
    :cljs
    [(:require
      [cljs.reader :as edn]
      [clojure.string :as str]
+     [clojure.core.async :as a :refer [<! >! chan close! put!]]
+     [promesa.core :as prom]
      [samak.lisparser :as p]
      [samak.oasis :as oasis]
      [samak.pipes :as pipes]
@@ -27,11 +33,19 @@
      [samak.caravan :as caravan]
      [samak.api :as api]
      [samak.tools :as t]
+     [samak.trace :as trace]
      [samak.core :as core]
+     [samak.test-programs :as test-programs]
      [samak.runtime.servers :as servers]
-     [samak.runtime.stores :as stores])]))
+     [samak.runtime.stores :as stores])
+    (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
+
+(def ^:dynamic *default-timeout* 0)
+(def config {:tracer {:backend :none}})
 
 (def rt (atom (run/make-runtime core/samak-symbols)))
+(def trace (atom (trace/init-tracer rt (:tracer config))))
+
 (caravan/init @rt)
 
 (defn catch-errors [ast]
@@ -46,47 +60,21 @@
 
 (defn eval-exp
   [runtime expression]
-  (let [new-symbols (:defined-ids (run/eval-expression! runtime expression))]
+  (let [new-symbols (:defined-ids (run/eval-expression! runtime expression :broken))]
     (when-let [latest (:latest new-symbols)]
       (print "EVALED:" latest))
     new-symbols))
 
 (defn fire-event-into-named-pipe
   [pipe-name event]
-  (let [pipe (run/get-definition-by-name @rt (symbol pipe-name))]
-    (if (pipes/pipe? pipe)
-      (do (let [arg (edn/read-string event)]
-            (pipes/fire! pipe arg))
-          {})
-      (println (str "could not find pipe " pipe-name)))))
-
-(defn eval-oasis
-  ""
-  [length]
-  (fn [state [nr exp]]
-    (let [progress (int (* (/ nr length) 100))]
-      (when (= 0 (mod progress 10)) (println (str progress "%")))
-      (run/eval-expression! state exp))))
-
-
-(defn start-oasis
-  []
-  (let [exps (oasis/start)
-        numbered (map-indexed vector exps)
-        state (reduce (eval-oasis (count numbered)) @rt numbered)
-        parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
-    ;; (println "oasis loaded: " (str net))
-    (reset! rt state)
-    (fire-event-into-named-pipe "oasis" "1")
-    (println "oasis started")
-    (doseq [expression parsed]
-        (caravan/repl-eval expression))
-    (servers/get-defined (:server @rt))))
+  (prom/let [arg (edn/read-string event)
+             res (run/fire-into-named-pipe @rt "" (symbol pipe-name) arg *default-timeout*)]
+    (if (:error res)
+      (println (:error res)))))
 
 (def repl-prefixes
   {\f (fn [in] (let [[pipe-name event] (str/split in #" " 2)]
                         (fire-event-into-named-pipe pipe-name event)))
-   \o (fn [_] (start-oasis))
    \e (fn [_] (println "Defined symbols:\n" (->> @rt
                                                 :server
                                                 servers/get-defined
@@ -103,12 +91,11 @@
   and returns a new map of symbols"
   [input]
   (if (str/starts-with? input "!")
-    (run-repl-cmd input)
-    (when-let [parsed (parse-samak-string input)]
-      #_(println parsed)
-      #_(doseq [expression parsed]
-          (caravan/repl-eval expression))
-      (swap! rt #(reduce run/eval-expression! % parsed)))))
+    (prom/resolved (run-repl-cmd input))
+    (prom/let [parsed (parse-samak-string input)
+               prt (prom/resolved @rt)
+               new (reduce (fn [rt exp] (prom/handle rt (fn [res _] (run/eval-expression! res exp :repl)))) prt parsed)]
+      (reset! rt new))))
 
 (defn group-repl-cmds [lines]
   (->> lines
@@ -118,66 +105,4 @@
                             [(str/join " " lines)])))))
 
 (defn eval-lines [lines]
-  (doseq [line (group-repl-cmds lines)]
-    (eval-line line)))
-
-(def t0
-  ["(def in (|> inc inc))"])
-
-(def t
-  ["(def in (|> inc inc))"
-   "(def out (pipes/log))"
-   "(| in out)"
-   "!f in 5"])
-
-(def tm
-  ["(def in (|> {:foo inc}))"
-   "(def out (pipes/log))"
-   "(| in out)"
-   "!f in 5"])
-
-(def tl
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> inc inc) out)"
-   "!f in 5"])
-
-(def tl2
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> [:div id]) out)"
-   "!f in 42"])
-
-(def tl3
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> (if even? id ignore)) out)"
-   "!f in 5"
-   "!f in 6"])
-
-(def tl3b
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> (only even?)) out)"
-   "!f in 5"
-   "!f in 6"])
-
-(def tl4
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (pipes/reductions (-> [:-next :-state] sum) 0) out)"
-   "!f in 5"
-   "!f in 6"])
-
-(def tl4b
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (pipes/reductions (-> [:-state :-next] into) {}) out)"
-   "!f in 5"
-   "!f in 6"])
-
-(def tl5
-  ["(def in (pipes/debug))"
-   "(def out (pipes/log))"
-   "(| in (|> (mapcat (repeat 3))) out)"
-   "!f in [5 6]"])
+  (prom/all (map eval-line (group-repl-cmds lines))))

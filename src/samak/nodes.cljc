@@ -1,11 +1,20 @@
 (ns samak.nodes
   (:require [samak.protocols :as p]
+            [samak.api       :as api]
             [samak.pipes     :as pipes]
-            [samak.tools     :refer [fail]]
-            [samak.code-db :as db]))
+            [samak.tools     :refer [fail log]]
+            [samak.trace     :refer [*db-id*]]
+            [samak.code-db   :as db]))
 
-(def ^:dynamic *environment* {})
+(def ^:dynamic *manager* nil)
 (def ^:dynamic *builtins* {})
+(def ^:dynamic *ctx* nil)
+
+
+(defn compile-error
+  [& args]
+  (fail ["[" *db-id* "]"] args))
+
 
 (defmulti eval-node ::type)
 
@@ -26,12 +35,16 @@
 
 (defmethod eval-node nil [value]
   (cond
-    (unresolved-name? value) (fail "Tried to eval unresolved name:"
+    (unresolved-name? value) (compile-error "Tried to eval unresolved name:"
                                    (str  "'" (second value) "'"))
     (ref? value)             (let [id (:db/id value)]
-                               (or (get *environment* id)
-                                   (fail "Referenced id " id " was undefined")))
-    :default                 (fail (str "unknown token during evaluation: " (str value)))))
+                               (or ((:resolve *manager*) id)
+                                   (compile-error "Referenced id " id " was undefined")))
+    :default                 (compile-error "unknown token during evaluation: " (str "type: " (or (type value) "nil") " with value: " (str value)))))
+
+(defmethod eval-node ::module [module]
+  (println "modulectx" *ctx*)
+  ((:module *manager*) module *manager* *ctx*))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
   (reduce (fn [a {:keys [::mapkey ::mapvalue]}]
@@ -49,28 +62,48 @@
 (defmethod eval-node ::float   [{:keys [::value]}] value)
 (defmethod eval-node ::builtin [{:keys [::value]}] (get *builtins* value))
 
-(defmethod eval-node ::def [{:keys [::rhs]}] (eval-node rhs))
+(defmethod eval-node ::def [{:keys [::rhs] :as fn}]
+  (let [res (eval-node rhs)
+        id (:db/id fn)]
+    ((:register *manager*) id res)
+    res))
 
-(defmethod eval-node ::pipe [{:keys [::from ::to ::xf]}]
+(defmethod eval-node ::pipe [{:keys [::from ::to ::xf] :as p}]
   (let [a (eval-node from)
-        b (when xf (eval-node xf))
-        c (eval-node to)]
-    (if b
-      (pipes/link! (pipes/link! a b) c)
-      (pipes/link! a c))))
+        c (eval-node to)
+        b (when xf
+            (let [db-id (:db/id xf)]
+              (binding [*db-id* db-id]
+                (-> xf
+                    eval-node
+                    ((partial pipes/instrument db-id (:cancel? *manager*)))
+                    (#(pipes/transduction-pipe % (str (pipes/uuid a) "-" db-id "-" (pipes/uuid c))))))))]
+    ((:link *manager*) a c b)))
 
-(defmethod eval-node ::fn-ref [{:keys [::fn]}]
-  (or (get *environment* (:db/id fn))
-      (fail "Undefined reference " fn " in " *environment*)))
+(defmethod eval-node ::fn-ref [{:keys [::fn] :as f}]
+  (or ((:resolve *manager*) (:db/id fn))
+      (when (api/is-def? fn)
+        (let [res (eval-node fn)]
+          ;; (println "evaling" (:db/id fn) "->" res "def" fn)
+          res))
+      ;; (when (api/is-module? fn)
+      ;;   (let [res (eval-node fn)]
+      ;;     (println "evaling" (:db/id fn) "->" res "mod" fn) res))
+      (println "type:" (::type fn) (:db/id fn))
+      (compile-error "Undefined reference for evaling " *db-id* " fn " fn)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
-  ;; (println (str "call: "  fn-expression))
-  (apply (p/eval-as-fn (eval-node fn-expression)) (eval-reordered arguments)))
+  (let [func (eval-node fn-expression)]
+    (try (apply (p/eval-as-fn func) (eval-reordered arguments))
+         (catch #?(:clj clojure.lang.ArityException :cljs js/Error) ex
+           (compile-error "wrong args: " (eval-reordered arguments) " for fn " func " -> " ex)))))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]
   (pipes/link! (eval-node from) (eval-node to)))
 
-(defn eval-env [env builtins ast]
-  (binding [*environment* env
-            *builtins* builtins]
+(defn eval-env [manager builtins ast {db-id :db-id ctx :ctx}]
+  (binding [*manager* manager
+            *builtins* builtins
+            *db-id* db-id
+            *ctx* ctx]
     (eval-node ast)))
