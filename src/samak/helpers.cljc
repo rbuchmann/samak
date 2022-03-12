@@ -127,9 +127,9 @@
   [inner outer form]
   (cond
     (p/promise? form) (p/then form #(w/walk inner outer form))
-    (list? form) (outer (apply list (p/all (map inner form))))
-    (seq? form) (outer (p/all (map inner form)))
-    (coll? form) (outer (into (empty form) (p/all (map inner form))))
+    (list? form) (outer (apply list (p/do! (map inner form))))
+    (seq? form) (outer (p/do! (map inner form)))
+    (coll? form) (outer (into (empty form) (p/do! (map inner form))))
     :else (w/walk inner outer form)))
 
 (defn ppostwalk

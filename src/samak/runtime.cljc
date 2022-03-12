@@ -192,7 +192,7 @@
   ([builtins scheduler conf]
    (p/let [prep (make-runtime-internal scheduler conf builtins)
            runtime (update prep :server servers/load-builtins! builtins)
-           build-in-names (p/all (map (partial resolve-name runtime) (keys builtins)))
+           build-in-names (p/all (map #(p/do! %1) (map (partial resolve-name runtime) (keys builtins))))
            asts (p/all (map (partial load-by-id runtime) build-in-names))]
      (update runtime :server eval-all asts ""))))
 
@@ -307,7 +307,8 @@
 
 (defn get-definition-by-id [runtime id]
   (when id
-    (-> runtime :server servers/get-defined (get id))))
+    (let [defs (-> runtime :server servers/get-defined)]
+      (get defs id))))
 
 (defn get-definition-by-name [runtime ctx sym]
   (p/let [id (resolve-name runtime sym)]
@@ -317,10 +318,11 @@
 (defn fire-into-named-pipe
   ""
   [rt ctx pipe-name data timeout]
-  (println "pipes" @pipe-links)
-  (println "firing" pipe-name)
   (p/let [pipe (get-definition-by-name rt ctx pipe-name)]
-    (do (println (:id rt) "pipeis" pipe) (if (pipes/pipe? pipe)
+    (do
+      (println "pipes" @pipe-links)
+      (println "firing" pipe-name)
+      (println (:id rt) "pipeis" pipe) (if (pipes/pipe? pipe)
        (let [paket (pipes/make-paket data ::fire)
              cancel-id (:samak.pipes/cancel (:samak.pipes/meta paket))]
          (when (> timeout 0)

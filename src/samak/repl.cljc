@@ -10,6 +10,7 @@
      [samak.oasis :as oasis]
      [samak.pipes :as pipes]
      [samak.runtime :as run]
+     [samak.builtins :as builtins]
      [samak.stdlib :as std]
      [samak.caravan :as caravan]
      [samak.api :as api]
@@ -30,6 +31,7 @@
      [samak.pipes :as pipes]
      [samak.runtime :as run]
      [samak.stdlib :as std]
+     [samak.builtins :as builtins]
      [samak.caravan :as caravan]
      [samak.api :as api]
      [samak.tools :as t]
@@ -43,10 +45,32 @@
 (def ^:dynamic *default-timeout* 0)
 (def config {:tracer {:backend :none}})
 
-(def rt (atom (run/make-runtime core/samak-symbols)))
+(def rt (atom nil))
 (def trace (atom (trace/init-tracer rt (:tracer config))))
 
-(caravan/init @rt)
+(def cli-symbols
+  (merge builtins/samak-symbols
+         std/pipe-symbols
+         caravan/symbols
+         ;; #?(:cljs layout/layout-symbols)
+         ;; #?(:cljs uistd/ui-symbols)
+         ))
+
+(def scheduler
+  (let [broadcast (pipes/pipe (chan) ::main-broadcast)
+        to-rt (pipes/pipe (chan) ::main-scheduler)]
+    (println "sched")
+    ;; (handle-update "out" broadcast)
+    ;; (handle-update "in" to-rt)
+    (fn [] [to-rt broadcast])))
+
+(def cli-conf {:id "rt-cli"
+                :modules {}})
+
+(defn init []
+  (prom/let [rt-inst (run/make-runtime cli-symbols scheduler cli-conf)]
+    (reset! rt rt-inst)
+    (caravan/init @rt)))
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -66,36 +90,44 @@
     new-symbols))
 
 (defn fire-event-into-named-pipe
-  [pipe-name event]
+  [runtime pipe-name event]
   (prom/let [arg (edn/read-string event)
-             res (run/fire-into-named-pipe @rt "" (symbol pipe-name) arg *default-timeout*)]
+             rt (prom/resolved runtime)
+             res (run/fire-into-named-pipe rt :repl (symbol pipe-name) arg *default-timeout*)]
+    ;; (println "###fire" pipe-name event)
     (if (:error res)
       (println (:error res)))))
 
 (def repl-prefixes
-  {\f (fn [in] (let [[pipe-name event] (str/split in #" " 2)]
-                        (fire-event-into-named-pipe pipe-name event)))
-   \e (fn [_] (println "Defined symbols:\n" (->> @rt
-                                                :server
-                                                servers/get-defined
-                                                t/pretty)))
-   \p (fn [in] (println (parse-samak-string in)))})
+  {\f (fn [in rt] (let [[pipe-name event] (str/split in #" " 2)]
+                        (fire-event-into-named-pipe rt pipe-name event)))
+   \e (fn [_ _] (prom/resolved (println "Defined symbols:\n" (->> @rt
+                                                                :server
+                                                                servers/get-defined
+                                                                t/pretty))))
+   \p (fn [in _] (prom/resolved (println (parse-samak-string in))))})
 
-(defn run-repl-cmd [s]
+(defn run-repl-cmd [s rt]
   (let [[_ dispatch & rst] s]
     (when-let [repl-cmd (repl-prefixes dispatch)]
-      (repl-cmd (->> rst (apply str) str/trim)))))
+      (println "###cmd" s)
+      (repl-cmd (->> rst (apply str) str/trim) rt))))
+
+(def foo (atom 1))
 
 (defn eval-line
   "Evals some input line in the context of the defined symbols,
   and returns a new map of symbols"
-  [input]
+  [input runtime]
   (if (str/starts-with? input "!")
-    (prom/resolved (run-repl-cmd input))
+    (do
+      (run-repl-cmd input runtime)
+      runtime)
     (prom/let [parsed (parse-samak-string input)
-               prt (prom/resolved @rt)
-               new (reduce (fn [rt exp] (prom/handle rt (fn [res _] (run/eval-expression! res exp :repl)))) prt parsed)]
-      (reset! rt new))))
+               prt (prom/resolved runtime)
+               new (reduce (fn [rt exp] (prom/handle rt (fn [res _] (println "eval" exp) (run/eval-expression! res exp :repl)))) prt parsed)]
+      (reset! rt new)
+      new)))
 
 (defn group-repl-cmds [lines]
   (->> lines
@@ -105,4 +137,5 @@
                             [(str/join " " lines)])))))
 
 (defn eval-lines [lines]
-  (prom/all (map eval-line (group-repl-cmds lines))))
+  (prom/let [evals (reduce (fn [rt exp] (prom/handle rt (fn [res _] (eval-line exp res)))) (prom/resolved @rt) (group-repl-cmds lines))]
+    evals))

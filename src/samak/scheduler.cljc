@@ -51,7 +51,7 @@
   ""
   [rt [id mod]]
   (println "### load-deps" id mod)
-  (p/let [deps (p/all (mapv (fn [m] (load-deps rt (first m))) (:dependencies mod)))
+  (p/let [deps (p/all (map (fn [m] (load-deps rt (first m))) (:dependencies mod)))
           roots (load-module rt mod)]
     {:id id
      :deps deps
