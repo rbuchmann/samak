@@ -70,19 +70,19 @@
 ;;          (caravan/trace-dump)
 ;;          (is (= :success val)))))))
 
-(deftest should-test-oasis-ui
-  (let [syms (merge {'pipes/ui (fn [_] (pipes/debug))}
-                    c/samak-symbols)
-        c (chan 1)
-        rt (runtime/make-runtime syms)
-        state (reduce (fn [s e] (runtime/eval-expression! s e)) rt (sut/start-ui))]
-    (trace/init-tracer rt {:backend :logging})
-    (caravan/init rt)
-    (caravan/run-testsuite c 'oasis-ui {:timeout 3000})
-    (utils/test-async
-     (go
-       (let [[raw port] (a/alts! [c (a/timeout 300000)])
-             val (if (= port c) raw :timeout-overall)]
-         (println (str "\ntraces: "))
-         (caravan/trace-dump)
-         (is (= :success val)))))))
+;; (deftest should-test-oasis-ui
+;;   (let [syms (merge {'pipes/ui (fn [_] (pipes/debug))}
+;;                     c/samak-symbols)
+;;         c (chan 1)
+;;         rt (runtime/make-runtime syms)
+;;         state (reduce (fn [s e] (runtime/eval-expression! s e)) rt (sut/start-ui))]
+;;     (trace/init-tracer rt {:backend :logging})
+;;     (caravan/init rt)
+;;     (caravan/run-testsuite c 'oasis-ui {:timeout 3000})
+;;     (utils/test-async
+;;      (go
+;;        (let [[raw port] (a/alts! [c (a/timeout 10000)])
+;;              val (if (= port c) raw :timeout-overall)]
+;;          (println (str "\ntraces: "))
+;;          (caravan/trace-dump)
+;;          (is (= :success val)))))))

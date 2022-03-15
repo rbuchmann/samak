@@ -31,11 +31,17 @@
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 
+
+
 ;; Utility helper
 
 (defn debug
-  ([] (pipes/pipe (chan)))
-  ([spec] (pipes/checked-pipe (debug) spec spec)))
+  ([] (debug (helpers/uuid)))
+  ([id] (debug id nil))
+  ([id spec]
+   (if spec
+     (pipes/checked-pipe (debug) spec spec id)
+     (pipes/pipe (pipes/pipe-chan id nil) id))))
 
 (defn log-through
   ([]
@@ -44,20 +50,22 @@
    (pipes/transduction-pipe
     (map (if prefix
            (fn [x] (tools/log prefix x) x)
-           (fn [x] (tools/log x) x))))))
+           (fn [x] (tools/log x) x)))
+    (str "logthrough-" prefix))))
 
 (defn log
   ([] (log (rand-int 100000)))
   ([prefix]
-   (let [log-chan (chan)]
+   (let [log-chan (pipes/pipe-chan prefix 42)]
      (go-loop []
        (when-let [x (<! log-chan)]
+         (println "log" prefix x)
          (trace/trace ::log 1337 x)
-         (if prefix
-           (tools/log prefix x)
-           (tools/log x))
+         ;; (if prefix
+         ;;   (tools/log prefix " " x)
+         ;;   (tools/log x))
          (recur)))
-     (pipes/sink log-chan))))
+     (pipes/sink log-chan nil (str "log-" prefix)))))
 
 ;; Networking
 
@@ -70,63 +78,6 @@
 
 (defn http []
   (pipes/async-pipe http-call nil nil))
-
-
-;; DB TODO: Don't think this belongs here
-
-;; (defn db-init [args]
-;;   (db/create-empty-db))
-
-;; (defn query-call
-;;   [db query]
-;;   (fn [input out]
-;;     (let [ast (or (db/load-by-id input) :not-found)]
-;;       (put! out ast))))
-
-;; (defn db-persist [db args]
-;;   (db/parse-tree->db! db args))
-
-;; (defn db-query [db query]
-;;   (pipes/async-pipe (query-call db query) nil nil))
-
-
-;; Runtime
-
-(def notify-chan (chan 1))
-
-(defn notify-source
-  ([ast]
-   (notify-source ast nil))
-  ([ast cb]
-   (if cb
-     (put! notify-chan (pipes/make-paket ast ::notify) cb)
-     (put! notify-chan (pipes/make-paket ast ::notify)))))
-
-(defn eval-notify
-  ""
-  []
-  (let [source (chan 1)]
-    (a/pipeline 1 source (map (fn [x] (println "ast in: " x) x)) notify-chan)
-    (pipes/source source)))
-
-
-;; TODO: don't think this belongs here
-
-#_(defn eval-line-call
-  ""
-  [input]
-  (doseq [expression (lp/parse input)]
-    (notify-source expression)))
-
-#_(defn eval-line
-  ""
-  []
-  (let [log-chan (chan)]
-    (go-loop []
-      (when-let [x (<! log-chan)]
-        (eval-line-call x)
-        (recur)))
-    (pipes/sink log-chan)))
 
 
 ;; General purpose
@@ -155,7 +106,8 @@
   (pipes/transduction-pipe
    (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
                  (tt/re-wrap (pipes/make-meta {:samak.pipes/source ::reductions})
-                             init))))
+                             init))
+   (str "reductions-" (helpers/uuid))))
 
 
 (def pipe-symbols
@@ -163,8 +115,4 @@
    'pipes/log-through log-through
    'pipes/debug       debug
    'pipes/http        http
-   'pipes/eval-notify eval-notify
-
-   ;; 'pipes/eval-line   eval-line
-
    'pipes/reductions  reductions*})

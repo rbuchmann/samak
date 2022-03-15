@@ -6,7 +6,11 @@
             [samak.stdlib          :as std]
             [samak.runtime.stores  :as stores]
             [samak.runtime.servers :as servers]
-            [datascript.core       :as d]))
+            [samak.utils           :as utils]
+            [promesa.core          :as p]
+            [datascript.core       :as d]
+            [samak.api :as api]
+            [samak.core :as core]))
 
 
 (def def-node
@@ -16,11 +20,9 @@
                                      :value "quux"}})
 
 (deftest should-eval-def-node
-  (let [r (sut/make-runtime)
-        k (-> r
-              (sut/eval-expression! def-node)
-              :store
-              (stores/resolve-name 'quux))]
+  (p/let [init (sut/make-runtime)
+          rt (sut/eval-expression! init def-node)
+          k (stores/resolve-name (:store rt) 'quux)]
     (is (number? k))))
 
 
@@ -40,10 +42,10 @@
                                       :arguments    []}})
 
 (deftest should-eval-pipe-node
-  (let [r              (sut/make-runtime {'pipes/debug std/debug
-                                          'pipes/log   std/log})
-        new-state      (sut/eval-expression! r pipe-node)
-        defined-things (-> new-state :server servers/get-defined vals)]
+  (p/let [r              (sut/make-runtime {'pipes/debug std/debug
+                                            'pipes/log   std/log})
+          new-state      (sut/eval-expression! r pipe-node)
+          defined-things (-> new-state :server servers/get-defined vals)]
     (is (some samak.pipes/pipe? defined-things))))
 
 (def other-def-node
@@ -53,10 +55,10 @@
                                      :value "foo"}})
 
 (deftest should-keep-existing-symbols
-  (let [r  (-> (sut/make-runtime)
-               (sut/eval-expression! def-node)
-               (sut/eval-expression! other-def-node))
-        vs (-> r :server servers/get-defined vals)]
+  (p/let [r  (-> (sut/make-runtime)
+                 (p/then #(sut/eval-expression! % def-node))
+                 (p/then #(sut/eval-expression! % other-def-node)))
+          vs (-> r :server servers/get-defined vals)]
     (is (= (set vs) #{"quux" "foo"}))))
 
 (def referring-node
@@ -65,23 +67,38 @@
                 :rhs  [:samak.nodes/name 'quux]})
 
 (deftest should-resolve-symbols
-  (let [vs (-> (sut/make-runtime)
-                (sut/eval-expression! def-node)
-                (sut/eval-expression! referring-node)
-                :server
-                servers/get-defined
-                vals)]
+  (p/let [rt (-> (sut/make-runtime)
+                 (sut/eval-expression! def-node)
+                 (sut/eval-expression! referring-node))
+          vs (-> rt
+                 :server
+                 servers/get-defined
+                 vals)]
     (is (= 2 (count vs)))
     (is (apply = vs))))
 
 (deftest should-retrieve-definitions-by-name
-  (let [r (-> (sut/make-runtime)
-              (sut/eval-expression! other-def-node))]
-    (is (= 1 (stores/resolve-name (:store r) 'foo)))))
+  (p/let [init (sut/make-runtime)
+        rt (sut/eval-expression! init other-def-node)
+        n (stores/resolve-name (:store rt) 'foo)]
+    (is (= 1 n))))
 
 
 (deftest should-persist-builtins
-  (is (= inc (-> (sut/make-runtime {'inc inc 'dec dec})
-                 :server
-                 servers/get-defined
-                 (get 1)))))
+  (utils/test-promise (p/then (sut/make-runtime {'inc inc 'dec dec})
+                              #(is (=
+                                    inc
+                                    (-> %
+                                        :server
+                                        servers/get-defined
+                                        (get 1)))))))
+
+
+(deftest should-load-def-from-bundle
+  (utils/test-promise
+   (p/let [code [(api/defmodule 'test (api/map {(api/keyword :sources) (api/map {(api/keyword :test1) (api/symbol 'inc)})}))]
+           rt (sut/make-runtime core/samak-symbols)
+           _ (sut/persist-to-ids! (:store rt) code)
+           defns (sut/load-by-sym rt 'test)
+           def (sut/load-def-from-bundle rt 'test defns)]
+     (is (= {'test {:depends [], :dependencies [], :sinks #{}, :roots #{151}}} def)))))

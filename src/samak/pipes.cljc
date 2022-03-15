@@ -1,29 +1,53 @@
 (ns samak.pipes
-  #?
+  (:refer-clojure :exclude [uuid])
+  #?@
   (:clj
-   (:require
-    [clojure.core.async :as a :refer [chan put!]]
+   [(:require
+    [clojure.core.async :as a :refer [chan put! <! go-loop]]
     [clojure.spec.alpha :as s]
     [com.stuartsierra.dependency :as dep]
     [samak.tools :as t]
-    [samak.trace :as trace]
     [samak.helpers :as help]
     [samak.protocols :as p]
-    [samak.transduction-tools :as tt])
+    [samak.transduction-tools :as tt])]
    :cljs
-   (:require
-    [cljs.core.async :as a :refer [chan put!]]
+   [(:require
+    [cljs.core.async :as a :refer [chan put! <!]]
     [cljs.spec.alpha :as s]
     [com.stuartsierra.dependency :as dep]
     [samak.protocols :as p]
     [samak.tools :as t]
-    [samak.trace :as trace]
     [samak.helpers :as help]
-    [samak.transduction-tools :as tt])))
+    [samak.transduction-tools :as tt])
+    (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
+
+(def buffs (atom {}))
+(def pipes (atom {}))
+
+(defn pipe-buf
+  ""
+  [n size]
+  (let [buf (a/buffer size)]
+    (swap! buffs assoc n buf)
+    buf))
+
+(defn exh
+  ""
+  [n]
+  (fn [e]
+    (let [msg (str "exception in pipe" n e)]
+      (t/log msg)
+    (throw (ex-info msg {} e)))))
+
+(defn pipe-chan
+  ""
+  [id size]
+  (chan (when size (pipe-buf id size)) nil (exh id)))
 
 ;; Pipes and flow control
 
 (defprotocol Pipe
+  (uuid [this])
   (in-port [this])
   (out-port [this])
   (in-spec [this])
@@ -35,20 +59,24 @@
 (defprotocol CleanupRequired
   (clean-up [this]))
 
-(defrecord Sink [ch in-spec]
+(defrecord Sink [ch in-spec uuid]
   Pipe
+  (uuid [_] uuid)
   (in-port [_] ch)
   (in-spec [_] in-spec)
   (out-port [_] nil)
   (out-spec [_] nil))
 
 (defn sink
-  ([ch] (sink ch nil))
+  ([ch] (sink ch nil (help/uuid)))
   ([ch spec]
-   (Sink. ch in-spec)))
+   (Sink. ch in-spec (help/uuid)))
+  ([ch spec uuid]
+   (Sink. ch in-spec uuid)))
 
-(defrecord Source [ch out-spec]
+(defrecord Source [ch out-spec uuid]
   Pipe
+  (uuid [_] uuid)
   (in-port [_] nil)
   (in-spec [_] nil)
   (out-port [_] ch)
@@ -57,32 +85,48 @@
 (defn source
   ([ch] (source ch nil))
   ([ch out-spec]
-  (Source. (a/mult ch) out-spec)))
+   (Source. (a/mult ch) out-spec (help/uuid)))
+  ([ch out-spec uuid]
+  (Source. (a/mult ch) out-spec uuid)))
 
-(defrecord Pipethrough [in out in-spec out-spec]
+(defrecord Pipethrough [in out in-spec out-spec uuid]
   Pipe
+  (uuid [_] uuid)
   (in-port [_] in)
   (in-spec [_] in-spec)
   (out-port [_] out)
   (out-spec [_] out-spec))
 
 (defn pipe
-  ([ch] (pipe ch nil nil))
-  ([ch in-spec out-spec]
-   (Pipethrough. ch (a/mult ch) in-spec out-spec))
-  ([in out] (pipe in out nil nil))
-  ([in out in-spec out-spec]
-   (Pipethrough. in (a/mult out) in-spec out-spec)))
+  ([ch] (pipe ch nil nil (help/uuid)))
+  ([ch uuid] (pipe ch nil nil uuid))
+  ([ch in-spec out-spec uuid] (pipe ch ch in-spec out-spec uuid))
+  ([in out uuid] (pipe in out nil nil uuid))
+  ([in out in-spec out-spec uuid]
+   (let [[old _] (swap-vals! pipes assoc uuid uuid)]
+     (if (get old uuid)
+       (println "!!!1 mult" uuid)
+       (println "!!!2 reg" uuid)))
+   (let [m (a/mult out)
+         c (pipe-chan ::drop nil)]
+     (go-loop []
+         (let [msg (<! c)]
+           (when msg (t/log "%%% drip pipe [" (or uuid "-") "] " msg))
+           (recur)))
+     (a/tap m c)
+     (Pipethrough. in m in-spec out-spec uuid))))
 
 
-(defn transduction-pipe [xf]
-  (pipe (chan 1 xf)))
+(defn transduction-pipe
+  ([xf] (transduction-pipe xf ::xf))
+  ([xf uuid] (pipe (chan 1 xf) uuid);; (pipe (chan (pipe-buf uuid 1) xf (exh uuid)) uuid)
+   ))
 
 (defn async-pipe [xf in-spec out-spec]
   (let [in-chan  (chan)
         out-chan (chan)]
     (a/pipeline-async 1 out-chan xf in-chan)
-    (Pipethrough. in-chan (a/mult out-chan) in-spec out-spec)))
+    (Pipethrough. in-chan (a/mult out-chan) in-spec out-spec (help/uuid))))
 
 (def ports (juxt in-port out-port))
 
@@ -108,12 +152,12 @@
 (defn fire-raw!
   "put a raw event into the given pipe. should be used for testing only."
   [pipe event]
+  ;; (println "pipe fire" pipe)
   (put! (in-port pipe) event))
 
 
 (defn fire! [pipe event db-id]
   (let [paket (make-paket event ::fire)]
-    (trace/trace db-id 42 paket)
     (fire-raw! pipe paket)))
 
 (defrecord CompositePipe [a b]
@@ -158,18 +202,20 @@
   ""
   [state spec paket]
   (let [x (::content paket)]
-  (when (not (s/valid? spec x))
-    (println "spec error in state " state)
-    (let [reason (s/explain spec x)]
-      (println reason)
-      reason)))
+    (if x
+      (when (not (s/valid? spec x))
+        (let [reason (s/explain spec x)]
+          (println "spec error in state" state)
+          (println "reason for" x ":" reason)
+          reason))
+      (println "no content: " paket)))
   paket)
 
 (defn checked-pipe
   ""
-  [pipe in-spec out-spec]
-  (let [in-checked (transduction-pipe (map #(check-values "in" in-spec %)))
-        out-checked (transduction-pipe (map #(check-values "out" out-spec %)))]
+  [pipe in-spec out-spec uuid]
+  (let [in-checked (transduction-pipe (map #(check-values (str uuid "-in") in-spec %)) (str uuid "-in"))
+        out-checked (transduction-pipe (map #(check-values (str uuid "-out") out-spec %)) (str uuid "-out"))]
     (link! in-checked pipe)
     (link! pipe out-checked)
-    (Pipethrough. (in-port in-checked) (out-port out-checked) in-spec out-spec)))
+    (Pipethrough. (in-port in-checked) (out-port out-checked) in-spec out-spec uuid)))

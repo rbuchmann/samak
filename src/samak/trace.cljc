@@ -1,22 +1,29 @@
 (ns samak.trace
   #?(:clj
-     (:require [clojure.spec.alpha   :as s]
-               [clojure.walk         :as w]
-               [samak.zipkin         :as tracing]
-               [samak.trace-db       :as db]
-               [samak.helpers        :as helper]
-               [samak.tools          :as tools]
-               [samak.api            :as api]
-               [samak.runtime.stores :as store])
+     (:require
+      [clojure.core.async :as a :refer [chan put! <! go-loop]]
+      [clojure.spec.alpha   :as s]
+      [clojure.walk         :as w]
+      [promesa.core         :as prom]
+      [samak.zipkin         :as tracing]
+      [samak.trace-db       :as db]
+      [samak.helpers        :as helper]
+      [samak.tools          :as tools]
+      [samak.api            :as api]
+      ;; [samak.runtime.stores :as store]
+      )
      :cljs
-     (:require [cljs.spec.alpha :as s]
-               [clojure.walk :as w]
-               [samak.zipkin :as tracing]
-               [samak.trace-db :as db]
-               [samak.helpers :as helper]
-               [samak.runtime.stores :as store]
-               [samak.api :as api]
-               [samak.tools :as tools])))
+     (:require
+      [cljs.core.async :as a :refer [chan put! <!]]
+      [cljs.spec.alpha :as s]
+      [clojure.walk :as w]
+      [promesa.core :as prom]
+      [samak.zipkin :as tracing]
+      [samak.trace-db :as db]
+      [samak.helpers :as helper]
+      ;; [samak.runtime.stores :as store]
+      [samak.api :as api]
+      [samak.tools :as tools])))
 
 (def ^:dynamic *db-id* nil)
 (def ^:dynamic *code* nil)
@@ -34,30 +41,26 @@
   (reset! rt rt-in)
   (when (= :zipkin (:backend config))
     (reset! tracer (tracing/init config)))
+  (when (= :samak (:backend config))
+    (reset! tracer {:trace-fn (fn [t x] (when (= 1 (rand-int 100)) (put! (:chan config) {:samak.pipes/content x})) t)}))
   (when (= :logging (:backend config))
     (let [pre (or (:prefix config) "TRACE -")]
       (reset! tracer {:trace-fn (fn [t x] (println pre x) t)}))))
 
 
-(defn load-ast
-  "loads an ast given by its entity id from the database"
-  [rt id]
-  (w/postwalk (fn [form]
-                (if-let [sub-id (when (and (map? form) (= (keys form) [:db/id]))
-                                  (:db/id form))]
-                 (store/load-by-id rt sub-id)
-                 form))
-              (store/load-by-id rt id)))
-
 (defn node-as-str
   ""
   [node]
-  (if (number? node)
-    (let [ast (load-ast (:store @rt) node)]
-      (if (api/is-def? ast)
-        (str "(" node ") " (:samak.nodes/name ast))
-        (str ast)))
-    node))
+  ;; (if (number? node)  ;; split into own ns
+  ;;   (prom/let [ast (store/load-by-id (:store @rt) node)]
+  ;;     (if (api/is-def? ast)
+  ;;       (str "(" node ") " (:samak.nodes/name ast))
+  ;;       (if (api/is-def? (:samak.nodes/fn ast))
+  ;;         (str "(" node ") " (:samak.nodes/name (:samak.nodes/fn ast)))
+  ;;         (str ast))))
+  ;;   node)
+  node
+  )
 
 (defn make-trace
   ""
@@ -81,7 +84,8 @@
   ""
   [db-id duration event]
   (if-not (:samak.pipes/uuid (:samak.pipes/meta event))
-    (println "assert failed:" event))
+    (when event
+      (println "no traceable event:" event)))
   (when @tracer
     (let [data (make-trace db-id duration event)]
       (reset! tracer ((:trace-fn @tracer) @tracer (to-tracer data)))))
