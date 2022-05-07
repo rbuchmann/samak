@@ -1,10 +1,10 @@
 (ns samak.layout
-  (:require [cljsjs.elkjs]
-            [samak.pipes        :as pipes]
-            [samak.trace        :as trace]
+  (:require ["elkjs"                  :as elkjs]
+            [samak.pipes              :as pipes]
+            [samak.trace              :as trace]
             [samak.transduction-tools :as tt]
-            [samak.helpers :as helpers]
-            [cljs.core.async    :as a :refer [<! put! chan close!]]))
+            [samak.helpers            :as helpers]
+            [cljs.core.async          :as a :refer [<! put! chan close!]]))
 
 (defn keywordize-type
   ""
@@ -23,7 +23,7 @@
   (println "returning workder")
   (js/Worker. url))
 
-(def elk (js/ELK. (clj->js {"workerFactory" make-worker
+(def elk (elkjs. (clj->js {"workerFactory" make-worker
                             "workerUrl" "/elk-worker.min.js"})))
 
 

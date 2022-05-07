@@ -6,36 +6,24 @@
      [clojure.string :as str]
      [clojure.core.async :as a :refer [<! >! chan go go-loop close! put!]]
      [samak.lisparser :as p]
-     [samak.oasis :as oasis]
-     [samak.pipes :as pipes]
      [samak.runtime :as run]
-     [samak.stdlib :as std]
-     [samak.caravan :as caravan]
      [samak.api :as api]
      [samak.tools :as t]
      [samak.trace :as trace]
      [samak.core :as core]
-     [samak.test-programs :as test-programs]
-     [samak.runtime.servers :as servers]
-     [samak.runtime.stores :as stores])]
+     [samak.runtime.servers :as servers])]
    :cljs
    [(:require
      [cljs.reader :as edn]
      [clojure.string :as str]
      [clojure.core.async :as a :refer [<! >! chan close! put!]]
      [samak.lisparser :as p]
-     [samak.oasis :as oasis]
-     [samak.pipes :as pipes]
      [samak.runtime :as run]
-     [samak.stdlib :as std]
-     [samak.caravan :as caravan]
      [samak.api :as api]
      [samak.tools :as t]
      [samak.trace :as trace]
      [samak.core :as core]
-     [samak.test-programs :as test-programs]
-     [samak.runtime.servers :as servers]
-     [samak.runtime.stores :as stores])
+     [samak.runtime.servers :as servers])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 (def ^:dynamic *default-timeout* 0)
@@ -43,8 +31,6 @@
 
 (def rt (atom (run/make-runtime core/samak-symbols nil)))
 (def trace (atom (trace/init-tracer rt (:tracer config))))
-
-(caravan/init @rt)
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -70,48 +56,9 @@
     (if (:error res)
       (println (:error res)))))
 
-(defn eval-oasis
-  ""
-  [length cb state [nr exp]]
-  (let [progress (int (* (/ nr length) 100))]
-    (when (= 0 (mod progress 10))
-      (go (>! cb progress))
-      (println (str progress "%")))
-    (run/eval-expression! state exp)))
-
-(defn run-oasis
-  ""
-  [state]
-  (let [parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
-    ;; (println "oasis loaded: " (str net))
-    (reset! rt state)
-    (caravan/init @rt)
-    (fire-event-into-named-pipe "init" "1")
-    (println "oasis started")
-    (doseq [expression parsed]
-      (caravan/repl-eval expression))
-    (servers/get-defined (:server @rt))))
-
-
-(defn start-oasis
-  [cb]
-  (let [c (chan)
-        exps (oasis/start)
-        numbered (map-indexed vector exps)
-        cnt (count numbered)]
-    (go-loop [state @rt]
-      (let [part (<! c)]
-        (if part
-          (let [state (eval-oasis cnt cb state part)]
-            (recur state))
-          (run-oasis state))))
-    (doall (map #(put! c %) numbered))
-    (close! c)))
-
 (def repl-prefixes
   {\f (fn [in] (let [[pipe-name event] (str/split in #" " 2)]
                         (fire-event-into-named-pipe pipe-name event)))
-   \o (fn [_] (start-oasis #()))
    \e (fn [_] (println "Defined symbols:\n" (->> @rt
                                                 :server
                                                 servers/get-defined
