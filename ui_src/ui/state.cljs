@@ -2,7 +2,6 @@
   (:require [reagent.core   :as r]
             [keybind.core   :as k]
             [samak.code-db  :as db]
-            [samak.stdlib   :as std]
             [samak.core     :as core]
             [samak.runtime  :as run]
             [ui.modes       :as modes]

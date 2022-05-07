@@ -1,10 +1,10 @@
 (ns samak.layout
-  (:require ;;[cljsjs.elkjs]
-            [samak.pipes        :as pipes]
-            [samak.trace        :as trace]
+  (:require ["elkjs"                  :as elkjs]
+            [samak.pipes              :as pipes]
+            [samak.trace              :as trace]
             [samak.transduction-tools :as tt]
-            [samak.helpers :as helpers]
-            [cljs.core.async    :as a :refer [<! put! chan close!]])
+            [samak.helpers            :as helpers]
+            [cljs.core.async          :as a :refer [<! put! chan close!]])
   (:require-macros [cljs.core :refer [exists?]]))
 
 (defn keywordize-type
@@ -32,6 +32,8 @@
 (defn init [url]
   (set! elk (js/ELK. (clj->js {"workerFactory" make-worker
                                "workerUrl" "/elk-worker.min.js"}))))
+;; (def elk (elkjs. (clj->js {"workerFactory" make-worker
+;;                             "workerUrl" "/elk-worker.min.js"})))
 
 
 (defn compute-layout [graph options success error]

@@ -1,0 +1,32 @@
+;; shadow-cljs configuration
+{:source-paths
+ ["src"
+  "ui_src"]
+
+ :dependencies
+ [[reagent "1.1.1"]
+  [datascript "1.3.12"]
+  [com.stuartsierra/dependency "1.0.0"]
+  [org.clojure/core.logic "1.0.1"]
+  [net.cgrand/xforms "0.19.2"]
+  [cljs-http "0.1.46"]
+  [com.andrewmcveigh/cljs-time "0.5.2"]
+  [tick "0.4.32"]
+  [automat "0.2.4"]
+  [camel-snake-kebab "0.4.2"]
+  [keybind "2.2.0"]
+  [expound "0.9.0"]
+  [org.clojure/test.check "1.1.1"]
+  [re-frame "1.3.0-rc3"]
+  ]
+
+ :builds
+ {:dev {:target     :browser
+        :output-dir "resources/public/shadowcljs/js"
+        :asset-path "/shadowcljs/js"
+        :modules    {:main {:entries [ui.core]}}
+        :dev        {:compiler-options {:closure-defines {re-frame.trace.trace-enabled?        true
+                                                          day8.re-frame.tracing.trace-enabled? true}}}
+        :devtools   {:http-root "resources/public"
+                     :http-port 8280
+                     }}}}

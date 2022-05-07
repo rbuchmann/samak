@@ -7,8 +7,6 @@
      [clojure.core.async :as a :refer [<! >! chan go go-loop close! put!]]
      [promesa.core :as prom]
      [samak.lisparser :as p]
-     [samak.oasis :as oasis]
-     [samak.pipes :as pipes]
      [samak.runtime :as run]
      [samak.builtins :as builtins]
      [samak.stdlib :as std]
@@ -17,9 +15,7 @@
      [samak.tools :as t]
      [samak.trace :as trace]
      [samak.core :as core]
-     [samak.test-programs :as test-programs]
-     [samak.runtime.servers :as servers]
-     [samak.runtime.stores :as stores])]
+     [samak.runtime.servers :as servers])]
    :cljs
    [(:require
      [cljs.reader :as edn]
@@ -27,8 +23,6 @@
      [clojure.core.async :as a :refer [<! >! chan close! put!]]
      [promesa.core :as prom]
      [samak.lisparser :as p]
-     [samak.oasis :as oasis]
-     [samak.pipes :as pipes]
      [samak.runtime :as run]
      [samak.stdlib :as std]
      [samak.builtins :as builtins]
@@ -37,9 +31,7 @@
      [samak.tools :as t]
      [samak.trace :as trace]
      [samak.core :as core]
-     [samak.test-programs :as test-programs]
-     [samak.runtime.servers :as servers]
-     [samak.runtime.stores :as stores])
+     [samak.runtime.servers :as servers])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
 (def ^:dynamic *default-timeout* 0)
