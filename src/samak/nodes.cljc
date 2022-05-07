@@ -3,8 +3,7 @@
             [samak.api       :as api]
             [samak.pipes     :as pipes]
             [samak.tools     :refer [fail log]]
-            [samak.trace     :refer [*db-id*]]
-            [samak.code-db   :as db]))
+            [samak.trace     :refer [*db-id*]]))
 
 (def ^:dynamic *manager* nil)
 (def ^:dynamic *builtins* {})
