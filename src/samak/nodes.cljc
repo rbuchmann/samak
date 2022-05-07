@@ -3,8 +3,7 @@
             [samak.api       :as api]
             [samak.pipes     :as pipes]
             [samak.tools     :refer [fail log]]
-            [samak.trace     :refer [*db-id*]]
-            [samak.code-db   :as db]))
+            [samak.trace     :refer [*db-id*]]))
 
 (def ^:dynamic *manager* nil)
 (def ^:dynamic *builtins* {})
@@ -92,9 +91,7 @@
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
   (let [func (eval-node fn-expression)]
-    (try (apply (p/eval-as-fn func) (eval-reordered arguments))
-         (catch clojure.lang.ArityException ex
-           (compile-error "wrong args: " (eval-reordered arguments) " for fn " func " -> " ex)))))
+    (apply (p/eval-as-fn func) (eval-reordered arguments))))
 
 (defmethod eval-node ::link [{:keys [::from ::to]}]
   (pipes/link! (eval-node from) (eval-node to)))
