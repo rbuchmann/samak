@@ -16,15 +16,19 @@
   [c]
   (update c :value (fn [v] (mapv keywordize-type v))))
 
+(def worker_threads (js/require "worker_threads"))
 
 (defn make-worker
   ""
   [url]
-  (println "returning worker")
-  (js/Worker. url))
+  ;; (println "returning worker: " worker_threads)
+  (if worker_threads (let [Worker (.-Worker worker_threads)] (Worker. url)) (js/Worker. url)))
 
-(def elk (js/ELK. (clj->js {"workerFactory" make-worker
-                            "workerUrl" "/elk-worker.min.js"})))
+(def elk (atom nil))
+
+(defn init [url]
+  (set! elk (js/ELK. (clj->js {"workerFactory" make-worker
+                               "workerUrl" "/elk-worker.min.js"}))))
 
 
 (defn compute-layout [graph options success error]

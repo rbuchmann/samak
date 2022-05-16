@@ -1,0 +1,9 @@
+
+(def in (pipes/debug))
+(def out (pipes/log "foobar"))
+(| in (inc _) out)
+(defmodule test {:sources {:test-in in}})
+(defmodule use {:depends {:test-use test} :sources {:use-in in}})
+(def test-in (-> test-use :-sources :-test-in))
+(def foo (pipes/debug))
+(| foo test-in)

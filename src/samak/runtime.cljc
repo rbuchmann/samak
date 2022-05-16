@@ -302,6 +302,7 @@
 
 
 (defn eval-expression! [{:keys [store server] :as rt} form ctx]
+  (println "eval exp" form ctx rt)
   (p/let [new-server (store-and-eval! rt (rewrite-expression "user" form) ctx)]
     (assoc rt :server new-server)))
 
@@ -312,6 +313,7 @@
 
 (defn get-definition-by-name [runtime ctx sym]
   (p/let [id (resolve-name runtime sym)]
+    (println "id" id)
     (get-definition-by-id runtime (str ctx "/" id))))
 
 

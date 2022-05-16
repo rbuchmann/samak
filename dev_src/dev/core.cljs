@@ -39,7 +39,7 @@
     (go-loop []
       (let [p (<! c)
             before (helpers/now)]
-        (println "to worker" p)
+        ;; (println "to worker" p)
         (.postMessage worker (t/write w p))
         (render/trace ::render-out
                     (helpers/duration before (helpers/now))
@@ -53,7 +53,7 @@
   (fn
     [event]
     (let [data (t/read json-reader (.-data event))]
-      (println "recv from w" data)
+      ;; (println "recv from w" data)
       (condp = (:target data)
         :load (put! load (:data data))
         :bootstrap (put! to-worker :init)

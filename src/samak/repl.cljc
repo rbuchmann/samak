@@ -70,7 +70,8 @@
 (defn init []
   (prom/let [rt-inst (run/make-runtime cli-symbols scheduler cli-conf)]
     (reset! rt rt-inst)
-    (caravan/init @rt)))
+    (caravan/init @rt)
+    rt-inst))
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -119,13 +120,14 @@
   "Evals some input line in the context of the defined symbols,
   and returns a new map of symbols"
   [input runtime]
+  (println "line" input runtime)
   (if (str/starts-with? input "!")
     (do
       (run-repl-cmd input runtime)
       runtime)
     (prom/let [parsed (parse-samak-string input)
                prt (prom/resolved runtime)
-               new (reduce (fn [rt exp] (prom/handle rt (fn [res _] (println "eval" exp) (run/eval-expression! res exp :repl)))) prt parsed)]
+               new (reduce (fn [rt exp] (prom/handle rt (fn [res _] (println "eval" exp res) (run/eval-expression! res exp :repl)))) prt parsed)]
       (reset! rt new)
       new)))
 
@@ -136,6 +138,8 @@
                             lines
                             [(str/join " " lines)])))))
 
-(defn eval-lines [lines]
-  (prom/let [evals (reduce (fn [rt exp] (prom/handle rt (fn [res _] (eval-line exp res)))) (prom/resolved @rt) (group-repl-cmds lines))]
+(defn eval-lines [lines runtime]
+  (prom/let [rt (if runtime runtime @rt)
+             _ (println "rtin" rt)
+             evals (reduce (fn [rt exp] (prom/handle rt (fn [res _] (eval-line exp res)))) (prom/resolved rt) (group-repl-cmds lines))]
     evals))
