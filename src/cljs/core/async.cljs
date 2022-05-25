@@ -447,7 +447,6 @@
          (doseq [[c close?] @cs]
            (when close? (close! c)))
          (let [chs (keys @cs)]
-           (println "multing " (count chs))
            (reset! dctr (count chs))
            (doseq [c chs]
                (when-not (put! c val done)

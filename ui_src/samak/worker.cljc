@@ -112,7 +112,7 @@
     (let [p (<! c)
           before (helpers/now)
           content (:samak.runtime/content p)]
-      (println (:id @rt) "in paket" p)
+      (println (:id rt) "in paket" p)
       (when (= :samak.runtime/paket (:samak.runtime/type p))
         (when-let [pipe (get-named-pipe-memo rt (:samak.runtime/target p))]
           (pipes/fire-raw! pipe content))
@@ -140,5 +140,5 @@
       (reset! progress load-c)
       (a/tap in-mult paket-c)
       (handle-input rt paket-c)
-      (start-oasis)
+      ;; do things
       (put! @progress 100))))

@@ -302,9 +302,11 @@
 
 
 (defn eval-expression! [{:keys [store server] :as rt} form ctx]
-  (println "eval exp" form ctx rt)
-  (p/let [new-server (store-and-eval! rt (rewrite-expression "user" form) ctx)]
-    (assoc rt :server new-server)))
+  (when form
+      (do
+        ;; (println "eval exp" form ctx rt)
+        (p/let [new-server (store-and-eval! rt (rewrite-expression "user" form) ctx)]
+    (assoc rt :server new-server)))))
 
 (defn get-definition-by-id [runtime id]
   (when id
@@ -320,6 +322,7 @@
 (defn fire-into-named-pipe
   ""
   [rt ctx pipe-name data timeout]
+  (println "§§§§§§ fire" rt ctx pipe-name data)
   (p/let [pipe (get-definition-by-name rt ctx pipe-name)]
     (do
       (println "pipes" @pipe-links)

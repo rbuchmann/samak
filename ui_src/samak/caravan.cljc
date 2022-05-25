@@ -9,7 +9,7 @@
               [samak.api             :as api]
               [samak.helpers         :as helpers]
               [samak.lisparser       :as p]
-              [samak.scheduler       :as sched]
+              [samak.modules         :as modules]
               [samak.runtime         :as rt]
               [samak.runtime.servers :as servers]
               [samak.pipes           :as pipes]
@@ -31,7 +31,7 @@
               [samak.api             :as api]
               [samak.helpers         :as helpers]
               [samak.lisparser       :as p]
-              [samak.scheduler       :as sched]
+              [samak.modules         :as modules]
               [samak.runtime         :as rt]
               [samak.runtime.servers :as servers]
               [samak.pipes           :as pipes]
@@ -636,13 +636,13 @@
   [source eval?]
   (prom/let [nodes (:nodes source)
              _ (println "  V" "Loading asts: " (s/join ", " nodes))
-             asts (prom/all (map #(load-ast @rt-conn %1) nodes))
+             asts (prom/all (map #(load-ast @rt-conn %1) nodes)) ;; FIXME!
              _ (println "  V" "Adding nodes: " (s/join ", " (map #(str (:samak.nodes/name %) "(" (:db/id %) ")") asts)))
              adder (if eval? add-node format-node)
              node-notify (doall (map #(adder (:db/id %) %) asts))
              pipes (:pipes source)
              _ (println "  V" "Adding pipes: " (s/join ", " pipes))
-             pipe-asts (prom/all (map #(load-ast @rt-conn %1) pipes))]
+             pipe-asts (prom/all (map #(load-ast @rt-conn %1) pipes))] ;; FIXME!
     [node-notify pipe-asts]))
 
 (defn handle-mod
@@ -663,7 +663,7 @@
   [net config verify]
   ;; (println "Loading source: " (str sym))
   (prom/let [[_ pipe-asts] (handle-source net true)]
-    (prom/all (map #(add-pipe-net verify (:then config) %) pipe-asts))))
+    (prom/all (map #(add-pipe-net verify (:then config) %) pipe-asts)))) ;; FIXME!
 
 
 (defn database-net
@@ -681,7 +681,8 @@
                                   :pipes []
                                   :modules []})]
     (reduce (fn [promise x] (prom/handle promise
-                                         (fn [acc _]
+                                         (fn [acc err]
+                                           (when err (throw err))
                                            (prom/let [roots (database-net (:roots x))]
                                              {:nodes (into [] (concat (:nodes acc) (:nodes roots)))
                                               :pipes (into [] (concat (:pipes acc) (:pipes roots)))
@@ -710,7 +711,7 @@
   ""
   [sym test]
   (prom/let [verify (setup-verify)
-             bundle (sched/load-bundle @rt-conn sym)]
+             bundle (modules/load-bundle @rt-conn sym)]
     (prom/do!
      (runtime-net (:roots bundle) test verify)
      verify)))
@@ -799,7 +800,7 @@
 (defn load-lib
   ""
   [cmd ev bundle-id]
-  (prom/let [bundle-code (sched/load-bundle-by-id @rt-conn bundle-id)
+  (prom/let [bundle-code (modules/load-bundle-by-id @rt-conn bundle-id)
              bundle (eval-bundle bundle-code)]
     ;; (println (str "count: " cnt))
     (doall (map #(notify-source ev %) (:modules bundle)))
@@ -975,7 +976,6 @@
 
 (defn init
   [rt]
-  (println "quux" rt)
   (reset! rt-conn rt))
 
 

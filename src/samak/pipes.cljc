@@ -111,7 +111,7 @@
          c (pipe-chan ::drop nil)]
      (go-loop []
          (let [msg (<! c)]
-           (when msg (t/log "%%% drip pipe [" (or uuid "-") "] " msg))
+           ;; (when msg (t/log "%%% drip pipe [" (or uuid "-") "] " msg))
            (recur)))
      (a/tap m c)
      (Pipethrough. in m in-spec out-spec uuid))))

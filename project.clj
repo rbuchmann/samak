@@ -21,9 +21,9 @@
                  [clj-http "3.7.0"]
                  [automat "0.2.4"]
                  [cljsjs/klayjs "0.3.2-0"]
-                 [cljsjs/elkjs "0.5.1-0"]
+                 ;; [cljsjs/elkjs "0.5.1-0"]
                  ;; [org.eclipse.elk/parent "0.3.0" :extension "pom"]
-                 [cljsjs/opentracing "0.14.3-0"]
+                 ;; [cljsjs/opentracing "0.14.3-0"]
                  [compojure "1.6.2"]
                  [ring/ring-defaults "0.3.3"]
                  [derekchiang/ring-proxy "1.0.2"]
@@ -70,6 +70,17 @@
                     :target         :nodejs
                     :infer-externs  true
                     :main           "cli.node-core"}}
+    {:source-paths ["src" "cli_src"]
+     :id           "cli-worker"
+     :compiler     {:output-to      "cli/samak-cli-worker.js"
+                    :output-dir     "cli-worker"
+                    ;; :source-map     true
+                    :asset-path     "cli"
+                    :optimizations  :none
+                    :cache-analysis true
+                    :target         :nodejs
+                    :infer-externs  true
+                    :main           "cli.worker-core"}}
     {:source-paths ["src" "ui_src"]
      :id           "frontend-dev"
      :figwheel       true

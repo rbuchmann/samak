@@ -1,9 +1,10 @@
-
 (def in (pipes/debug))
-(def out (pipes/log "foobar"))
+(def out (pipes/log "logger"))
 (| in (inc _) out)
-(defmodule test {:sources {:test-in in}})
-(defmodule use {:depends {:test-use test} :sources {:use-in in}})
-(def test-in (-> test-use :-sources :-test-in))
-(def foo (pipes/debug))
-(| foo test-in)
+(defmodule logger {:sources {:logger-in in}})
+(defmodule use {:depends {:log-use logger} :sources {:use-in in}})
+(def logger-in (-> logger :-sources :-logger-in))
+(def logger-in-fn (logger-in))
+(def tester (pipes/debug))
+(| tester logger-in-fn)
+!f tester 5

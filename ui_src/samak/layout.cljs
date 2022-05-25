@@ -1,5 +1,5 @@
 (ns samak.layout
-  (:require [cljsjs.elkjs]
+  (:require ;;[cljsjs.elkjs]
             [samak.pipes        :as pipes]
             [samak.trace        :as trace]
             [samak.transduction-tools :as tt]

@@ -48,30 +48,10 @@
 (def rt (atom nil))
 (def trace (atom (trace/init-tracer rt (:tracer config))))
 
-(def cli-symbols
-  (merge builtins/samak-symbols
-         std/pipe-symbols
-         caravan/symbols
-         ;; #?(:cljs layout/layout-symbols)
-         ;; #?(:cljs uistd/ui-symbols)
-         ))
-
-(def scheduler
-  (let [broadcast (pipes/pipe (chan) ::main-broadcast)
-        to-rt (pipes/pipe (chan) ::main-scheduler)]
-    (println "sched")
-    ;; (handle-update "out" broadcast)
-    ;; (handle-update "in" to-rt)
-    (fn [] [to-rt broadcast])))
-
-(def cli-conf {:id "rt-cli"
-                :modules {}})
-
-(defn init []
-  (prom/let [rt-inst (run/make-runtime cli-symbols scheduler cli-conf)]
-    (reset! rt rt-inst)
-    (caravan/init @rt)
-    rt-inst))
+(defn init [rt-inst]
+  (prom/do!
+   (caravan/init rt-inst)
+   rt-inst))
 
 (defn catch-errors [ast]
   (if-let [error (:error ast)]
@@ -93,8 +73,7 @@
 (defn fire-event-into-named-pipe
   [runtime pipe-name event]
   (prom/let [arg (edn/read-string event)
-             rt (prom/resolved runtime)
-             res (run/fire-into-named-pipe rt :repl (symbol pipe-name) arg *default-timeout*)]
+             res (run/fire-into-named-pipe runtime :repl (symbol pipe-name) arg *default-timeout*)]
     ;; (println "###fire" pipe-name event)
     (if (:error res)
       (println (:error res)))))
@@ -102,7 +81,7 @@
 (def repl-prefixes
   {\f (fn [in rt] (let [[pipe-name event] (str/split in #" " 2)]
                         (fire-event-into-named-pipe rt pipe-name event)))
-   \e (fn [_ _] (prom/resolved (println "Defined symbols:\n" (->> @rt
+   \e (fn [_ rt] (prom/resolved (println "Defined symbols:\n" (->> rt
                                                                 :server
                                                                 servers/get-defined
                                                                 t/pretty))))
@@ -120,16 +99,22 @@
   "Evals some input line in the context of the defined symbols,
   and returns a new map of symbols"
   [input runtime]
-  (println "line" input runtime)
+  (println "line" input (or (:id runtime) runtime))
   (if (str/starts-with? input "!")
-    (do
-      (run-repl-cmd input runtime)
-      runtime)
+    (prom/let [a (run-repl-cmd input runtime)]
+      (println "repl" a)
+      (prom/resolved runtime))
     (prom/let [parsed (parse-samak-string input)
-               prt (prom/resolved runtime)
-               new (reduce (fn [rt exp] (prom/handle rt (fn [res _] (println "eval" exp res) (run/eval-expression! res exp :repl)))) prt parsed)]
+               prt (prom/resolved {:rt runtime :cnt 0})
+               red (reduce (fn [rt exp] (prom/handle rt (fn [res err] (when err (throw err))
+                                                               (println "eval" (:cnt res) err "!" exp "-" (:id (:rt res)))
+                                                               (prom/let [rt (run/eval-expression! (:rt res) exp :repl)]
+                                                                 {:rt rt :cnt (inc (:cnt res))}))))
+                                prt parsed)
+               new (:rt red)]
       (reset! rt new)
-      new)))
+      (println "resolved" new)
+      (prom/resolved new))))
 
 (defn group-repl-cmds [lines]
   (->> lines
@@ -140,6 +125,5 @@
 
 (defn eval-lines [lines runtime]
   (prom/let [rt (if runtime runtime @rt)
-             _ (println "rtin" rt)
-             evals (reduce (fn [rt exp] (prom/handle rt (fn [res _] (eval-line exp res)))) (prom/resolved rt) (group-repl-cmds lines))]
+             evals (reduce (fn [rt exp] (prom/handle rt (fn [res err] (if err (throw err) (eval-line exp res))))) (prom/resolved rt) (group-repl-cmds lines))]
     evals))
