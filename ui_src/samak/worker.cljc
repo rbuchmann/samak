@@ -100,7 +100,7 @@
   []
   (println "worker oasis")
   ;; (pipes/link! (pipes/source in) (:scheduler @rt))
-  (p/let [id (sched/start-module rt {} 'kbn-core 'lone)]
+  (p/let [id (sched/start-module rt {} 'oasis 'lone)]
     (swap! named-modules assoc :lone id)
     (caravan/init @rt)
     (println "worker started core")))
@@ -115,6 +115,7 @@
       (println (:id rt) "in paket" p)
       (when (= :samak.runtime/paket (:samak.runtime/type p))
         (when-let [pipe (get-named-pipe-memo rt (:samak.runtime/target p))]
+          (println "worker fires" pipe content)
           (pipes/fire-raw! pipe content))
         (trace/trace ::worker-in
                      (helpers/duration before (helpers/now))
@@ -122,7 +123,7 @@
     (recur)))
 
 (defn start-rt
-  ""
+  "initializes the worker runtime"
   [load-c in-c out-c]
   (let [[to-rt to-out] (scheduler)
         in-mult (a/mult in-c)
@@ -141,4 +142,6 @@
       (a/tap in-mult paket-c)
       (handle-input rt paket-c)
       ;; do things
-      (put! @progress 100))))
+      ;; (start-oasis)
+      (put! @progress 100)
+      )))

@@ -9,7 +9,7 @@
                  [reagent "0.6.1"]
                  [garden "1.3.10"]
                  [ring/ring-core "1.6.1"]
-                 [org.clojure/core.async "0.3.443" :scope "provided"] ;;forked for debugging
+                 [org.clojure/core.async "0.3.443"]
                  [org.clojure/core.logic "0.8.11"]
                  [datascript "0.16.9"]
                  [com.stuartsierra/dependency "0.2.0"]
@@ -28,7 +28,7 @@
                  [ring/ring-defaults "0.3.3"]
                  [derekchiang/ring-proxy "1.0.2"]
                  [camel-snake-kebab "0.4.2"]
-                 [funcool/promesa "6.0.2"]
+                 [funcool/promesa "10.0.594"]
                  [keybind "2.1.0"]
                  [expound "0.7.2"]
                  [org.clojure/test.check "0.9.0"]]
@@ -59,7 +59,7 @@
 
   :cljsbuild
   {:builds
-   [{:source-paths ["src" "cli_src"]
+   [{:source-paths ["src" "cli_src" "ui_src"]
      :id           "cli-dev"
      :compiler     {:output-to      "cli/samak-cli.js"
                     :output-dir     "cli"
@@ -70,7 +70,7 @@
                     :target         :nodejs
                     :infer-externs  true
                     :main           "cli.node-core"}}
-    {:source-paths ["src" "cli_src"]
+    {:source-paths ["src" "cli_src" "ui_src"]
      :id           "cli-worker"
      :compiler     {:output-to      "cli/samak-cli-worker.js"
                     :output-dir     "cli-worker"

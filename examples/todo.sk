@@ -40,15 +40,5 @@
 (| events fetch-on-submit http)
 (| http reduce-jokes jokes)
 (| jokes log)
-(| start init-jokes jokes) (| jokes render-ui ui)
-
-(def todo
-  (net
-   [(| ui handle-event raw-events)
-    (| raw-events combine-event events)
-    (| events log)
-    (| events fetch-on-submit http)
-    (| http reduce-jokes jokes)
-    (| jokes log)
-    (| start init-jokes jokes)
-    (| jokes render-ui ui)]))
+(| start init-jokes jokes)
+(| jokes render-ui ui)

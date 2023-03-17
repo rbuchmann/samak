@@ -3,7 +3,6 @@
             [samak.api            :as api]
             [samak.code-db        :as db]
             [datascript.core      :as d]
-            [datascript.core      :as d]
             #?(:clj [clojure.test :as t :refer [is deftest]]
                :cljs [cljs.test   :as t :include-macros true])))
 

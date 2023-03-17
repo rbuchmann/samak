@@ -45,8 +45,7 @@
 (def ^:dynamic *default-timeout* 0)
 (def config {:tracer {:backend :none}})
 
-(def rt (atom nil))
-(def trace (atom (trace/init-tracer rt (:tracer config))))
+;; (def trace (atom (trace/init-tracer rt (:tracer config))))
 
 (defn init [rt-inst]
   (prom/do!
@@ -100,30 +99,32 @@
   and returns a new map of symbols"
   [input runtime]
   (println "line" input (or (:id runtime) runtime))
-  (if (str/starts-with? input "!")
-    (prom/let [a (run-repl-cmd input runtime)]
-      (println "repl" a)
-      (prom/resolved runtime))
+  (condp #(str/starts-with? %2 %1) input
+    "!" (prom/let [a (run-repl-cmd input runtime)]
+          (println "repl" a)
+          (prom/resolved runtime))
+    ";" (do (println "ignored:" input) (prom/resolved runtime))
     (prom/let [parsed (parse-samak-string input)
                prt (prom/resolved {:rt runtime :cnt 0})
                red (reduce (fn [rt exp] (prom/handle rt (fn [res err] (when err (throw err))
-                                                               (println "eval" (:cnt res) err "!" exp "-" (:id (:rt res)))
-                                                               (prom/let [rt (run/eval-expression! (:rt res) exp :repl)]
-                                                                 {:rt rt :cnt (inc (:cnt res))}))))
-                                prt parsed)
+                                                          (prom/let [rt (run/eval-expression! (:rt res) exp :repl)]
+                                                            {:rt rt :cnt (inc (:cnt res))}))))
+                           prt parsed)
                new (:rt red)]
-      (reset! rt new)
-      (println "resolved" new)
+      ;; (println "resolved" new)
       (prom/resolved new))))
+
+(defn special-line? [line]
+  (or (str/starts-with? line "!") (str/starts-with? line ";")))
 
 (defn group-repl-cmds [lines]
   (->> lines
-       (partition-by #(str/starts-with? % "!"))
-       (mapcat (fn [lines] (if (-> lines first (str/starts-with? "!"))
+       (partition-by special-line?)
+       (mapcat (fn [lines] (if (-> lines first special-line?)
                             lines
                             [(str/join " " lines)])))))
 
 (defn eval-lines [lines runtime]
-  (prom/let [rt (if runtime runtime @rt)
-             evals (reduce (fn [rt exp] (prom/handle rt (fn [res err] (if err (throw err) (eval-line exp res))))) (prom/resolved rt) (group-repl-cmds lines))]
+  (prom/let [rt runtime
+             evals (reduce (fn [rt exp] (prom/handle rt (fn [res err] (if err (do (println err)(throw err)) (eval-line exp res))))) (prom/resolved rt) (group-repl-cmds lines))]
     evals))

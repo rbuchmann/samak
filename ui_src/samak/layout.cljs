@@ -4,7 +4,8 @@
             [samak.trace        :as trace]
             [samak.transduction-tools :as tt]
             [samak.helpers :as helpers]
-            [cljs.core.async    :as a :refer [<! put! chan close!]]))
+            [cljs.core.async    :as a :refer [<! put! chan close!]])
+  (:require-macros [cljs.core :refer [exists?]]))
 
 (defn keywordize-type
   ""
@@ -16,13 +17,15 @@
   [c]
   (update c :value (fn [v] (mapv keywordize-type v))))
 
-(def worker_threads (js/require "worker_threads"))
+(def worker_threads (if (exists? js/require) (js/require "worker_threads")))
 
 (defn make-worker
   ""
   [url]
   ;; (println "returning worker: " worker_threads)
-  (if worker_threads (let [Worker (.-Worker worker_threads)] (Worker. url)) (js/Worker. url)))
+  (if worker_threads
+    (let [Worker (.-Worker worker_threads)] (Worker. url))
+    (js/Worker. url)))
 
 (def elk (atom nil))
 

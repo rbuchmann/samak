@@ -6,6 +6,7 @@
      [clj-http.client :as http]
      [clojure.core.async :as a :refer [<! put! chan go go-loop close!]]
      [samak.pipes :as pipes]
+     [samak.conveyor :as conv]
      [samak.code-db :as db]
      [samak.tools :as tools]
      [samak.transduction-tools :as tt]
@@ -21,6 +22,7 @@
      [cljs.core.async :as a :refer [<! put! chan close!]]
      [clojure.string :as str]
      [samak.pipes :as pipes]
+     [samak.conveyor :as conv]
      [samak.code-db :as db]
      [samak.tools :as tools]
      [samak.transduction-tools :as tt]
@@ -29,9 +31,6 @@
      [samak.protocols :as p]
      [net.cgrand.xforms :as x])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
-
-
-
 
 ;; Utility helper
 
@@ -43,29 +42,28 @@
      (pipes/checked-pipe (debug) spec spec id)
      (pipes/pipe (pipes/pipe-chan id nil) id))))
 
+(defn conveyor
+  ([] (conveyor (helpers/uuid)))
+  ([id] (conveyor id nil))
+  ([id spec]
+   (conv/passthrough id identity spec nil)))
+
 (defn log-through
   ([]
    (log-through nil))
   ([prefix]
-   (pipes/transduction-pipe
-    (map (if prefix
-           (fn [x] (tools/log prefix x) x)
-           (fn [x] (tools/log x) x)))
-    (str "logthrough-" prefix))))
+   (conv/transduction-pipe
+    (if prefix
+      (fn [x] (tools/log prefix x) x)
+      (fn [x] (tools/log x) x))
+    (str "logthrough-" prefix)
+    nil)))
 
 (defn log
   ([] (log (rand-int 100000)))
   ([prefix]
-   (let [log-chan (pipes/pipe-chan prefix 42)]
-     (go-loop []
-       (when-let [x (<! log-chan)]
-         (println "log" prefix x)
-         (trace/trace ::log 1337 x)
-         ;; (if prefix
-         ;;   (tools/log prefix " " x)
-         ;;   (tools/log x))
-         (recur)))
-     (pipes/sink log-chan nil (str "log-" prefix)))))
+   (conv/sink #(println "log" prefix %)
+              (str "log-" prefix))))
 
 ;; Networking
 
@@ -114,5 +112,6 @@
   {'pipes/log         log
    'pipes/log-through log-through
    'pipes/debug       debug
+   'pipes/station     conveyor
    'pipes/http        http
    'pipes/reductions  reductions*})

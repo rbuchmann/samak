@@ -10,6 +10,7 @@
             [samak.utils          :as utils]
             [samak.trace          :as trace]
             [samak.scheduler      :as sched]
+            [samak.modules        :as mod]
             [promesa.core         :as p]
             #?(:clj [clojure.core.async :as a :refer [<! chan go go-loop]]
                :cljs [clojure.core.async :as a :refer [<! chan go go-loop]])
@@ -223,7 +224,7 @@
                    ;; (trace/init-tracer rt {:backend :logging})
                    _ (sut/init rt)
                    _ (sut/persist-net test-programs/test-nested-modules-test)
-                   bundle (sched/load-bundle rt 'baz)]
+                   bundle (mod/load-bundle rt 'baz)]
              (sut/eval-bundle bundle))
            #(and (is (= 3 (count (:modules %))))
                  (is (= 5 (count (:pipes %))))

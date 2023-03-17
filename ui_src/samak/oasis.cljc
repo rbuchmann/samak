@@ -27,6 +27,12 @@
   ([sym fn-name & args]
    (api/defexp sym (api/fn-call (api/symbol fn-name) args))))
 
+;; (defn defncall
+;;   ([sym fn-name]
+;;    (api/defexp sym (api/fn-call (api/symbol fn-name) [])))
+;;   ([sym fn-name & args]
+;;    (api/defexp sym (api/fn-call (api/symbol fn-name) args))))
+
 (defn defmap
   [sym m]
   (defncall sym '-> (api/map m)))
@@ -3811,29 +3817,29 @@
 
 (def oasis-ui-defs
   [
-   ;; (api/defexp 'ui-mod (api/fn-call (api/symbol 'modules/ui) []))
-   ;; (api/defexp 'm-ui (api/fn-call (api/symbol 'ui-mod) []))
+   (api/defexp 'ui-mod (api/fn-call (api/symbol 'modules/ui) []))
+   (api/defexp 'm-ui (api/fn-call (api/symbol 'ui-mod) []))
 
-   ;; (defncall 'm-ui-kb '->
-   ;;   (api/symbol 'm-ui)
-   ;;   (api/key-fn :sources)
-   ;;   (api/key-fn :keyboard))
-   ;; (defncall 'oasis-ui-mod-kb 'm-ui-kb)
-   ;; (defncall 'm-ui-mouse '->
-   ;;   (api/symbol 'm-ui)
-   ;;   (api/key-fn :sources)
-   ;;   (api/key-fn :mouse))
-   ;; (defncall 'oasis-ui-mod-mouse 'm-ui-mouse)
-   ;; (defncall 'm-ui-events '->
-   ;;   (api/symbol 'm-ui)
-   ;;   (api/key-fn :sources)
-   ;;   (api/key-fn :events))
-   ;; (defncall 'oasis-ui-mod-events 'm-ui-events)
-   ;; (defncall 'm-ui-render '->
-   ;;   (api/symbol 'm-ui)
-   ;;   (api/key-fn :sinks)
-   ;;   (api/key-fn :render))
-   ;; (defncall 'oasis-ui-out 'm-ui-render)
+   (defncall 'm-ui-kb '->
+     (api/symbol 'm-ui)
+     (api/key-fn :sources)
+     (api/key-fn :keyboard))
+   (defncall 'oasis-ui-mod-kb 'm-ui-kb)
+   (defncall 'm-ui-mouse '->
+     (api/symbol 'm-ui)
+     (api/key-fn :sources)
+     (api/key-fn :mouse))
+   (defncall 'oasis-ui-mod-mouse 'm-ui-mouse)
+   (defncall 'm-ui-events '->
+     (api/symbol 'm-ui)
+     (api/key-fn :sources)
+     (api/key-fn :events))
+   (defncall 'oasis-ui-mod-events 'm-ui-events)
+   (defncall 'm-ui-render '->
+     (api/symbol 'm-ui)
+     (api/key-fn :sinks)
+     (api/key-fn :render))
+   (defncall 'oasis-ui-out 'm-ui-render)
 
    (defncall 'oasis-ui-render 'pipes/ui (api/integer 2))
    (defncall 'oasis-ui-events 'pipes/events (api/integer 2))
@@ -3862,20 +3868,20 @@
 
    (api/defmodule 'oasis-ui (api/map {(api/keyword :depends) (api/map {(api/keyword :ui) (api/symbol 'modules/ui)})
                                       (api/keyword :sources) (api/map {(api/keyword :render) (api/symbol 'oasis-ui-in)
-                                                                       ;; (api/keyword :m-ui) (api/symbol 'm-ui)
-                                                                       ;; (api/keyword :ui-mod) (api/symbol 'ui-mod)
-                                                                       ;; (api/keyword :m-ui-kb) (api/symbol 'm-ui-kb)
-                                                                       ;;(api/keyword :mod-kb) (api/symbol 'oasis-ui-mod-kb)
-                                                                       ;;(api/keyword :mod-mouse) (api/symbol 'oasis-ui-mod-mouse)
+                                                                       (api/keyword :m-ui) (api/symbol 'm-ui)
+                                                                       (api/keyword :ui-mod) (api/symbol 'ui-mod)
+                                                                       (api/keyword :m-ui-kb) (api/symbol 'm-ui-kb)
+                                                                       (api/keyword :mod-kb) (api/symbol 'oasis-ui-mod-kb)
+                                                                       ;; (api/keyword :mod-mouse) (api/symbol 'oasis-ui-mod-mouse)
                                                                        (api/keyword :kb) (api/symbol 'oasis-ui-kb)
-                                                                       ;;(api/keyword :mouse) (api/symbol 'oasis-ui-mouse)
-                                                                       ;;(api/keyword :m-ui-mouse) (api/symbol 'm-ui-mouse)
-                                                                       ;;(api/keyword :m-ui-render) (api/symbol 'm-ui-render)
-                                                                       ;;(api/keyword :oasis-ui-out) (api/symbol 'oasis-ui-out)
+                                                                       (api/keyword :mouse) (api/symbol 'oasis-ui-mouse)
+                                                                       (api/keyword :m-ui-mouse) (api/symbol 'm-ui-mouse)
+                                                                       (api/keyword :m-ui-render) (api/symbol 'm-ui-render)
+                                                                       (api/keyword :oasis-ui-out) (api/symbol 'oasis-ui-out)
                                                                        (api/keyword :events) (api/symbol 'oasis-ui-events)
-                                                                       ;;(api/keyword :events-mod) (api/symbol 'oasis-ui-mod-events)
+                                                                       (api/keyword :events-mod) (api/symbol 'oasis-ui-mod-events)
                                                                        })
-                                      (api/keyword :sinks) (api/map {;;(api/keyword :mouse) (api/symbol 'oasis-ui-mouse-out)
+                                      (api/keyword :sinks) (api/map {(api/keyword :mouse) (api/symbol 'oasis-ui-mouse-out)
                                                                      (api/keyword :kb) (api/symbol 'oasis-ui-foo)
                                                                      (api/keyword :events) (api/symbol 'oasis-ev)
                                                                      })
@@ -3896,23 +3902,19 @@
   [
    (pipe 'oasis-ui-in 'render)
    ;; (pipe 'oasis-ui-in 'log-render2)
-   ;;(pipe 'render 'elements-reduce)
-   ;;(pipe 'elements-reduce 'reducer)
+   (pipe 'render 'elements-reduce)
+   (pipe 'elements-reduce 'reducer)
 
-   ;;(pipe 'reducer 'render-elements 'oasis-ui-render)
-   ;;(pipe 'oasis-ui-events 'oasis-ev)
+   (pipe 'reducer 'render-elements 'oasis-ui-render)
+   (pipe 'oasis-ui-events 'oasis-ev)
 
-   ;; (pipe 'oasis-ui-mouse 'oasis-ui-mouse-out)
+   (pipe 'oasis-ui-mouse 'oasis-ui-mouse-out)
    ;; (pipe 'oasis-ui-kb 'oasis-ui-kb-out)
    (pipe 'oasis-ui-kb 'log-kb2)
    (pipe 'oasis-ui-in 'log-kb2)
 
-   ;; (pipe 'oasis-ui-in 'render)
-   ;; (pipe 'render 'elements-reduce)
-   ;; (pipe 'elements-reduce 'reducer)
+   (pipe 'oasis-ui-in 'render)
 
-   ;; (pipe 'reducer 'render-elements 'oasis-ui-render)
-   ;; (pipe 'oasis-ui-events 'oasis-ev)
    ;; (pipe 'oasis-ui-events 'log-render2)
    ;; ;; (pipe 'oasis-ui-render 'log-render2)
    ;; (pipe 'reducer 'render-elements 'log-render2)
@@ -4107,6 +4109,7 @@
   (into oasis (flatten network)))
 
 (defn store [s]
+  (println oasis)
   (stores/persist-tree! s oasis)
   (stores/persist-tree! s (flatten network))
   s)

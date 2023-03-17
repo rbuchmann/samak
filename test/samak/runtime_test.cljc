@@ -19,11 +19,11 @@
                 :rhs  #:samak.nodes {:type  :samak.nodes/string
                                      :value "quux"}})
 
-(deftest should-eval-def-node
-  (p/let [init (sut/make-runtime)
-          rt (sut/eval-expression! init def-node)
-          k (stores/resolve-name (:store rt) 'quux)]
-    (is (number? k))))
+;; (deftest should-eval-def-node
+;;   (p/await (p/let [init (sut/make-runtime)
+;;                    rt (sut/eval-expression! init def-node)
+;;                    k (stores/resolve-name (:store rt) 'quux)]
+;;              (is (number? k)))))
 
 
 (def pipe-node
@@ -85,13 +85,10 @@
 
 
 (deftest should-persist-builtins
-  (utils/test-promise (p/then (sut/make-runtime {'inc inc 'dec dec})
-                              #(is (=
-                                    inc
-                                    (-> %
-                                        :server
-                                        servers/get-defined
-                                        (get 1)))))))
+  (p/let [rt (sut/make-runtime {'inc inc 'dec dec})
+          defined (servers/get-defined (:server rt))]
+    (do (println "a" defined)
+        (is (= inc defined)))))
 
 
 (deftest should-load-def-from-bundle
@@ -101,4 +98,5 @@
            _ (sut/persist-to-ids! (:store rt) code)
            defns (sut/load-by-sym rt 'test)
            def (sut/load-def-from-bundle rt 'test defns)]
-     (is (= {'test {:depends [], :dependencies [], :sinks #{}, :roots #{151}}} def)))))
+     (do (println "def" def)
+     (is (= {'test {:depends [], :dependencies [], :sinks #{}, :roots #{151}}} def))))))

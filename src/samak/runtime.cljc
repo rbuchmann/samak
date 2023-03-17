@@ -10,6 +10,7 @@
      [samak.tools :refer [fail log]]
      [samak.trace :as trace]
      [samak.pipes :as pipes]
+     [samak.conveyor :as conv]
      [samak.transduction-tools :as tt]
      [samak.nodes :as n]
      [samak.api :as api]
@@ -24,6 +25,7 @@
      [samak.tools :refer [fail log]]
      [samak.trace :as trace]
      [samak.pipes :as pipes]
+     [samak.conveyor :as conv]
      [samak.transduction-tools :as tt]
      [samak.nodes :as n]
      [samak.api :as api]
@@ -116,16 +118,19 @@
 (defn link-fn
   ""
   [id broadcast inbound]
-  (fn [from to xf]
+  (fn [from to xf db-id]
+    (println "link" from to xf db-id)
     (let [a (replace-piped from id broadcast inbound)
           c (replace-piped to id broadcast inbound)
-          _ (when (not (pipes/pipe? a))
+          _ (when (and (not (pipes/pipe? a)) (not (conv/station? a)))
               (fail "cant link from " from))
-          _ (when (not (pipes/pipe? c))
+          _ (when (and (not (pipes/pipe? c)) (not (conv/station? c)))
               (fail "cant link to " to))
-          l (if xf
-              (pipes/link! (pipes/link! a xf) c)
-              (pipes/link! a c))
+          ;; xi (when xf (pipes/instrument db-id cancel? xf))
+          x (when xf (conv/transduction-pipe xf (str (pipes/uuid a) "-" db-id "-" (pipes/uuid c)) cancel?))
+          l (if x
+              (conv/link! (conv/link! a x) c)
+              (conv/link! a c))
           from-uuid (if (pipes/pipe? from) (pipes/uuid from) (or (:named from) from))
           to-uuid (if (pipes/pipe? to) (pipes/uuid to) (or (:named to) to))]
       (println "### linking" from-uuid to-uuid)
@@ -153,7 +158,7 @@
               ;; needs to prep resolve magic when instanciating pipes, to select same runtime
               ;; maybe simply do so explicitly
               ;; (if (:config man))
-              (println (str "### used module: " a "---" module "->" evaled))
+              (println "### used module: " a "---" module "->" evaled)
               evaled))))))
 
 (defn make-store-internal
@@ -186,7 +191,8 @@
   ([]
    (make-runtime nil))
   ([builtins]
-   (make-runtime builtins (fn [] [(pipes/pipe (chan) identity) (pipes/pipe (chan) identity)])))
+   (make-runtime builtins (fn [] [(pipes/pipe (chan) identity)
+                                  (pipes/pipe (chan) println)])))
   ([builtins scheduler]
    (make-runtime builtins scheduler {}))
   ([builtins scheduler conf]
@@ -322,16 +328,17 @@
 (defn fire-into-named-pipe
   ""
   [rt ctx pipe-name data timeout]
-  (println "§§§§§§ fire" rt ctx pipe-name data)
+  (println "§§§§§§ fire" (:id rt) ctx pipe-name data)
   (p/let [pipe (get-definition-by-name rt ctx pipe-name)]
     (do
       (println "pipes" @pipe-links)
       (println "firing" pipe-name)
-      (println (:id rt) "pipeis" pipe) (if (pipes/pipe? pipe)
-       (let [paket (pipes/make-paket data ::fire)
+      (println (:id rt) "pipeis" pipe)
+      (if (conv/fire? pipe)
+       (let [paket (conv/fire! pipe data nil)
              cancel-id (:samak.pipes/cancel (:samak.pipes/meta paket))]
          (when (> timeout 0)
            (set-cancellation-condition cancel-id {:timeout (helpers/future-ms timeout)}))
          (trace/trace ::fire 0 paket)
-         (pipes/fire-raw! pipe paket))
+         (println "fired"))
        (ex-info "could not find pipe" {:pipe-name pipe-name})))))

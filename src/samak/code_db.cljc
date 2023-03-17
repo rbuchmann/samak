@@ -68,7 +68,11 @@
   (d/create-conn schema))
 
 (defn parse-tree->db! [db tree]
-  (d/transact! db tree))
+  (try
+    (d/transact! db tree)
+    (catch #?(:clj java.lang.RuntimeException :cljs js/Error) ex
+      (println "db could not persist" tree)
+      (println ex))))
 
 (defn load-by-id
   "Loads an ast given by its entity id from the database.
@@ -84,11 +88,12 @@
          :where [?id :samak.nodes/type :samak.nodes/def]]
        @db))
 
-(defn load-links [db]
-  (d/q '[:find [(pull ?id [*]) ...]
-         :in $
-         :where [?id :samak.nodes/type :samak.nodes/link]]
-       @db))
+;; unused?
+;; (defn load-links [db]
+;;   (d/q '[:find [(pull ?id [*]) ...]
+;;          :in $
+;;          :where [?id :samak.nodes/type :samak.nodes/link]]
+;;        @db))
 
 (defn load-recurse
   "loads an ast given by its entity id from the database"

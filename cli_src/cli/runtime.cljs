@@ -54,7 +54,7 @@
   (fn
     [event]
     (let [data (t/read json-reader event)]
-      (println "recv from" (:id conf) ":" data)
+      ;; (println "recv from" (:id conf) ":" data)
       (condp = (:target data)
         (a/put! from-worker data)))))
 
@@ -64,7 +64,7 @@
   (let [w (t/writer :json {:handlers d/writers})]
     (go-loop []
       (let [p (<! c)]
-        (println "send to" (:id conf) p)
+        ;; (println "send to" (:id conf) p)
         (.postMessage worker (t/write w p)))
       (recur))))
 

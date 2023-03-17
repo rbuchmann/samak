@@ -1,5 +1,5 @@
-(ns samak.scheduler-test
-  (:require [samak.scheduler :as sut]
+(ns samak.modules-test
+  (:require [samak.modules :as sut]
             #?(:clj [clojure.test :as t]
                :cljs [cljs.test :as t :include-macros true])
             [clojure.string :as s]

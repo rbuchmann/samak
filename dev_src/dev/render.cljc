@@ -18,6 +18,7 @@
      [samak.test-programs :as test-programs]
      [samak.pipes :as pipes]
      [samak.scheduler :as sched]
+     [samak.modules :as modules]
      [samak.runtime :as run])]
    :cljs
    [(:require
@@ -38,6 +39,7 @@
      [samak.lisparser :as p]
      [samak.test-programs :as test-programs]
      [samak.layout :as layout]
+     [samak.modules :as modules]
      [samak.pipes :as pipes]
      [samak.scheduler :as sched]
      [samak.runtime :as run])
@@ -106,7 +108,7 @@
 (defn run-oasis
   ""
   [id]
-  (prom/let [res (run/fire-into-named-pipe @rt id 'kbn-init "1" 0)]
+  (prom/let [res (run/fire-into-named-pipe @rt id 'oasis-init "1" 0)]
     (println "oasis started: " res))
   ;; (let [parsed [(api/defexp 'start (api/fn-call (api/symbol 'pipes/debug) []))]]
   ;;   (doseq [expression parsed]
@@ -148,13 +150,13 @@
   ""
   [load]
   (println "loading oasis")
-  (prom/let [net (sched/load-bundle @rt 'kbn)]
+  (prom/let [net (modules/load-bundle @rt 'oasis)]
     (helpers/debounce
       (fn []
         (let [id (str "moasis-" (helpers/uuid))]
           (prom/do!
            (println "evaluating oasis")
-           (sched/eval-module rt main-conf net nil id)
+           (modules/eval-module rt main-conf net nil id)
            (println "renderer loaded oasis")
            (helpers/debounce #(run-oasis id))))))))
 
@@ -187,7 +189,7 @@
   (prom/let [rt-inst (run/make-runtime renderer-symbols scheduler main-conf)]
     (reset! rt rt-inst)
     (println "persisting oasis")
-    (kbn/store (:store @rt))
+    (oasis/store (:store @rt))
     (println "persist done")
     (pipes/link! (:broadcast @rt) (pipes/sink out))
     (pipes/link! (pipes/source in) (:scheduler @rt))

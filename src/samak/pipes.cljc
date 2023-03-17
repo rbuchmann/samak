@@ -46,8 +46,10 @@
 
 ;; Pipes and flow control
 
+(defprotocol Identified
+  (uuid [this]))
+
 (defprotocol Pipe
-  (uuid [this])
   (in-port [this])
   (out-port [this])
   (in-spec [this])
@@ -60,8 +62,9 @@
   (clean-up [this]))
 
 (defrecord Sink [ch in-spec uuid]
-  Pipe
+  Identified
   (uuid [_] uuid)
+  Pipe
   (in-port [_] ch)
   (in-spec [_] in-spec)
   (out-port [_] nil)
@@ -75,8 +78,9 @@
    (Sink. ch in-spec uuid)))
 
 (defrecord Source [ch out-spec uuid]
-  Pipe
+  Identified
   (uuid [_] uuid)
+  Pipe
   (in-port [_] nil)
   (in-spec [_] nil)
   (out-port [_] ch)
@@ -90,8 +94,9 @@
   (Source. (a/mult ch) out-spec uuid)))
 
 (defrecord Pipethrough [in out in-spec out-spec uuid]
-  Pipe
+  Identified
   (uuid [_] uuid)
+  Pipe
   (in-port [_] in)
   (in-spec [_] in-spec)
   (out-port [_] out)
@@ -153,7 +158,10 @@
   "put a raw event into the given pipe. should be used for testing only."
   [pipe event]
   ;; (println "pipe fire" pipe)
-  (put! (in-port pipe) event))
+  (try (put! (in-port pipe) event)
+       (catch #?(:clj java.lang.RuntimeException :cljs js/Error) ex
+         (println "exception firing to pipe" (uuid pipe) " -> " ex)))
+  (::uuid (::meta event)))
 
 
 (defn fire! [pipe event db-id]
@@ -161,6 +169,8 @@
     (fire-raw! pipe paket)))
 
 (defrecord CompositePipe [a b]
+  Identified
+  (uuid [_] (str (uuid a) "-" (uuid b)))
   Pipe
   (in-port [_] (in-port a))
   (out-port [_] (out-port b))

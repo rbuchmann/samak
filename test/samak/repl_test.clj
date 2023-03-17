@@ -7,9 +7,8 @@
             [clojure.string :as str]))
 
 (deftest should-parse-groups
-  (let [res (sut/group-repl-cmds ["(def in 5)" "!f in 5"])]
-    (println res)
-    (is (= res 5))))
+  (let [res (sut/group-repl-cmds ["(def in 5)" "(def out 3)" "" ";--" "!f in 5"])]
+    (is (= (count res) 3))))
 
 ;; (deftest should-eval-inc-x2
 ;;   (utils/test-promise (prom/then (prom/let [s# (new java.io.StringWriter)]

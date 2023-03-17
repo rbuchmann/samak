@@ -4,11 +4,13 @@
             [samak.code-db  :as db]
             [samak.stdlib   :as std]
             [samak.core     :as core]
+            [samak.runtime  :as run]
             [ui.modes       :as modes]
             [ui.transitions :as transitions]))
 
 (defn make-initial-state []
   {:mode            modes/starting-mode
+   :rt              (run/make-runtime nil nil {:id "main" :env {}})
    :path            []
    :repl-lines      []
    :defined-symbols core/samak-symbols})

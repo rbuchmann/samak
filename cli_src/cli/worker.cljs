@@ -27,7 +27,7 @@
     (go-loop []
       (let [p (<! c)
             before (helpers/now)]
-        (println "to main" p)
+        ;; (println "to main" p)
         (.postMessage (.-parentPort worker_threads) (t/write w p)))
       (recur))))
 
@@ -38,7 +38,7 @@
   (fn
     [event]
     (let [data (t/read json-reader event)]
-      (println "worker in" data)
+      ;; (println "worker in" data)
       (if (= (:cmd data) :init)
         (helpers/debounce #(init (:param data)))
         (put! in data)))))

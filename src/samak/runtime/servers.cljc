@@ -21,14 +21,18 @@
 (defrecord LocalSamakServer [defined-ids builtins manager]
   SamakServer
   (eval-ast [this {:keys [db/id] :as ast} ctx]
-    (println "eval <-" (str ctx "/" id) ast)
+    ;; (println "eval <-" (str ctx "/" id) ast)
     (let [defs (atom (get-defined this))
           man (merge (get this :manager)
-                     {:resolve (fn [x] (println "res <-" (str ctx "/" x) (get @defs (str ctx "/" x))) (or (get @defs (str ctx "/" x)) (get @defs (str "/" x))))
-                      :register (fn [did def] (println "reg ->" (str ctx "/" did) def) (swap! defs assoc (str ctx "/" did) def))})
+                     {:resolve (fn [x] (let [val (or (get @defs (str ctx "/" x)) (get @defs (str "/" x)))]
+                                         ;; (println "res <-" (str ctx "/" x) val)
+                                         val))
+                      :register (fn [did def]
+                                  ;; (println "reg ->" (str ctx "/" did) def)
+                                  (swap! defs assoc (str ctx "/" did) def))})
           def (n/eval-env man builtins ast {:db-id id :ctx ctx})]
       (swap! defs assoc (str ctx "/" id) def)
-      (println "eval ->" (str ctx "/" id) def)
+      ;; (println "eval ->" (str ctx "/" id) def)
       (assoc this :defined-ids @defs)))
   (get-defined [this]
     (get this :defined-ids))

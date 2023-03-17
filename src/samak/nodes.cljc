@@ -69,16 +69,16 @@
     res))
 
 (defmethod eval-node ::pipe [{:keys [::from ::to ::xf] :as p}]
+  (println "pipe"  from " ------------- "  to)
   (let [a (eval-node from)
-        c (eval-node to)
-        b (when xf
+        b (eval-node to)
+        _ (println "a" a)
+        _ (println "b" b)
+        c (when xf
             (let [db-id (:db/id xf)]
               (binding [*db-id* db-id]
-                (-> xf
-                    eval-node
-                    ((partial pipes/instrument db-id (:cancel? *manager*)))
-                    (#(pipes/transduction-pipe % (str (pipes/uuid a) "-" db-id "-" (pipes/uuid c))))))))]
-    ((:link *manager*) a c b)))
+                (eval-node xf))))]
+    ((:link *manager*) a b c (:db/id xf))))
 
 (defmethod eval-node ::fn-ref [{:keys [::fn] :as f}]
   (or ((:resolve *manager*) (:db/id fn))
@@ -96,10 +96,11 @@
   (let [func (eval-node fn-expression)]
     (try (apply (p/eval-as-fn func) (eval-reordered arguments))
          (catch #?(:clj clojure.lang.ArityException :cljs js/Error) ex
-           (compile-error "wrong args: " (eval-reordered arguments) " for fn " func " -> " ex)))))
+           (compile-error "wrong args: " (eval-reordered arguments) " for " func "= fn " fn-expression " -> " ex)))))
 
-(defmethod eval-node ::link [{:keys [::from ::to]}]
-  (pipes/link! (eval-node from) (eval-node to)))
+;; unused?
+;; (defmethod eval-node ::link [{:keys [::from ::to]}]
+;;   (pipes/link! (eval-node from) (eval-node to)))
 
 (defn eval-env [manager builtins ast {db-id :db-id ctx :ctx}]
   (binding [*manager* manager
