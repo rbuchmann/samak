@@ -1,5 +1,7 @@
-(def foobar (pipes/station))
+; (def init (pipes/station))
+(def in (pipes/station))
 (def out (pipes/log "foobar"))
-; (def counter (pipes/reductions (+ :-state :-next) 0))
-(| foobar (-> (repeat _ 1) many) out)
-!f foobar 3
+(def counter (pipes/reductions (+ :-state :-next) 0))
+(| in (-> (repeat _ 1) many) counter)
+; (| init in)
+(| counter out)

@@ -80,17 +80,21 @@
 (def repl-prefixes
   {\f (fn [in rt] (let [[pipe-name event] (str/split in #" " 2)]
                         (fire-event-into-named-pipe rt pipe-name event)))
-   \e (fn [_ rt] (prom/resolved (println "Defined symbols:\n" (->> rt
-                                                                :server
-                                                                servers/get-defined
-                                                                t/pretty))))
-   \p (fn [in _] (prom/resolved (println (parse-samak-string in))))})
+   \e (fn [_ rt] (prom/resolved (let [p (->> rt
+                                             :server
+                                             servers/get-defined
+                                             t/pretty)]
+                                  (println "Defined symbols:\n" p)
+                                  p)))
+   \l (fn [_ rt] (prom/resolved (let [l (run/links rt)] (run! println l) l)))
+   \p (fn [in _] (prom/resolved (let [s (parse-samak-string in)] (println s) s)))})
 
 (defn run-repl-cmd [s rt]
   (let [[_ dispatch & rst] s]
-    (when-let [repl-cmd (repl-prefixes dispatch)]
-      (println "###cmd" s)
-      (repl-cmd (->> rst (apply str) str/trim) rt))))
+    (let [repl-cmd (repl-prefixes dispatch)]
+      (if repl-cmd
+        (repl-cmd (->> rst (apply str) str/trim) rt)
+        (prom/rejected (ex-info (str "no valid command: " s) {}))))))
 
 (def foo (atom 1))
 
@@ -98,21 +102,24 @@
   "Evals some input line in the context of the defined symbols,
   and returns a new map of symbols"
   [input runtime]
-  (println "line" input (or (:id runtime) runtime))
-  (condp #(str/starts-with? %2 %1) input
-    "!" (prom/let [a (run-repl-cmd input runtime)]
-          (println "repl" a)
-          (prom/resolved runtime))
-    ";" (do (println "ignored:" input) (prom/resolved runtime))
-    (prom/let [parsed (parse-samak-string input)
-               prt (prom/resolved {:rt runtime :cnt 0})
-               red (reduce (fn [rt exp] (prom/handle rt (fn [res err] (when err (throw err))
-                                                          (prom/let [rt (run/eval-expression! (:rt res) exp :repl)]
-                                                            {:rt rt :cnt (inc (:cnt res))}))))
-                           prt parsed)
-               new (:rt red)]
-      ;; (println "resolved" new)
-      (prom/resolved new))))
+  (if (= "" (str/trim input))
+    runtime
+    (do
+      (println "line" input (or (:id runtime) runtime))
+      (condp #(str/starts-with? %2 %1) input
+        "!" (prom/let [a (run-repl-cmd input runtime)]
+              (println "repl" a)
+              (prom/resolved runtime))
+        ";" (do (println "ignored:" input) (prom/resolved runtime))
+        (prom/let [parsed (parse-samak-string input)
+                   prt (prom/resolved {:rt runtime :cnt 0})
+                   red (reduce (fn [rt exp] (prom/handle rt (fn [res err] (when err (throw err))
+                                                              (prom/let [rt (run/eval-expression! (:rt res) exp :repl)]
+                                                                {:rt rt :cnt (inc (:cnt res))}))))
+                               prt parsed)
+                   new (:rt red)]
+          ;; (println "resolved" new)
+          (prom/resolved new))))))
 
 (defn special-line? [line]
   (or (str/starts-with? line "!") (str/starts-with? line ";")))
@@ -128,3 +135,8 @@
   (prom/let [rt runtime
              evals (reduce (fn [rt exp] (prom/handle rt (fn [res err] (if err (do (println err)(throw err)) (eval-line exp res))))) (prom/resolved rt) (group-repl-cmds lines))]
     evals))
+
+(defn init [rt args]
+  (prom/let [init? (run/get-definition-by-name rt :repl 'init)]
+    (when init?
+      (fire-event-into-named-pipe rt 'init args))))

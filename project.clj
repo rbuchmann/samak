@@ -20,10 +20,17 @@
                  [tick "0.4.32"]
                  [clj-http "3.7.0"]
                  [automat "0.2.4"]
+                 [clojure-lanterna "0.9.7"]
                  [cljsjs/klayjs "0.3.2-0"]
                  ;; [cljsjs/elkjs "0.5.1-0"]
                  ;; [org.eclipse.elk/parent "0.3.0" :extension "pom"]
                  ;; [cljsjs/opentracing "0.14.3-0"]
+                 [io.opentelemetry/opentelemetry-api "1.24.0"]
+                 [io.opentelemetry/opentelemetry-sdk "1.24.0"]
+                 [io.opentelemetry/opentelemetry-exporter-otlp "1.24.0"]
+                 [io.opentelemetry/opentelemetry-exporter-logging "1.24.0"]
+                 [io.opentelemetry/opentelemetry-sdk-testing "1.24.0"]
+                 [io.opentelemetry/opentelemetry-semconv "1.24.0-alpha"]
                  [compojure "1.6.2"]
                  [ring/ring-defaults "0.3.3"]
                  [derekchiang/ring-proxy "1.0.2"]
@@ -45,6 +52,7 @@
                          ["cljsbuild" "once" "oasis-dev"]]}
 
   :main samak.main
+  :aot [samak.main]
 
   :ring {:handler foo.handler/app}
   :clean-targets ^{:protect false} ["resources/main.js"
@@ -69,6 +77,7 @@
                     :cache-analysis true
                     :target         :nodejs
                     :infer-externs  true
+                    :npm-deps {"@opentelemetry/api", "1.4.1"}
                     :main           "cli.node-core"}}
     {:source-paths ["src" "cli_src" "ui_src"]
      :id           "cli-worker"

@@ -342,3 +342,6 @@
          (trace/trace ::fire 0 paket)
          (println "fired"))
        (ex-info "could not find pipe" {:pipe-name pipe-name})))))
+
+(defn links [rt]
+  @conv/links)

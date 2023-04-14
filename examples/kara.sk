@@ -1,0 +1,14 @@
+(def log-metrics (pipes/log "metrics-out"))
+(def log-traces (pipes/log "traces-out"))
+
+(def halef-mod ((modules/halef "karabennemsi")))
+
+(def trace-in (-> halef-mod :-sources :-trace))
+(| (trace-in {}) log-traces)
+
+(def metrics-in (-> halef-mod :-sources :-metrics))
+(def met-pipe (metrics-in {}))
+(| met-pipe log-metrics)
+
+(def init (pipes/station))
+(| init log-metrics)

@@ -72,8 +72,6 @@
   (println "pipe"  from " ------------- "  to)
   (let [a (eval-node from)
         b (eval-node to)
-        _ (println "a" a)
-        _ (println "b" b)
         c (when xf
             (let [db-id (:db/id xf)]
               (binding [*db-id* db-id]

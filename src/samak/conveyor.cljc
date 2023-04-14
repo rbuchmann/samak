@@ -7,6 +7,7 @@
               [promesa.core :as prom]
               [promesa.protocols :as pt]
               [promesa.exec :as px]
+              [samak.metrics :as metrics]
               [samak.trace :as t]
               [samak.helpers :as helpers]
               [samak.transduction-tools :as tt]
@@ -19,6 +20,7 @@
               [promesa.core :as prom]
               [promesa.protocols :as pt]
               [promesa.exec :as px]
+              [samak.metrics :as metrics]
               [samak.trace :as t]
               [samak.transduction-tools :as tt]
               [samak.helpers :as helpers]
@@ -28,6 +30,16 @@
 
 (def queue (a/buffer 102400))
 (def links (atom {}))
+
+(defn meter [n t]
+  (metrics/get-meter "conveyor" n t))
+
+(def meters (atom {}))
+
+(defn get-meter [k t]
+  (or (get meters k)
+      (let [m (swap! meters #(if (contains? % k) % (assoc % k (meter (name k) t))))]
+        (get m k))))
 
 (def MAX_RUNS 10)
 
@@ -66,9 +78,11 @@
 
 (defn wrap [{:keys [::from ::to ::msg] :as call}]
   (fn []
-    (println "starting" call)
+    ;; (println "starting" call)
     (if (and (fn? (cancel? to)) ((cancel? to) msg))
-      (t/trace ::cancel 0 call)
+      (do
+        (.add (get-meter (str "node-" (pipes/uuid to) "-cancel") :counter) 1)
+        (t/trace ::cancel 0 call))
       (try
         (let [target (xf to)
               passthrough (not (sink? to))
@@ -102,9 +116,9 @@
                #(when (pos? (dec c))) (trigger (dec c)))))
 
 (defn schedule [from to msg]
-  (println "----------")
-  (println "count" (count queue))
-  (println "----------")
+  ;; (println "----------")
+  ;; (println "count" (count queue))
+  ;; (println "----------")
   (let [call {::msg msg ::from from ::to to}]
     (ap/add!* queue call))
   (trigger MAX_RUNS))
@@ -141,8 +155,9 @@
               ;; both conveyor
               [false false] to)]
     (swap! links update from conj to)
+    (.add (get-meter :link_counter :counter) 1)
     (println "----------")
-    (println links)
+    (run! #(println %) @links)
     (println "----------")
     res))
 

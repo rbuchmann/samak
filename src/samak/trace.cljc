@@ -9,6 +9,7 @@
       [samak.trace-db       :as db]
       [samak.helpers        :as helper]
       [samak.tools          :as tools]
+      [samak.metrics        :as metrics]
       [samak.api            :as api]
       ;; [samak.runtime.stores :as store]
       )
@@ -23,6 +24,7 @@
       [samak.helpers :as helper]
       ;; [samak.runtime.stores :as store]
       [samak.api :as api]
+      [samak.metrics :as metrics]
       [samak.tools :as tools])))
 
 (def ^:dynamic *db-id* nil)
@@ -33,6 +35,14 @@
 
 (def tracer (atom nil))
 
+(def meters (atom {}))
+
+(defn get-meter [s n t]
+  (let [k (str s "-" n)]
+    (or (get meters k)
+        (let [m (swap! meters #(if (contains? % k) % (assoc % k (metrics/get-meter s n t))))]
+          (get m k)))))
+
 
 (defn init-tracer
   ""
@@ -42,7 +52,7 @@
   (when (= :zipkin (:backend config))
     (reset! tracer (tracing/init config)))
   (when (= :samak (:backend config))
-    (reset! tracer {:trace-fn (fn [t x] (when (= 1 (rand-int 100)) (put! (:chan config) {:samak.pipes/content x})) t)}))
+    (reset! tracer {:trace-fn (fn [t x] (when (= 0 (rand-int 1)) (put! (:chan config) {:samak.pipes/content x})) t)}))
   (when (= :logging (:backend config))
     (let [pre (or (:prefix config) "TRACE -")]
       (reset! tracer {:trace-fn (fn [t x] (println pre x) t)}))))
@@ -86,6 +96,8 @@
   (if-not (:samak.pipes/uuid (:samak.pipes/meta event))
     (when event
       (println "no traceable event:" event)))
+  (let [meter (get-meter (str "node-" db-id) "call" :counter)]
+      (.add meter 1))
   (when @tracer
     (let [data (make-trace db-id duration event)]
       (reset! tracer ((:trace-fn @tracer) @tracer (to-tracer data)))))

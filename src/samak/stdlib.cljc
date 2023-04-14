@@ -59,11 +59,21 @@
     (str "logthrough-" prefix)
     nil)))
 
+(def lock 1)
+(def log-chan (atom nil))
+
+(defn init [log-c]
+  (reset! log-chan log-c))
+
 (defn log
   ([] (log (rand-int 100000)))
   ([prefix]
-   (conv/sink #(println "log" prefix %)
-              (str "log-" prefix))))
+   (conv/sink
+    (fn [l]
+      (if @log-chan
+        (put! @log-chan {:msg l :source prefix})
+        (locking lock (tools/log (str "log " prefix " " l)))))
+    (str "log-" prefix))))
 
 ;; Networking
 
