@@ -105,8 +105,11 @@
   [s n]
   (str
    (if (> (str-len s) n)
-     (str (subs (str s) 0 (- n 3)) "...")
+     (str (subs (str s) 0 (max 0 (- n 3))) "...")
      s)))
+
+(defn fixstring [s n]
+  (apply str (concat (take n (concat (substring s n) (repeat " "))))))
 
 (defn to-json [x]
   #?(:cljs (clj->js x)
@@ -136,3 +139,21 @@
   ""
   [f form]
   (pwalk (partial ppostwalk f) f form))
+
+(defn make-meta
+  ""
+  [specific]
+  (merge {:samak.pipes/created (now)
+          :samak.pipes/span (make-span)
+          :samak.pipes/parent (make-span)
+          :samak.pipes/cancel (uuid)
+          :samak.pipes/uuid (uuid)} specific))
+
+(defn make-paket
+  ""
+  ([event source]
+   {:samak.pipes/meta (make-meta {:samak.pipes/source source})
+    :samak.pipes/content event})
+  ([event source uuid]
+   {:samak.pipes/meta (make-meta {:samak.pipes/uuid uuid :samak.pipes/source source})
+    :samak.pipes/content event}))

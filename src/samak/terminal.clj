@@ -8,17 +8,12 @@
             [lanterna.constants :as c]
             [lanterna.screen :as s]
             [promesa.core   :as prom]
-            [samak.runtime  :as rt]
             [samak.helpers  :as helpers]
-            [samak.stdlib   :as std]
-            [samak.trace    :as trace]
-            [samak.metrics  :as metrics]
-            [samak.builtins :as builtins]
-            [samak.caravan  :as caravan]
-            [samak.halef    :as halef]
-            [samak.repl     :as repl]))
+            [samak.tools    :as tools]
+            [samak.pipes    :as pipes]))
 
 (def screens (atom {}))
+(def terminal (atom (s/get-screen)))
 (def current (atom :none))
 
 (def dirty (atom true))
@@ -43,11 +38,12 @@
         (doall (map-indexed (fn [i c] (draw-component scr c (merge-context box-context {:y i})))
                             children)))))
 
-(defn draw-screen [scr screen context]
+(defn draw-screen [^Screen scr screen context]
   (when-let [attrs (second screen)]
     (when (map? attrs)
-      (when-let [cursor (:cursor attrs)]
-        (s/move-cursor scr (:x cursor) (:y cursor)))))
+      (if-let [cursor (:cursor attrs)]
+        (s/move-cursor scr (:x cursor) (:y cursor))
+        (.setCursorPosition scr nil))))
   (draw-box scr screen context))
 
 (defn draw-component [scr com {:keys [:origin] :as context}]
@@ -73,39 +69,80 @@
       :alt (.isAltPressed key)
       :ctrl (.isCtrlPressed key)})))
 
+(defn find-next [ids cur]
+  (:res (reduce (fn [acc id]
+                  (if (:found acc)
+                    {:res id :found false}
+                    {:res (:res acc) :found (= cur id)}))
+                {:res (first ids) :found false}
+                ids)))
+
+(defn handle-key [key chan]
+  (if (= (:key key) :end)
+    (prom/resolved (do
+                     (let [ids (keys @screens)
+                           cur @current
+                           next (find-next ids cur)]
+                       (reset! current next)
+                       (reset! dirty true))))
+    (prom/resolved (when chan (put! chan key)))))
+
 (defn start-loop []
   (when (compare-and-set! run false true)
     (reset! run true)
     (go-loop []
       (let [p-chan (a/promise-chan)
-            screen (get @screens @current)]
-        (println "scr" @screens)
-        (prom/let [raw-key (draw (:screen screen) (:msg screen))
+            scr (get @screens @current)]
+        (prom/let [raw-key (draw @terminal (:msg scr))
                    res (if raw-key
-                         (prom/resolved (put! (:key-chan screen) raw-key))
+                         (handle-key raw-key (:key-chan scr))
                          (prom/delay 50 [raw-key nil]))]
-          (println "loop" raw-key "")
           (put! p-chan true))
-        (and (<! p-chan) (when @run (recur)))))))
+        (and (<! p-chan) (when @run (recur)))))
+    (s/start @terminal)))
 
-(defn start-screen [uuid scr draw-chan exit-chan]
+(defn start-screen [uuid draw-chan exit-chan]
   (go
-    (let [exit (<! exit-chan)]
-      (s/stop scr)
-      (swap! screens dissoc uuid)
-      (reset! current (first (first @screens)))))
+    (let [exit (<! exit-chan)
+          scr (swap! screens dissoc uuid)]
+      (if (= 0 (count scr))
+        (s/stop @terminal)
+        (reset! current (first (first @screens))))))
   (go-loop []
     (let [in (<! draw-chan)]
       (swap! screens assoc-in [uuid :msg] in)
       (reset! dirty true))
-    (recur))
-  (s/start scr))
+    (recur)))
 
 (defn add-screen [draw-chan key-chan exit-chan]
-  (let [scr (s/get-screen)
-        uuid (helpers/uuid)]
-    (swap! screens assoc uuid {:screen scr :key-chan key-chan :msg nil})
-    (println "screens" @screens)
-    (start-screen uuid scr draw-chan exit-chan)
+  (let [uuid (helpers/uuid)]
+    (swap! screens assoc uuid {:key-chan key-chan :msg nil})
+    (start-screen uuid draw-chan exit-chan)
     (reset! current uuid)
     (start-loop)))
+
+(defn terminal-module
+  ""
+  [prefix]
+  (println "def term" prefix)
+  (fn []
+    (let [inst (str prefix "-" (helpers/uuid))
+          draw-in (pipes/pipe-chan ::in 100 (map :samak.pipes/content))
+          draw-pipe (pipes/sink draw-in)
+          key-out (pipes/pipe-chan ::key 100 (map #(helpers/make-paket % ::exit)))
+          key-pipe (pipes/pipe key-out)
+          exit-in (pipes/pipe-chan ::exit 1 (map :samak.pipes/content))
+          exit-pipe (pipes/pipe exit-in)]
+      (add-screen draw-in key-out exit-in)
+      (println "init terminal" inst)
+      ;; (go-loop []
+      ;;   (when-let [x (<! draw-in)]
+      ;;     (tools/log "terminal-in: " inst " " x)
+      ;;     (recur)))
+      (let [foo {:sources {:key key-pipe}
+                 :sinks {:draw draw-pipe
+                         :exit exit-pipe}}]
+        (println "terminal is" inst "->" foo)
+        foo))))
+
+(def samak-symbols {'modules/terminal terminal-module})

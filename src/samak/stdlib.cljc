@@ -71,7 +71,7 @@
    (conv/sink
     (fn [l]
       (if @log-chan
-        (put! @log-chan {:msg l :source prefix})
+        (put! @log-chan {:msg l :source prefix :time (helpers/now)})
         (locking lock (tools/log (str "log " prefix " " l)))))
     (str "log-" prefix))))
 
@@ -113,7 +113,7 @@
 (defn reductions* [f init]
   (pipes/transduction-pipe
    (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
-                 (tt/re-wrap (pipes/make-meta {:samak.pipes/source ::reductions})
+                 (tt/re-wrap (helpers/make-meta {:samak.pipes/source ::reductions})
                              init))
    (str "reductions-" (helpers/uuid))))
 

@@ -49,7 +49,7 @@
                      m (mult c)
                      r (-> (reify-chan-exporter c)
                            (PeriodicMetricReader/builder)
-                           (.setInterval 10 TimeUnit/SECONDS)
+                           (.setInterval 3 TimeUnit/SECONDS)
                            (.build))
                      meter (-> (SdkMeterProvider/builder)
                                (.registerMetricReader r)

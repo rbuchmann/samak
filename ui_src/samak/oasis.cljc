@@ -35,8 +35,8 @@
 
 (defn defmap
   [sym m]
-  (defncall sym '-> (api/map m)))
-
+  (defncall sym '-> (api/map m))
+)
 (defn defpipe
   ""
   [sym call in-spec out-spec & args]

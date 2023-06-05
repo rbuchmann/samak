@@ -25,6 +25,7 @@
 (def metpipe (chan 100))
 (def trace-source (atom nil))
 (def metrics-source (atom nil))
+(def rt (atom nil))
 
 (defn trace-stream [inst out-pipe]
   (go-loop []
@@ -53,8 +54,31 @@
   (run! (fn [[n v]] (println "metrics" n v)) (convert-metrics v))
   (println "- /metrics -----------------------"))
 
+(defn node-as-str
+  ""
+  [node]
+  ;; (if (number? node)  ;; split into own ns
+  ;;   (prom/let [ast (store/load-by-id (:store @rt) node)]
+  ;;     (if (api/is-def? ast)
+  ;;       (str "(" node ") " (:samak.nodes/name ast))
+  ;;       (if (api/is-def? (:samak.nodes/fn ast))
+  ;;         (str "(" node ") " (:samak.nodes/name (:samak.nodes/fn ast)))
+  ;;         (str ast))))
+    node)
+
+
+(defn convert-traces [t]
+  {:event (:samak.trace/event (:samak.pipes/content t))
+   :timestamp (helpers/print-ISO (:samak.trace/timestamp (:samak.pipes/content t)))
+   :duration (:samak.trace/duration (:samak.pipes/content t))
+   :parent (:samak.pipes/parent (:samak.pipes/meta t))
+   :span (:samak.pipes/span (:samak.pipes/meta t))
+   :node (:samak.trace/node (:samak.pipes/content t))
+   :runtime (:samak.trace/runtime (:samak.pipes/content t))})
+
 (defn init
   [trac met]
+  ;; (reset! rt runtime)
   (reset! trace-source trac)
   (reset! metrics-source met)
   (a/tap trac tracepipe)
@@ -68,9 +92,9 @@
     (let [inst (str prefix "-" (helpers/uuid))
           halef-in (pipes/pipe-chan ::in nil)
           halef-in-pipe (pipes/sink halef-in)
-          halef-trace (pipes/pipe-chan ::trace nil)
+          halef-trace (chan (a/sliding-buffer 100) (map #(helpers/make-paket (convert-traces %) ::traces)))
           halef-trace-pipe (pipes/pipe halef-trace)
-          halef-metrics (chan 100 (map convert-metrics))
+          halef-metrics (chan 100 (map #(helpers/make-paket (convert-metrics %) ::metrics)))
           halef-metrics-pipe (pipes/pipe halef-metrics)]
       (a/pipe tracepipe (pipes/in-port halef-trace-pipe))
       (a/pipe metpipe halef-metrics)

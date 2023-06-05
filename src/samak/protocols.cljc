@@ -13,7 +13,8 @@
 (defn eval-as-fn [f]
   (cond
     (satisfies? SamakCallable f) (to-samak-fn f)
-    (ifn? f) f
+    (ifn? f) (fn [& x] ;; (println "!!!!call" x)
+               (apply f x))
     :default (constantly f)))
 
 (defn to-map-fn [m]

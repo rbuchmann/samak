@@ -62,11 +62,16 @@
 (defmethod eval-node ::float   [{:keys [::value]}] value)
 (defmethod eval-node ::builtin [{:keys [::value]}] (get *builtins* value))
 
+(defn IObj? [t]
+  (bases (class t)))
+
 (defmethod eval-node ::def [{:keys [::rhs] :as fn}]
   (let [res (eval-node rhs)
         id (:db/id fn)]
     (when-let [r (:register *manager*)] (r id res))
-    res))
+    (if (instance? clojure.lang.IObj res)
+      (with-meta res {::id id})
+      res)))
 
 (defmethod eval-node ::pipe [{:keys [::from ::to ::xf] :as p}]
   (println "pipe"  from " ------------- "  to)
@@ -83,7 +88,7 @@
       (when (api/is-def? fn)
         (let [res (eval-node fn)]
           ;; (println "evaling" (:db/id fn) "->" res "def" fn)
-          res))
+          (with-meta res {::id (:db/id fn)})))
       ;; (when (api/is-module? fn)
       ;;   (let [res (eval-node fn)]
       ;;     (println "evaling" (:db/id fn) "->" res "mod" fn) res))

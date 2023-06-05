@@ -1,14 +1,78 @@
 (def log-metrics (pipes/log "metrics-out"))
 (def log-traces (pipes/log "traces-out"))
-
+(def log-debug (pipes/log "debug-out"))
+;
 (def halef-mod ((modules/halef "karabennemsi")))
+(def term-mod ((modules/terminal "karabennemsi")))
+
+;; term handling
+
+(def term-draw (-> term-mod :-sinks :-draw))
+(def term-inst (term-draw {}))
+
+(def term-out (pipes/station))
+
+(def log-screen (-> [:screen {} [
+     [:box [:-prompt]]
+     [:box [[:line "Logs"]]]
+     [:box {:x 2 :y 0} :-logs]
+     [:box {:x 0 :y 5} [[:line "Traces"]]]
+     [:box {:x 2 :y 5} :-traces]
+     [:box {:x 0 :y 10} [[:line "Metrics"]]]
+     [:box {:x 2 :y 10} :-metrics]
+]]))
+
+(| term-out log-screen term-inst)
+
+(def collect-ui (pipes/reductions (-> (into :-state :-next))
+                                  {:logs [[:line "no logs"]]
+                                   :traces [[:line "no traces"]]
+                                   :metrics [[:line "no metrics"]]
+                                   :prompt [:line "Initializing Karabennemsi..."]}))
+
+(| collect-ui term-out)
+
+;; metrics
 
 (def trace-in (-> halef-mod :-sources :-trace))
-(| (trace-in {}) log-traces)
 
 (def metrics-in (-> halef-mod :-sources :-metrics))
-(def met-pipe (metrics-in {}))
-(| met-pipe log-metrics)
+
+(def mets (pipes/station))
+(def hack-mets (-> (map (str (first _) ": " (second _)) _) {:metrics (mapv [:line _] _)}))
+
+(| (metrics-in {}) hack-mets mets)
+(| mets collect-ui)
+
+;; traces
+
+(def trac (pipes/station))
+(def hack-trace (-> (str :-timestamp " (" :-duration "ms) " :-parent "->" :-span ": " :-event " @" :-node "/" :-runtime)))
+
+(def format-trace (-> (take 160 _) (str-join "" _) [:line _]))
+
+(def collect-traces (pipes/reductions (-> {:state :-state :next (-> :-next format-trace)}
+                                          (conj :-state :-next)
+                                          (reverse _)
+                                          (take 5 _))
+                                      []))
+
+(| (trace-in {}) hack-trace trac)
+(| trac collect-traces)
+(def li (pipes/station))
+(def la (pipes/station))
+(def lu (pipes/station))
+(| collect-traces li)
+(| li (-> {:traces _}) la)
+(| la log-debug)
+(| la collect-ui)
+; (| collect-traces (-> {:traces _}) log-debug)
+
+;; init
+
+(def term-init (pipes/station))
+(| term-init collect-ui)
 
 (def init (pipes/station))
 (| init log-metrics)
+(| init term-init)

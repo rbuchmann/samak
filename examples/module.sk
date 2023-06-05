@@ -1,17 +1,18 @@
 (def in (pipes/debug))
 (def out (pipes/log))
-(| in out)
+(| in id)
+(| id out)
+(def id (pipes/reductions {:id :-id :msg (str :-id " - " :-next)} {:id (rand-int 1000) :msg "init"}))
 (defmodule logger {:sources {:logger-in in}})
 
 (def logger-mod (logger "use1"))
 (def log-pipe (-> logger-mod :-sources :-logger-in))
 
-(def logger2-mod (logger "use2"))
-(def log2-pipe (-> logger2-mod :-sources :-logger-in))
-
 (def tester (pipes/debug))
 (def tester2 (pipes/debug))
 (| tester (log-pipe {}))
+
 ;doesn't work
-(| tester (log2-pipe {}))
-!f tester 5
+; (| tester (log2-pipe {}))
+; (def logger2-mod (logger "use2"))
+; (def log2-pipe (-> logger2-mod :-sources :-logger-in))

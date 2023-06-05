@@ -41,8 +41,10 @@
 
 (defn pipe-chan
   ""
-  [id size]
-  (chan (when size (pipe-buf id size)) nil (exh id)))
+  ([id size]
+   (pipe-chan id size nil))
+  ([id size xform]
+  (chan (when size (pipe-buf id size)) xform (exh id))))
 
 ;; Pipes and flow control
 
@@ -135,25 +137,6 @@
 
 (def ports (juxt in-port out-port))
 
-(defn make-meta
-  ""
-  [specific]
-  (merge {::created (help/now)
-          ::span (help/make-span)
-          ::parent (help/make-span)
-          ::cancel (help/uuid)
-          ::uuid (help/uuid)} specific))
-
-(defn make-paket
-  ""
-  ([event source]
-   {::meta (make-meta {::source source})
-    ::content event})
-  ([event source uuid]
-   {::meta (make-meta {::uuid uuid ::source source})
-    ::content event}))
-
-
 (defn fire-raw!
   "put a raw event into the given pipe. should be used for testing only."
   [pipe event]
@@ -165,7 +148,7 @@
 
 
 (defn fire! [pipe event db-id]
-  (let [paket (make-paket event ::fire)]
+  (let [paket (help/make-paket event ::fire)]
     (fire-raw! pipe paket)))
 
 (defrecord CompositePipe [a b]

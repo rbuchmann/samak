@@ -30,6 +30,7 @@
 
 (def queue (a/buffer 102400))
 (def links (atom {}))
+(def debug (atom nil))
 
 (defn meter [n t]
   (metrics/get-meter "conveyor" n t))
@@ -76,44 +77,50 @@
 
 (declare schedule-next)
 
+(defn call-node [{:keys [::from ::to ::msg] :as call}]
+  (if (and (fn? (cancel? to)) ((cancel? to) msg))
+    (do
+      (.add (get-meter (str "node-" (pipes/uuid to) "-cancel") :counter) 1)
+      (t/trace ::cancel 0 call))
+    (try
+      (let [target (xf to)
+            passthrough (not (sink? to))
+            cont (if passthrough (:samak.pipes/content msg) msg)
+            id (pipes/uuid to)
+            meta-info (:samak.pipes/meta msg)
+            before (helpers/now)
+            res (target cont)
+            duration (helpers/duration before (helpers/now))]
+        (when passthrough
+          (when (nil? res)
+            (throw (ex-info (str "received nil on " from to msg ", with meta: " meta-info) {})))
+          (if (satisfies? tt/Streamable res)
+            (->> res
+                 tt/get-items
+                 (map (tt/re-wrap meta-info))
+                 (map #(t/trace id duration %))
+                 (run! (partial schedule-next to)))
+            (->> res
+                 (tt/re-wrap meta-info)
+                 (t/trace id duration)
+                 (schedule-next to))))
+        )
+      (catch #?(:clj java.lang.RuntimeException :cljs js/Error) ex
+        (println "exception running" ex)))))
+
 (defn wrap [{:keys [::from ::to ::msg] :as call}]
   (fn []
-    ;; (println "starting" call)
-    (if (and (fn? (cancel? to)) ((cancel? to) msg))
-      (do
-        (.add (get-meter (str "node-" (pipes/uuid to) "-cancel") :counter) 1)
-        (t/trace ::cancel 0 call))
-      (try
-        (let [target (xf to)
-              passthrough (not (sink? to))
-              cont (if passthrough (:samak.pipes/content msg) msg)
-              id (pipes/uuid to)
-              meta-info (:samak.pipes/meta msg)
-              before (helpers/now)
-              res (target cont)
-              duration (helpers/duration before (helpers/now))]
-          (when passthrough
-            (when (nil? res)
-              (throw (ex-info (str "received nil on " call ", with meta: " meta-info) {})))
-            (if (satisfies? tt/Streamable res)
-              (->> res
-                   tt/get-items
-                   (map (tt/re-wrap meta-info))
-                   (map #(t/trace id duration %))
-                   (run! (partial schedule-next to)))
-              (->> res
-                   (tt/re-wrap meta-info)
-                   (t/trace id duration)
-                   (schedule-next to))))
-          )
-        (catch #?(:clj java.lang.RuntimeException :cljs js/Error) ex
-          (println "exception running" ex))))))
+    (if-let [d @debug]
+      (prom/then (d call)
+                 (fn [_]
+                   (call-node call)))
+      (call-node call))))
 
 (defn trigger [c]
   ;; FIXME: LOCK
   (when-let [next (getNext queue)]
     (prom/then (px/run! (wrap next))
-               #(when (pos? (dec c))) (trigger (dec c)))))
+               #(when (pos? (dec c)) (trigger (dec c))))))
 
 (defn schedule [from to msg]
   ;; (println "----------")
@@ -163,7 +170,7 @@
 
 (defn fire!
   [pipe event db-id]
-  (let [paket (pipes/make-paket event ::fire)]
+  (let [paket (helpers/make-paket event ::fire)]
     (if (pipes/pipe? pipe)
       (pipes/fire-raw! pipe paket)
       (schedule ::fire pipe paket))

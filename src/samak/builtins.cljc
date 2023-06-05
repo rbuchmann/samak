@@ -5,6 +5,7 @@
             [clojure.string           :as s]
             [samak.tools              :as tools]
             [samak.pipes              :as pipes]
+            [samak.helpers            :as helpers]
             [clojure.string           :as str]
             [samak.core-utils         :refer [samakify samakify-all]]))
 
@@ -59,6 +60,9 @@
 (defn lookup [m x d]
   (get m x d))
 
+(defn takev [n col]
+  (vec (take n col)))
+
 (def samakified-builtins
   (samakify-all
 
@@ -89,13 +93,13 @@
    (remove     [!f col])
    (filter     [!f col])
    (map        [!f col])
-   (mapv        [!f col])
+   (mapv       [!f col])
    (mapcat     [!f col])
    (concat     [& args])
    (flatten    [col])
    (nth        [col index])
    (drop       [n col])
-   (take       [n col])
+   [take       (takev [n col])]
    (interleave [& args])
    (interpose  [sep col])
    (into       [target source])
@@ -109,6 +113,7 @@
    (count      [col])
    (sort       [coll])
    (sort-by    [!comp coll])
+   (reverse    [col])
 
    ;; Map functions
    (vals      [m])
@@ -125,6 +130,7 @@
    [str-join  (str/join  [sep col])]
    [str-split (str/split [s re])]
    [str-index (index-of* [s x])]
+   [str-to-int (helpers/str-to-int [s])]
 
    ;; Boolean functions
    (=  [& args])
