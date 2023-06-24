@@ -112,19 +112,17 @@
                   draw-debug-chan]
   (go-loop [breaks (atom [])
             k (atom nil)
-            halt (atom true)]
+            halt (atom false)]
     (let [[v port] (a/alts! [key-chan debug-chan])]
       (when (= port debug-chan)
-        (println @halt "->" (::prom v))
         (if @halt
           (swap! breaks conj v)
           (prom/resolve! (::prom v))))
       (when (= port key-chan)
         (reset! k v)
-        (println "key " v)
         (condp = (:key v)
           \space (do
-                   (reset! conv/debug (when (not @halt) (make-debugger debug-chan)))
+                   (reset! conv/debug (if @halt nil (make-debugger debug-chan)))
                    (when @halt
                      (dorun (map #(prom/resolve! (::prom %)) @breaks))
                      (reset! breaks []))
@@ -198,7 +196,7 @@
           ]
       (-> (prom/let [runtime (rt/make-runtime cli-symbols)
                      debugger (make-debugger debug-chan)
-                     _ (reset! conv/debug debugger)
+                     ;; _ (reset! conv/debug debugger)
                      _ (caravan/init rt)
                      _ (trace/init-tracer rt {:backend :samak :chan int-ch})
                      _ (std/init log-chan)

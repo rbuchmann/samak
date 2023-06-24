@@ -24,7 +24,7 @@
 
 (| term-out log-screen term-inst)
 
-(def collect-ui (pipes/reductions (-> (into :-state :-next))
+(def collect-ui (pipes/splitter (-> (into :-state :-next))
                                   {:logs [[:line "no logs"]]
                                    :traces [[:line "no traces"]]
                                    :metrics [[:line "no metrics"]]
@@ -51,7 +51,7 @@
 
 (def format-trace (-> (take 160 _) (str-join "" _) [:line _]))
 
-(def collect-traces (pipes/reductions (-> {:state :-state :next (-> :-next format-trace)}
+(def collect-traces (pipes/splitter (-> {:state :-state :next (-> :-next format-trace)}
                                           (conj :-state :-next)
                                           (reverse _)
                                           (take 5 _))

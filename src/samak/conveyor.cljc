@@ -3,23 +3,24 @@
   #?@
   (:clj
    [(:require [clojure.core.async :as a :refer [<! >! chan go go-loop close! put!]]
-              [clojure.core.async.impl.protocols :as ap]
               [promesa.core :as prom]
               [promesa.protocols :as pt]
               [promesa.exec :as px]
+              [promesa.exec.csp.mutable-list :as mlist]
               [samak.metrics :as metrics]
               [samak.trace :as t]
               [samak.helpers :as helpers]
               [samak.transduction-tools :as tt]
               [samak.tools :refer [fail log]]
               [samak.pipes :as pipes])
-    (:import java.util.concurrent.ForkJoinPool)]
+    (:import java.util.concurrent.ForkJoinPool
+             java.util.concurrent.locks.ReentrantLock)]
    :cljs
    [(:require [clojure.core.async :as a :refer [<! >! chan close! put!]]
-              [clojure.core.async.impl.protocols :as ap]
               [promesa.core :as prom]
               [promesa.protocols :as pt]
               [promesa.exec :as px]
+              [promesa.exec.csp.mutable-list :as mlist]
               [samak.metrics :as metrics]
               [samak.trace :as t]
               [samak.transduction-tools :as tt]
@@ -28,9 +29,27 @@
               [samak.pipes :as pipes])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
-(def queue (a/buffer 102400))
+(defprotocol Buffer
+  (size [this])
+  (add! [this value])
+  (remove! [this])
+  (get-buffer [this]))
+
+
+(defn buffer []
+  (let [buf (mlist/create)]
+    (reify
+      Buffer
+      (get-buffer [_] buf)
+      (add! [this o] (locking this (mlist/add-first! buf o)) true)
+      (remove! [this] (locking this (mlist/remove-last! buf)))
+      (size [_] (mlist/size buf)))))
+
+(def queue (buffer))
 (def links (atom {}))
 (def debug (atom nil))
+(def parked (atom {}))
+(def lock (Object.))
 
 (defn meter [n t]
   (metrics/get-meter "conveyor" n t))
@@ -44,23 +63,65 @@
 
 (def MAX_RUNS 10)
 
+(defn getNext [queue]
+    (locking lock
+      (try
+        (remove! queue)
+        ;; will throw on empty list
+        (catch #?(:clj java.lang.RuntimeException :cljs js/Error) _))))
+
 (defprotocol Station
-  (xf [this])
+  (xf [this arg])
   (cancel? [this]))
 
 (defrecord Passthrough [uuid xf cancel?]
   pipes/Identified
   (uuid [_] uuid)
   Station
-  (xf [_] xf)
+  (xf [_ arg] (xf arg))
   (cancel? [_] cancel?))
 
 (defrecord Sink [uuid xf]
   pipes/Identified
   (uuid [_] uuid)
   Station
-  (xf [_] xf)
+  (xf [_ arg] (xf arg))
   (cancel? [_] false))
+
+(defprotocol Store
+  (get-state [this] )
+  (set-state [this value]))
+
+(defrecord AtomStore [store]
+  Store
+  (get-state [_] @store)
+  (set-state [_ value] (reset! store value)))
+
+(defprotocol AssignedQueue
+  (nextOrUnlock [this] "Return next value or unlock")
+  (enqueueLocking [this elem] "Add elem to queue or lock if first element"))
+
+(defrecord Splitter [uuid xf store queue lock]
+  pipes/Identified
+  (uuid [_] uuid)
+  Station
+  (xf [_ arg] (let [res (xf {:state (.get-state store) :next arg})]
+                (.set-state store res)
+                res))
+  (cancel? [_] false)
+  AssignedQueue
+  (nextOrUnlock [_]
+    (if (pos? (size queue))
+      (remove! queue)
+      (do (reset! lock false) nil)))
+  (enqueueLocking [_ call]
+    (if @lock
+      (do
+        (add! queue call)
+        (let [size (size queue)]
+          ;; (println uuid " " size)
+          false))
+      (reset! lock true))))
 
 (defn passthrough [uuid xf cancel? spec]
   (Passthrough. uuid xf cancel?))
@@ -71,9 +132,8 @@
 (defn sink? [s]
   (instance? Sink s))
 
-(defn getNext [queue]
-  (try (ap/remove! queue)
-       (catch #?(:clj java.lang.RuntimeException :cljs js/Error) _)))
+(defn splitter? [s]
+  (instance? Splitter s))
 
 (declare schedule-next)
 
@@ -83,13 +143,12 @@
       (.add (get-meter (str "node-" (pipes/uuid to) "-cancel") :counter) 1)
       (t/trace ::cancel 0 call))
     (try
-      (let [target (xf to)
-            passthrough (not (sink? to))
+      (let [passthrough (not (sink? to))
             cont (if passthrough (:samak.pipes/content msg) msg)
             id (pipes/uuid to)
             meta-info (:samak.pipes/meta msg)
             before (helpers/now)
-            res (target cont)
+            res (.xf to cont)
             duration (helpers/duration before (helpers/now))]
         (when passthrough
           (when (nil? res)
@@ -117,18 +176,38 @@
       (call-node call))))
 
 (defn trigger [c]
-  ;; FIXME: LOCK
   (when-let [next (getNext queue)]
-    (prom/then (px/run! (wrap next))
-               #(when (pos? (dec c)) (trigger (dec c))))))
+    (when (< 10 c) (println c "trigger"))
+    (px/run! (wrap next))
+    (do (when (< 10 c ) (println "c" c)) (when (pos? (dec c)) (trigger (dec c))))))
+
+(defn process-splitter [to call]
+  ((wrap call))
+  (loop [next (.nextOrUnlock to)
+         c 1]
+    (when next
+      ;; (println c "next" (-> next ::msg :samak.pipes/meta :samak.pipes/uuid))
+      ((wrap next))
+      (recur (.nextOrUnlock to) (inc c)))))
 
 (defn schedule [from to msg]
   ;; (println "----------")
-  ;; (println "count" (count queue))
+  (let [size (size queue)]
+    (when (= 0 (rand-int 1000))
+      (.record (get-meter :samak_runtime_queue_length :histogram) (double size)))
+    ;; (when (pos? size)
+    ;;   (println "count" size)
+    ;;   (println "first" (.peek (get-buffer queue))))
+    )
   ;; (println "----------")
   (let [call {::msg msg ::from from ::to to}]
-    (ap/add!* queue call))
-  (trigger MAX_RUNS))
+    (if (splitter? to)
+      (do
+        (when (.enqueueLocking to call)
+          (px/run! #(process-splitter to call))))
+      (do
+        (add! queue call)
+        (trigger MAX_RUNS)))))
 
 (defn schedule-next [station res]
   (when-not (sink? station)
@@ -186,3 +265,7 @@
 (defn sink
   [f uuid]
   (Sink. uuid f))
+
+(defn splitter
+  [xf init uuid]
+  (Splitter. uuid xf (AtomStore. (atom init)) (buffer) (atom false)))

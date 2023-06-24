@@ -38,16 +38,32 @@
   (str (.getName (.getInstrumentationScopeInfo data)) "/" (.getName data)))
 
 (defn show-metric [data]
-  (case = (.getType data)
-        MetricDataType/LONG_SUM (str (-> (.getLongSumData data)
+  (condp = (.getType data)
+    MetricDataType/HISTOGRAM (str (-> (.getHistogramData data)
                                          (.getPoints)
                                          (first)
-                                         (.getValue)))))
+                                         (#(when (some? %)
+                                             (str
+                                              (.getCount %) ": "
+                                              (.getMin %)
+                                              "/"
+                                              (format "%.2f" (/ (.getSum %) (.getCount %)))
+                                              "/"
+                                              (.getMax %))))))
+    MetricDataType/DOUBLE_GAUGE (str (-> (.getDoubleGaugeData data)
+                                         (.getPoints)
+                                         (first)
+                                         (#(when (some? %) (.getValue %)))))
+    MetricDataType/LONG_SUM (str (-> (.getLongSumData data)
+                                     (.getPoints)
+                                     (first)
+                                     (#(when (some? %) (.getValue %)))))
+    (str "unknown metrics type: " (.getType data))))
 
 (defn convert-metrics [v]
   (let [data (into {} (map (fn [x] [(metric-name x) x]) v))
         disp (into {} (map (fn [[k v]] [k (show-metric v)]) data))]
-    disp))
+    (sort-by first disp)))
 
 (defn print-metrics [v]
   (println "- metrics ------------------------")

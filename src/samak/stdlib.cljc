@@ -118,10 +118,17 @@
    (str "reductions-" (helpers/uuid))))
 
 
+(defn splitter [f init]
+  (conv/splitter (-> f p/eval-as-fn)
+                 (tt/re-wrap (helpers/make-meta {:samak.pipes/source ::reductions})
+                             init)
+                 (str "splitter-" (helpers/uuid))))
+
 (def pipe-symbols
   {'pipes/log         log
    'pipes/log-through log-through
    'pipes/debug       debug
    'pipes/station     conveyor
    'pipes/http        http
+   'pipes/splitter    splitter
    'pipes/reductions  reductions*})
