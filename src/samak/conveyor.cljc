@@ -101,13 +101,16 @@
   (nextOrUnlock [this] "Return next value or unlock")
   (enqueueLocking [this elem] "Add elem to queue or lock if first element"))
 
-(defrecord Splitter [uuid xf store queue lock]
+(defrecord Splitter [uuid xf store queue lock init-fn]
   pipes/Identified
   (uuid [_] uuid)
   Station
-  (xf [_ arg] (let [res (xf {:state (.get-state store) :next arg})]
-                (.set-state store res)
-                res))
+  (xf [_ arg]
+    (let [cur (or (.get-state store)
+                  (init-fn arg))
+          res (xf {:state cur :next arg})]
+      (.set-state store res)
+      res))
   (cancel? [_] false)
   AssignedQueue
   (nextOrUnlock [_]
@@ -267,5 +270,5 @@
   (Sink. uuid f))
 
 (defn splitter
-  [xf init uuid]
-  (Splitter. uuid xf (AtomStore. (atom init)) (buffer) (atom false)))
+  [xf init-fn uuid]
+  (Splitter. uuid xf (AtomStore. (atom nil)) (buffer) (atom false) init-fn))

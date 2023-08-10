@@ -114,14 +114,13 @@
   (pipes/transduction-pipe
    (x/reductions (-> f p/eval-as-fn wrap-samak-reducer)
                  (tt/re-wrap (helpers/make-meta {:samak.pipes/source ::reductions})
-                             init))
+                             ((p/eval-as-fn init))))
    (str "reductions-" (helpers/uuid))))
 
 
 (defn splitter [f init]
-  (conv/splitter (-> f p/eval-as-fn)
-                 (tt/re-wrap (helpers/make-meta {:samak.pipes/source ::reductions})
-                             init)
+  (conv/splitter (p/eval-as-fn f)
+                 (p/eval-as-fn init)
                  (str "splitter-" (helpers/uuid))))
 
 (def pipe-symbols

@@ -134,10 +134,10 @@
       (put! draw-debug-chan (draw-debug @breaks @k))
       (recur breaks k halt))))
 
-(defn main-loop [rt
+(defn main-loop [runtime
                  draw-repl-chan key-chan draw-plain-chan dirty-chan
                  history log prompt]
-  (go-loop [res rt
+  (go-loop [res runtime
             input ""]
     (let [p-chan (a/promise-chan)
           [raw-key port] (a/alts! [key-chan dirty-chan])]
@@ -151,14 +151,13 @@
                    res (if line
                          (do
                            (swap! history conj (str "history: " line))
-                           (-> (repl/eval-line line rt)
+                           (-> (repl/eval-line line @rt)
                                (prom/catch #(do
                                               (println "error: " %)
                                               (swap! history conj (str "error: " (ex-message %)))
-                                              rt))))
-                         rt)]
+                                              res))))
+                         res)]
           (reset! rt res)
-          (println (:server @rt))
           (reset! prompt "")
           (when-let [modi (or (:alt raw-key) (:ctrl raw-key))]
             (reset! prompt (str "mod: " raw-key)))
@@ -220,7 +219,7 @@
             (put! draw-debug-chan (draw-debug ["none"] "init"))
             (term/add-screen draw-plain-chan key-repl-chan exit-plain-chan)
             (term/add-screen draw-debug-chan key-debug-chan exit-debug-chan)
-            (term/add-screen draw-repl-chan nil exit-repl-chan)
+            (term/add-screen draw-repl-chan key-repl-chan exit-repl-chan)
             )
           (prom/catch #(println "ERROR" %)))
       (while @run
