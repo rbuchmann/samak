@@ -1,17 +1,27 @@
-(def in (pipes/debug))
+(def in (pipes/station))
 (def out (pipes/log))
-(| in (inc _) out)
+(def id (pipes/splitter {:id (-> :-state :-id) :msg (str (-> :-state :-id) " - " :-next)}
+                             {:id (rand-int 1000) :msg "init"}))
+(| in id)
+(| id out)
 (defmodule logger {:sources {:logger-in in}})
 
-(def logger-mod (logger "from use"))
-(def log-pipe (-> logger-mod :-sources :-logger-in))
-(def use-in (pipes/debug))
+(def use-in (pipes/station))
 (defmodule use {:depends {:log-use logger} :sources {:use-in use-in}})
-(| use-in (log-pipe {}))
+
+(def logger-mod (logger "from use"))
+(def log-use (-> logger-mod :-sources :-logger-in))
+(def logger-mod2 (logger "from use2"))
+(def log-use2 (-> logger-mod2 :-sources :-logger-in))
+
+(def log-pipe (log-use "pipe1"))
+(def log-pipe2 (log-use2 "pipe2"))
+
+(| use-in log-pipe)
+(| use-in log-pipe2)
 
 (def use-mod (use "from main"))
 (def use-pipe (-> use-mod :-sources :-use-in))
 
-(def tester (pipes/debug))
-(| tester (use-pipe {}))
-!f tester 5
+(def tester (pipes/station))
+(| tester (use-pipe "main"))

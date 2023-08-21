@@ -146,19 +146,19 @@
     (println "inst mod ->" id ctx)
     (if c
       (fn []
-        ;; (println "return stub for" n "[" (:db/id module) "] -> " c)
+        (println "return stub for" n "[" (:db/id module) "] -> " c)
         c)
       (do (println  (str "### about to eval module: " id module))
           (let [ns-reg #(do (println "ns reg ->" id %1 %2) ((:register man) (str id "/" %1) %2))
                 ns-res #(do (println "ns res ->" id %1) (or ((:resolve man) (str id "/" %1)) ((:resolve man) %1)))
                 ns-man (merge man {:register ns-reg :resolve ns-res})
-                evaled (n/eval-env man nil definition {:db-id (:db/id module) :ctx id})] ;;;FIXME should be server/eval-ast?
+                evaled (n/eval-env ns-man nil definition {:db-id (:db/id module) :ctx id})] ;;;FIXME should be server/eval-ast?
             (fn [a]
               ;; FIXME
               ;; needs to prep resolve magic when instanciating pipes, to select same runtime
               ;; maybe simply do so explicitly
               ;; (if (:config man))
-              (println "### used module: " a "---" module "->" evaled)
+              (println "### used module: " ctx "/" n "/" a "---" module "->" evaled)
               evaled))))))
 
 (defn make-store-internal

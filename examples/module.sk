@@ -11,9 +11,9 @@
 
 (def tester (pipes/station))
 (def tester2 (pipes/station))
-(| tester (log-pipe {}))
+(| tester (log-pipe "pipe1"))
 
 ;doesn't work
 (def logger2-mod (logger "use2"))
 (def log2-pipe (-> logger2-mod :-sources :-logger-in))
-(| tester (log2-pipe {}))
+(| tester (log2-pipe "pipe2"))
