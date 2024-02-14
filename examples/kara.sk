@@ -55,7 +55,7 @@
                                           (conj :-state :-next)
                                           (reverse _)
                                           (take 5 _))
-                                      []))
+                                     ["foo"]))
 
 (| (trace-in {}) hack-trace trac)
 (| trac collect-traces)
@@ -66,7 +66,7 @@
 (| li (-> {:traces _}) la)
 (| la log-debug)
 (| la collect-ui)
-; (| collect-traces (-> {:traces _}) log-debug)
+(| collect-traces (-> {:traces _}) log-debug)
 
 ;; init
 
