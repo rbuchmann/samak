@@ -1,23 +1,18 @@
 (ns samak.helpers
-  #?@
-  (:clj
-   [(:refer-clojure :exclude [uuid])
-    (:require
-     [promesa.core :as p]
-     [clojure.walk :as w]
-     [clojure.data.json :as json]
-     [clj-time.core :as time]
-     [clj-time.format :as time-format]
-     [clj-time.coerce :as time-coerce])]
-   :cljs
-   [(:refer-clojure :exclude [uuid])
-    (:require
-     [goog.async.nextTick]
-     [promesa.core :as p]
-     [clojure.walk :as w]
-     [cljs-time.core :as time]
-     [cljs-time.format :as time-format]
-     [cljs-time.coerce :as time-coerce])]))
+  (:refer-clojure :exclude [uuid])
+  (:require
+   #?@ (:clj [[promesa.core :as p]
+              [clojure.walk :as w]
+              [clojure.data.json :as json]
+              [clj-time.core :as time]
+              [clj-time.format :as time-format]
+              [clj-time.coerce :as time-coerce]]
+        :cljs [[goog.async.nextTick]
+               [promesa.core :as p]
+               [clojure.walk :as w]
+               [cljs-time.core :as time]
+               [cljs-time.format :as time-format]
+               [cljs-time.coerce :as time-coerce]])))
 
 (defn now
   ""
