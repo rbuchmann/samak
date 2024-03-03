@@ -18,6 +18,8 @@
          :content    (s/* (s/or :terminal string?
                                 :element  ::hiccup))))
 
+(def ui (atom nil))
+
 ;; GUI & Event handling
 
 (defn destructure-element [x]
@@ -126,9 +128,9 @@
     (helpers/debounce #(render-cb n node)))
   (swap! content assoc n (if events (transform-element x c) x)))
 
-(defn ui
+(defn ui-legacy
   ([n]
-   (ui n false)) ;;FIXME
+   (ui-legacy n false)) ;;FIXME
   ([n events]
    (let [ui-in (chan (a/sliding-buffer 1))
          ui-out (chan (a/sliding-buffer 1000))
@@ -231,6 +233,7 @@
 
 (defn keyboard []
   (let [c (pipes/pipe-chan (str ::keyboard (helpers/hex)) nil)]
+    (println "keyboard!")
     (set! (.-onkeypress js/document)
           (fn [e] (do (.warn js/console e) (let [event (js->clj e :keywordize-keys true)]
                         (put-meta! c (convert-key-event event :press) ::keyboard)
@@ -239,36 +242,46 @@
           (fn [e] (do (.warn js/console e) (let [event (js->clj e :keywordize-keys true)]
                         (put-meta! c (convert-key-event event :up) ::keyboard)
                         (contains? #{"INPUT" "TEXTAREA"} (.-tagName (.-target event)))))))
-    (let [x (a/chan)
-          y (a/chan)
-          m (a/mult c)]
-      (go-loop []
-        (let [msg (<! x)]
-          (when msg (.log js/console (str "%%% drip2 kb - " msg)))
-          (recur)))
-      (a/tap m x)
-      (a/tap m y)
-      (pipes/source y nil (str ::keyfoo (helpers/hex))))))
+    (pipes/source c nil (str ::keyfoo (helpers/hex)))))
 
-(defn ui-module
-  []
+(defn init-ui []
   (println "init ui")
-  (fn []
-    (let [xid 2
-          render (ui xid true)
-          m (mouse xid)]
+  (let [xid 2
+        render (ui-legacy xid true)
+        m (mouse xid)
+        k (keyboard)]
+    (fn []
       (println "start ui:" m)
       {:sources {:events render
                  :mouse m
-                 :keyboard (keyboard)}
+                 :keyboard k}
        :sinks {:render render}})))
 
+(defn ui-module
+  []
+  (if-let [ui-mod @ui]
+    ui-mod
+    (let [ui-mod (init-ui)]
+      (reset! ui ui-mod)
+      ui-mod)))
+
+(defn kb-mod []
+  (get-in ((ui-module)) [:sources :keyboard]))
+
+(defn mouse-mod []
+  (get-in ((ui-module)) [:sources :mouse]))
+
+(defn events-mod []
+  (get-in ((ui-module)) [:sources :events]))
+
+(defn render-mod []
+  (get-in ((ui-module)) [:sinks :render]))
 
 ;; Exported symbols
 
 (def ui-symbols
   {'modules/ui     ui-module
-   'pipes/ui       ui
-   'pipes/events   events
-   'pipes/mouse    mouse
-   'pipes/keyboard keyboard})
+   'pipes/ui       render-mod
+   'pipes/events   events-mod
+   'pipes/mouse    mouse-mod
+   'pipes/keyboard kb-mod})

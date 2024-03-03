@@ -220,7 +220,6 @@
                              (let [c (chan)]
                                (a/tap (pipes/out-port from) c)
                                (go-loop []
-                                 ()
                                  (let [msg (<! c)]
                                    (schedule from to msg)
                                    (recur))))
@@ -230,9 +229,9 @@
               ;; both conveyor
               [false false] to)]
     (swap! links update from conj to)
-    (println "----------")
-    (run! #(println %) @links)
-    (println "----------")
+    ;; (println "----------")
+    ;; (run! #(println %) @links)
+    ;; (println "----------")
     res))
 
 (defn fire!

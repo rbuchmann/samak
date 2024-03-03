@@ -166,6 +166,7 @@
   (CompositePipe. a b))
 
 (defn link! [from to]
+  (println "oldschool link" from to)
   (let [source (out-port from)
         sink   (in-port to)]
     (a/tap source sink)
