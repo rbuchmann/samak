@@ -47,7 +47,7 @@
                     (helpers/duration before (helpers/now))
                     (:samak.runtime/content data)))))
 
-(defn bootstrap
+(defn init
   ""
   []
   (println "bootstrap")
@@ -60,4 +60,4 @@
     (put! out {:target :bootstrap})
     ))
 
-(bootstrap)
+;; (bootstrap)

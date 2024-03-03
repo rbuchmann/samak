@@ -13,7 +13,7 @@
 (defn eval-as-fn [f]
   (cond
     (satisfies? SamakCallable f) (to-samak-fn f)
-    (ifn? f) (fn [& x] ;; (println "!!!!call" x)
+    (ifn? f) (fn [& x] ;; (println "!!!!call" x "on" f)
                (apply f x))
     :default (constantly f)))
 
@@ -25,7 +25,9 @@
            (into {})))))
 
 (defn to-vector-fn [v]
-  (apply juxt (map eval-as-fn v)))
+  (if (empty? v)
+    (constantly v)
+    (apply juxt (map eval-as-fn v))))
 
 (extend-protocol SamakCallable
   #?(:clj  clojure.lang.PersistentArrayMap

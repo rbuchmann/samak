@@ -1,7 +1,8 @@
 (ns samak.core
   (:require [samak.builtins           :as builtins]
             [samak.stdlib             :as std]
-            ;#?(:cljs [samak.ui_stdlib :as uistd])
+            [samak.caravan            :as c]
+            #?(:cljs [samak.ui-stdlib :as uistd])
             ;#?(:cljs [samak.layout    :as layout])
             ))
 
@@ -15,6 +16,6 @@
 (def samak-symbols
   (merge builtins/samak-symbols
          c/symbols
-         ; #?(:cljs uistd/ui-symbols)
+         #?(:cljs uistd/ui-symbols)
          ; #?(:cljs layout/layout-symbols)
          std/pipe-symbols))

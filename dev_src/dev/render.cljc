@@ -29,7 +29,6 @@
      [samak.api :as api]
      [samak.helpers :as helpers]
      [samak.lisparser :as p]
-     [samak.ui_stdlib :as uistd]
      [samak.builtins :as builtins]
      [samak.stdlib :as std]
      [samak.trace :as trace]
@@ -38,6 +37,7 @@
      [samak.caravan :as caravan]
      [samak.lisparser :as p]
      [samak.test-programs :as test-programs]
+     [samak.ui-stdlib :as uistd]
      [samak.layout :as layout]
      [samak.modules :as modules]
      [samak.pipes :as pipes]
@@ -51,24 +51,26 @@
          std/pipe-symbols
          caravan/symbols
          #?(:cljs layout/layout-symbols)
-         #?(:cljs uistd/ui-symbols)))
+         #?(:cljs uistd/ui-symbols)
+         ))
 
 (def rt (atom {}))
-(def config {:tracer {:backend :none
+(def config {:tracer {:backend :logging
                       :url "/api/v2/"}})
 (def tracer (atom {}))
 
 (def main-conf {:id "rt-main"
-                :modules {"oasis-core" {:depends {}
-                                        :sinks {:state (sched/make-pipe-id {:module :lone :type :sinks :name :state})}
-                                        :sources {
-                                                  :init (sched/make-pipe-id {:module :lone :type :sources :name :init})
-                                                  :kb (sched/make-pipe-id {:module :lone :type :sources :name :kb})
-                                                  :drag (sched/make-pipe-id {:module :lone :type :sources :name :drag})
-                                                  :hover (sched/make-pipe-id {:module :lone :type :sources :name :hover})
-                                                  :events (sched/make-pipe-id {:module :lone :type :sources :name :events})
-                                                  }
-                                        }}})
+                :modules [];; {"oasis-corex" {:depends {}
+                         ;;                :sinks {:state (sched/make-pipe-id {:module :lone :type :sinks :name :state})}
+                         ;;                :sources {
+                         ;;                          :init (sched/make-pipe-id {:module :lone :type :sources :name :init})
+                         ;;                          :kb (sched/make-pipe-id {:module :lone :type :sources :name :kb})
+                         ;;                          :drag (sched/make-pipe-id {:module :lone :type :sources :name :drag})
+                         ;;                          :hover (sched/make-pipe-id {:module :lone :type :sources :name :hover})
+                         ;;                          :events (sched/make-pipe-id {:module :lone :type :sources :name :events})
+                         ;;                          }
+                         ;;                }}
+                })
 
 
 (defn handle-update
@@ -89,13 +91,13 @@
     ;; (handle-update "in" to-rt)
     (fn [] [to-rt broadcast])))
 
-(def scheduler2
-  (let [broadcast (pipes/pipe (chan) ::preview-broadcast)
-        to-rt (pipes/pipe (chan) ::preview-scheduler)]
-    (println "sched2")
-    (handle-update "out2" broadcast)
-    (handle-update "in2" to-rt)
-    (fn [] [to-rt broadcast])))
+;; (def scheduler2
+;;   (let [broadcast (pipes/pipe (chan) ::preview-broadcast)
+;;         to-rt (pipes/pipe (chan) ::preview-scheduler)]
+;;     (println "sched2")
+;;     (handle-update "out2" broadcast)
+;;     (handle-update "in2" to-rt)
+;;     (fn [] [to-rt broadcast])))
 
 ;; (defn eval-test
 ;;   ""
@@ -164,24 +166,25 @@
   ""
   [load]
   (println "start-main")
-  (helpers/debounce #(start-oasis load)))
+  (helpers/debounce #(start-oasis load))
+  )
 
-(defn start-preview-runtime
-  ""
-  [in-c out-c]
-  (println "renderer starting preview")
-  (let [[to-rt to-out] (scheduler2)
-        in-mult (a/mult in-c)
-        rt-c (chan)
-        paket-c (chan)]
-    (a/tap in-mult rt-c)
-    (pipes/link! to-out (pipes/sink out-c))
-    (pipes/link! (pipes/source rt-c) to-rt)
-    (prom/let [rt-inst (run/make-runtime renderer-symbols scheduler2 {:store :remote :id "rt-preview"})
-               rt-atom (atom rt-inst)]
-      ;; (a/tap in-mult paket-c)
-      ;; (handle-render rt-atom paket-c)
-      (println "renderer started preview"))))
+;; (defn start-preview-runtime
+;;   ""
+;;   [in-c out-c]
+;;   (println "renderer starting preview")
+;;   (let [[to-rt to-out] (scheduler2)
+;;         in-mult (a/mult in-c)
+;;         rt-c (chan)
+;;         paket-c (chan)]
+;;     (a/tap in-mult rt-c)
+;;     (pipes/link! to-out (pipes/sink out-c))
+;;     (pipes/link! (pipes/source rt-c) to-rt)
+;;     (prom/let [rt-inst (run/make-runtime renderer-symbols scheduler2 {:store :remote :id "rt-preview"})
+;;                rt-atom (atom rt-inst)]
+;;       ;; (a/tap in-mult paket-c)
+;;       ;; (handle-render rt-atom paket-c)
+;;       (println "renderer started preview"))))
 
 (defn start-render-runtime
   ""

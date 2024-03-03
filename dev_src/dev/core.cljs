@@ -63,6 +63,7 @@
 (defn init
   ""
   []
+  (println "INIT")
   (p/let [in-main (chan)
           out-main (chan)
           out-mult (a/mult out-main)
@@ -71,14 +72,13 @@
           loading (chan)]
     (a/tap out-mult in-worker)
     (render/start-render-runtime loading in-main out-main)
-    (let [w (js/Worker. "/js/oasis-worker.js")]
+    (let [w (js/Worker. "/shadowcljs/js/oasis-out/worker.js")]
       (handle-send w in-worker)
       (aset w "onmessage" (make-handler loading in-main in-worker))
       (handle-update loading
                      (fn [] (p/do! ;; (a/tap out-mult in-preview)
                                    ;; (render/start-preview-runtime in-preview in-main)
-                                   (render/start-main loading)
-                                   ))))
+                                   (render/start-main loading)))))
     ))
 
-(init)
+;; (init)

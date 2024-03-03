@@ -2,7 +2,7 @@
   (:require [expound.alpha      :as expound]
             [clojure.string     :as str]
             [clojure.spec.alpha :as s]
-            [reagent.core       :as r]
+            [reagent.dom       :as r]
             [samak.pipes        :as pipes]
             [samak.trace        :as trace]
             [samak.transduction-tools :as tt]
@@ -39,6 +39,10 @@
        e
        :unknown))
 
+(defn bounding-rect [elem]
+  (if (nil? elem) {:left 0 :top 0}
+      (let [rect (.getBoundingClientRect elem)] {:top (.-top rect)
+                                                 :left (.-left rect)})))
 
 (defmulti  convert-event #(:type (to-clj %)))
 (defmethod convert-event "change" [ev] {:target {:value (.-value (:target (to-clj ev)))}})
@@ -51,8 +55,7 @@
 (defn put-meta!
   ""
   [ch ev source]
-  (put! ch (pipes/make-paket ev source)))
-
+  (put! ch (helpers/make-paket ev source)))
 
 (defn to-handler [v ch]
   (fn
@@ -86,7 +89,8 @@
   (let [c (pipes/pipe-chan ::events nil)
         init (atom true)
         elem (if n (js/document.getElementById (str "samak" n)) (.-body js/document))
-        bound (.getBoundingClientRect elem)]
+        _ (println "events " n elem)
+        bound (bounding-rect elem)]
     (set! (.-onresize js/window)
           (fn [e] (do (println "rez: " n)
                       (put-meta! c (let [event (js->clj e :keywordize-keys true)]
@@ -121,7 +125,6 @@
   (if (not (get @content n))
     (helpers/debounce #(render-cb n node)))
   (swap! content assoc n (if events (transform-element x c) x)))
-
 
 (defn ui
   ([n]
@@ -163,14 +166,13 @@
 (defn translate-coords
   ""
   [bound event]
-  [(- (.-pageX event) (.-left bound))
-   (- (.-pageY event) (.-top bound))])
-
+  [(- (.-pageX event) (:left bound))
+   (- (.-pageY event) (:top bound))])
 
 (defn mouse [n]
   (let [c (pipes/pipe-chan ::mouse nil)
         elem (if n (js/document.getElementById (str "samak" n)) (.-body js/document))
-        bound (.getBoundingClientRect elem)]
+        bound (bounding-rect elem)]
     (set! (.-onmousedown elem)
           (fn [e] (do (put-meta! c (let [event (js->clj e :keywordize-keys true)
                                          [x y] (translate-coords bound event)]
@@ -226,7 +228,6 @@
    :shift-key (.-shiftKey event)
    :target (.-id (.-target event))
    :type (.-tagName (.-target event))})
-
 
 (defn keyboard []
   (let [c (pipes/pipe-chan (str ::keyboard (helpers/hex)) nil)]

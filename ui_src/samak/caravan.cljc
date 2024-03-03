@@ -187,8 +187,8 @@
    (notify-source c src nil))
   ([c src cb]
   (doall (map (fn [[key val]] (if cb
-                                (put! c (pipes/make-paket {(str key) val} ::notify) cb)
-                                (put! c (pipes/make-paket {(str key) val} ::notify))))
+                                (put! c (helpers/make-paket {(str key) val} ::notify) cb)
+                                (put! c (helpers/make-paket {(str key) val} ::notify))))
               src))))
 
 
@@ -724,8 +724,9 @@
 (defn trace-dump
   ""
   []
-  (trace/init-tracer @rt-conn {})
-  (trace/dump))
+  ;; (trace/init-tracer @rt-conn {})
+  ;; (trace/dump)
+  )
 
 
 (defn persist-net
@@ -741,9 +742,9 @@
   ""
   [pipe pipe-name content]
   (let [source-name (str "test/" pipe-name)
-        paket (pipes/make-paket content source-name)]
+        paket (helpers/make-paket content source-name)]
     (println (str "f! " pipe-name " -> " content))
-    (trace/trace source-name 0 paket)
+    ;; (trace/trace source-name 0 paket)
     (pipes/fire-raw! pipe paket)
     ))
 
@@ -809,7 +810,8 @@
     (notify-source
      ev
      {::state ::done}
-     #(a/put! cmd (pipes/make-paket {::event ::load ::status ::done ::percent 100 ::id (:id bundle)} ::caravan)))))
+     #(a/put! cmd (helpers/make-paket {::event ::load ::status ::done ::percent 100 ::id (:id bundle)} ::caravan)))
+    ))
 
 (defn load-bundle
   ""
@@ -971,7 +973,8 @@
             val (if (= port c) raw :timeout-overall)]
         (println (str "\nresult: " val))
         (println (str "\ntraces: "))
-        (trace-dump)))))
+        ;; (trace-dump)
+        ))))
 
 
 (defn init
@@ -982,7 +985,7 @@
 (defn pong
   ""
   [caravan-out x]
-  (a/put! caravan-out (pipes/make-paket {:event :pong} ::caravan)))
+  (a/put! caravan-out (helpers/make-paket {:event :pong} ::caravan)))
 
 
 (defn caravan-module

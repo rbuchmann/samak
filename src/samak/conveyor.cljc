@@ -7,7 +7,6 @@
               [promesa.protocols :as pt]
               [promesa.exec :as px]
               [promesa.exec.csp.mutable-list :as mlist]
-              [samak.metrics :as metrics]
               [samak.trace :as t]
               [samak.helpers :as helpers]
               [samak.transduction-tools :as tt]
@@ -21,7 +20,6 @@
               [promesa.protocols :as pt]
               [promesa.exec :as px]
               [promesa.exec.csp.mutable-list :as mlist]
-              [samak.metrics :as metrics]
               [samak.trace :as t]
               [samak.transduction-tools :as tt]
               [samak.helpers :as helpers]
@@ -34,7 +32,6 @@
   (add! [this value])
   (remove! [this])
   (get-buffer [this]))
-
 
 (defn buffer []
   (let [buf (mlist/create)]
@@ -49,17 +46,8 @@
 (def links (atom {}))
 (def debug (atom nil))
 (def parked (atom {}))
-(def lock (Object.))
-
-(defn meter [n t]
-  (metrics/get-meter "conveyor" n t))
-
-(def meters (atom {}))
-
-(defn get-meter [k t]
-  (or (get meters k)
-      (let [m (swap! meters #(if (contains? % k) % (assoc % k (meter (name k) t))))]
-        (get m k))))
+(def lock #?(:clj (Object.) :cljs nil))
+(def id (atom "unnamed"))
 
 (def MAX_RUNS 10)
 
@@ -71,21 +59,21 @@
         (catch #?(:clj java.lang.RuntimeException :cljs js/Error) _))))
 
 (defprotocol Station
-  (xf [this arg])
+  (call-fn [this arg])
   (cancel? [this]))
 
 (defrecord Passthrough [uuid xf cancel?]
   pipes/Identified
   (uuid [_] uuid)
   Station
-  (xf [_ arg] (xf arg))
+  (call-fn [_ arg] (log "pass " arg) (apply xf [arg]))
   (cancel? [_] cancel?))
 
 (defrecord Sink [uuid xf]
   pipes/Identified
   (uuid [_] uuid)
   Station
-  (xf [_ arg] (xf arg))
+  (call-fn [_ arg] (log "sink " arg) (apply xf [arg]))
   (cancel? [_] false))
 
 (defprotocol Store
@@ -105,11 +93,12 @@
   pipes/Identified
   (uuid [_] uuid)
   Station
-  (xf [_ arg]
-    (let [cur (or (.get-state store)
-                  (init-fn arg))
-          res (xf {:state cur :next arg})]
-      (.set-state store res)
+  (call-fn [_ arg]
+    (let [cur (or (get-state store)
+                  (apply init-fn [arg]))
+          _ (log "split " cur arg)
+          res (apply xf [{:state cur :next arg}])]
+      (set-state store res)
       res))
   (cancel? [_] false)
   AssignedQueue
@@ -142,16 +131,15 @@
 
 (defn call-node [{:keys [::from ::to ::msg] :as call}]
   (if (and (fn? (cancel? to)) ((cancel? to) msg))
-    (do
-      (.add (get-meter (str "node-" (pipes/uuid to) "-cancel") :counter) 1)
-      (t/trace ::cancel 0 call))
+    (println "canceled" call)
     (try
+      (println "[" @id "]" "run" call)
       (let [passthrough (not (sink? to))
             cont (if passthrough (:samak.pipes/content msg) msg)
             id (pipes/uuid to)
             meta-info (:samak.pipes/meta msg)
             before (helpers/now)
-            res (.xf to cont)
+            res (call-fn to cont)
             duration (helpers/duration before (helpers/now))]
         (when passthrough
           (when (nil? res)
@@ -186,27 +174,25 @@
 
 (defn process-splitter [to call]
   ((wrap call))
-  (loop [next (.nextOrUnlock to)
+  (loop [next (nextOrUnlock to)
          c 1]
     (when next
       ;; (println c "next" (-> next ::msg :samak.pipes/meta :samak.pipes/uuid))
       ((wrap next))
-      (recur (.nextOrUnlock to) (inc c)))))
+      (recur (nextOrUnlock to) (inc c)))))
 
 (defn schedule [from to msg]
-  ;; (println "----------")
+  (println "----------")
   (let [size (size queue)]
-    (when (= 0 (rand-int 1000))
-      (.record (get-meter :samak_runtime_queue_length :histogram) (double size)))
-    ;; (when (pos? size)
-    ;;   (println "count" size)
-    ;;   (println "first" (.peek (get-buffer queue))))
+    (println "count" size)
+    (when (pos? size)
+      (println "first" (peek (get-buffer queue))))
     )
-  ;; (println "----------")
+  (println "----------")
   (let [call {::msg msg ::from from ::to to}]
     (if (splitter? to)
       (do
-        (when (.enqueueLocking to call)
+        (when (enqueueLocking to call)
           (px/run! #(process-splitter to call))))
       (do
         (add! queue call)
@@ -216,7 +202,7 @@
   (when-not (sink? station)
     (let [next (get @links station)]
       (if (empty? next)
-        (log "dangling node for " station)
+        (log "[" @id "] " "dangling node for " station)
         (run! (fn [target] (if (pipes/pipe? target)
                              (pipes/fire-raw! target res)
                              (schedule station target res)))
@@ -244,7 +230,6 @@
               ;; both conveyor
               [false false] to)]
     (swap! links update from conj to)
-    (.add (get-meter :link_counter :counter) 1)
     (println "----------")
     (run! #(println %) @links)
     (println "----------")

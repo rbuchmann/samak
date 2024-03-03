@@ -119,9 +119,10 @@
 
 
 (defn splitter [f init]
-  (conv/splitter (p/eval-as-fn f)
-                 (p/eval-as-fn init)
-                 (str "splitter-" (helpers/uuid))))
+  (let [n (str "splitter-" (helpers/uuid))
+        ffn (p/eval-as-fn f)
+        initfn (p/eval-as-fn init)]
+    (conv/splitter ffn initfn n)))
 
 (def pipe-symbols
   {'pipes/log         log

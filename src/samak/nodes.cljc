@@ -61,16 +61,14 @@
 (defmethod eval-node ::float   [{:keys [::value]}] value)
 (defmethod eval-node ::builtin [{:keys [::value]}] (get *builtins* value))
 
-(defn IObj? [t]
-  (bases (class t)))
-
 (defmethod eval-node ::def [{:keys [::rhs] :as fn}]
   (let [res (eval-node rhs)
         id (:db/id fn)]
     (when-let [r (:register *manager*)] (r id res))
-    (if (instance? clojure.lang.IObj res)
-      (with-meta res {::id id})
-      res)))
+    #?(:cljs res
+       :clj (if (instance? clojure.lang.IObj res)
+              (with-meta res {::id id})
+              res))))
 
 (defmethod eval-node ::pipe [{:keys [::from ::to ::xf] :as p}]
   (println "pipe"  from " ------------- "  to)
@@ -87,7 +85,8 @@
       (when (api/is-def? fn)
         (let [res (eval-node fn)]
           ;; (println "evaling" (:db/id fn) "->" res "def" fn)
-          (with-meta res {::id (:db/id fn)})))
+          (with-meta res {::id (:db/id fn)})
+          ))
       ;; (when (api/is-module? fn)
       ;;   (let [res (eval-node fn)]
       ;;     (println "evaling" (:db/id fn) "->" res "mod" fn) res))
@@ -95,10 +94,11 @@
       (compile-error "Undefined reference for evaling " *db-id* " fn " fn)))
 
 (defmethod eval-node ::fn-call [{:keys [::fn-expression ::arguments]}]
-  (let [func (eval-node fn-expression)]
-    (try (apply (p/eval-as-fn func) (eval-reordered arguments))
+  (let [func (eval-node fn-expression)
+        args (eval-reordered arguments)]
+    (try (apply (p/eval-as-fn func) args)
          (catch #?(:clj clojure.lang.ArityException :cljs js/Error) ex
-           (compile-error "wrong args: " (eval-reordered arguments) " for " func "= fn " fn-expression " -> " ex)))))
+           (compile-error "wrong args: " args " for " func "= fn " fn-expression " -> " ex)))))
 
 ;; unused?
 ;; (defmethod eval-node ::link [{:keys [::from ::to]}]

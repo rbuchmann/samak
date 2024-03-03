@@ -46,8 +46,9 @@
   (merge builtins/samak-symbols
          std/pipe-symbols
          caravan/symbols
-         ui-mock-symbols
-         #?(:cljs layout/layout-symbols)))
+         ;; ui-mock-symbols
+         #?(:cljs layout/layout-symbols)
+         ))
 
 
 (defn handle-update
@@ -112,7 +113,7 @@
     (let [p (<! c)
           before (helpers/now)
           content (:samak.runtime/content p)]
-      (println (:id rt) "in paket" p)
+      (println "[" (:id rt) "]" "in paket" p)
       (when (= :samak.runtime/paket (:samak.runtime/type p))
         (when-let [pipe (get-named-pipe-memo rt (:samak.runtime/target p))]
           (println "worker fires" pipe content)

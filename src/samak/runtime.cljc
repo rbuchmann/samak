@@ -49,7 +49,9 @@
 (defn load-by-id
   ""
   [{store :store} id]
-  (stores/load-by-id store id))
+  (if (nil? id)
+    (fail "tried to load nil")
+    (stores/load-by-id store id)))
 
 (defn load-ast
   "loads an ast given by its entity id from the database"
@@ -119,7 +121,7 @@
   ""
   [id broadcast inbound]
   (fn [from to xf db-id]
-    (println "link" from to xf db-id)
+    (println "[" id "]" "link" from to xf db-id)
     (let [a (replace-piped from id broadcast inbound)
           c (replace-piped to id broadcast inbound)
           _ (when (and (not (pipes/pipe? a)) (not (conv/station? a)))
@@ -133,7 +135,7 @@
               (conv/link! a c))
           from-uuid (if (pipes/pipe? from) (pipes/uuid from) (or (:named from) from))
           to-uuid (if (pipes/pipe? to) (pipes/uuid to) (or (:named to) to))]
-      (println "### linking" from-uuid to-uuid)
+      (println "[" id "]" "### linking" from-uuid to-uuid)
       (swap! pipe-links assoc (str from-uuid "|" to-uuid) l)
       l)))
 
@@ -180,6 +182,7 @@
                  :link (link-fn id broadcast inbound)
                  :cancel? cancel?
                  :module instanciate-module}]
+    (reset! conv/id id)
     {:id id
      :store (make-store-internal (:store conf) inbound broadcast builtins)
      :manager manager
