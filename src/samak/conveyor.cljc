@@ -66,14 +66,14 @@
   pipes/Identified
   (uuid [_] uuid)
   Station
-  (call-fn [_ arg] (log "pass " arg) (apply xf [arg]))
+  (call-fn [_ arg] (apply xf [arg]))
   (cancel? [_] cancel?))
 
 (defrecord Sink [uuid xf]
   pipes/Identified
   (uuid [_] uuid)
   Station
-  (call-fn [_ arg] (log "sink " arg) (apply xf [arg]))
+  (call-fn [_ arg] (apply xf [arg]))
   (cancel? [_] false))
 
 (defprotocol Store
@@ -96,7 +96,6 @@
   (call-fn [_ arg]
     (let [cur (or (get-state store)
                   (apply init-fn [arg]))
-          _ (log "split " cur arg)
           res (apply xf [{:state cur :next arg}])]
       (set-state store res)
       res))
@@ -133,7 +132,7 @@
   (if (and (fn? (cancel? to)) ((cancel? to) msg))
     (println "canceled" call)
     (try
-      (println "[" @id "]" "run" call)
+      ;; (println "[" @id "]" "run" call)
       (let [passthrough (not (sink? to))
             cont (if passthrough (:samak.pipes/content msg) msg)
             id (pipes/uuid to)
@@ -182,13 +181,14 @@
       (recur (nextOrUnlock to) (inc c)))))
 
 (defn schedule [from to msg]
-  (println "----------")
   (let [size (size queue)]
-    (println "count" size)
+
     (when (pos? size)
-      (println "first" (peek (get-buffer queue))))
+      (println "----------")
+      (println "count" size)
+      (println "first" (peek (get-buffer queue)))
+      (println "----------"))
     )
-  (println "----------")
   (let [call {::msg msg ::from from ::to to}]
     (if (splitter? to)
       (do
