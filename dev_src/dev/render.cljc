@@ -159,6 +159,10 @@
           (prom/do!
            (println "evaluating oasis")
            (modules/eval-module rt main-conf net nil id)
+           (println "init caravan")
+           (caravan/init @rt)
+           (println "init layout")
+           (layout/init)
            (println "renderer loaded oasis")
            (helpers/debounce #(run-oasis id))))))))
 

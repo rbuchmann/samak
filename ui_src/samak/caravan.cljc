@@ -802,8 +802,9 @@
   ""
   [cmd ev bundle-id]
   (prom/let [bundle-code (modules/load-bundle-by-id @rt-conn bundle-id)
-             bundle (eval-bundle bundle-code)]
-    ;; (println (str "count: " cnt))
+             _ (println (str "code: " bundle-code))
+             bundle (eval-bundle bundle-code)
+             _ (println (str "count: " bundle))]
     (doall (map #(notify-source ev %) (:modules bundle)))
     (doall (map #(notify-source ev %) (:nodes bundle)))
     (doall (map #(notify-source ev %) (:pipes bundle)))
@@ -883,6 +884,7 @@
   [cmd ev arg]
   (case arg
     :test (load-test cmd ev)
+    :chuck (load-chuck cmd ev)
     :base (load-base cmd ev)
     :self (load-oasis cmd ev)
     (tools/log "load unknown: " arg)))

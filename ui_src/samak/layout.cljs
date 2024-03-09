@@ -3,6 +3,7 @@
             [samak.trace              :as trace]
             [samak.transduction-tools :as tt]
             [samak.helpers            :as helpers]
+            ["elkjs"                  :as elkjs]
             [cljs.core.async          :as a :refer [<! put! chan close!]])
   (:require-macros [cljs.core :refer [exists?]]))
 
@@ -29,8 +30,8 @@
 (def elk (atom nil))
 
 (defn init [url]
-  (set! elk (js/ELK. (clj->js {"workerFactory" make-worker
-                               "workerUrl" "/elk-worker.min.js"}))))
+  (set! elk (elkjs. (clj->js {"workerFactory" make-worker
+                              "workerUrl" "/elk-worker.min.js"}))))
 ;; (def elk (elkjs. (clj->js {"workerFactory" make-worker
 ;;                             "workerUrl" "/elk-worker.min.js"})))
 

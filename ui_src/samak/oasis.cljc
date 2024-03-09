@@ -74,7 +74,7 @@
 
                (api/defexp 'carv-mod (api/fn-call (api/symbol 'modules/caravan) []))
                (api/defexp 'm-caravan (api/fn-call (api/symbol 'carv-mod) []))
-               (defncall 'caravan-actions '->
+               (defncall 'm-caravan-actions '->
                  (api/symbol 'm-caravan)
                  (api/key-fn :sinks)
                  (api/key-fn :actions))
@@ -563,6 +563,16 @@
                            (api/keyword :data) (api/keyword :load)
                            (api/keyword :load) (api/keyword :base)}))
 
+               (defncall 'is-kb-load-chuck '->
+                 (api/key-fn :key)
+                 (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "c")]))
+
+               (defncall 'construct-load-chuck '->
+                 (api/map {(api/keyword :command) (api/keyword :load)
+                           (api/keyword :type) (api/keyword :immediate)
+                           (api/keyword :data) (api/keyword :load)
+                           (api/keyword :load) (api/keyword :chuck)}))
+
                (defncall 'is-kb-self '->
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "p")]))
@@ -597,7 +607,9 @@
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-menu)
                                                     (api/symbol 'construct-menu)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-load)
-                                                    (api/symbol 'construct-load)])
+                                                    (api/symbol 'construct-load [(api/keyword :base)])])
+                 (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-load-chuck)
+                                                    (api/symbol 'construct-load-chuck)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-self)
                                                     (api/symbol 'construct-self)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-test)
@@ -871,7 +883,7 @@
               (defncall 'handle-load '->
                 (api/key-fn :data)
                 (api/map {(api/keyword :mode) (api/keyword :load)
-                          (api/keyword :load) (api/keyword :test2)}))
+                          (api/keyword :load) (api/keyword :chuck)}))
 
               (defncall 'is-test '->
                 (api/key-fn :command)
@@ -1949,7 +1961,7 @@
              (defncall 'tag-mode '->
                (api/map {(api/keyword :mode) (api/symbol '_)}))
 
-             (defncall 'm-caravan-actions 'caravan-actions)
+             (defncall 'caravan-actions 'm-caravan-actions)
              ])
 
 (def oasis-core-defs
@@ -1973,8 +1985,8 @@
                                                                          ;; (api/keyword :caravan-commands) (api/symbol 'm-caravan-commands)
                                                                          ;; (api/keyword :caravan-commands-inst) (api/symbol 'caravan-commands)
                                                                          ;; (api/keyword :caravan-eval) (api/symbol 'm-caravan-eval)
-                                                                         ;; (api/keyword :caravan-eval-inst) (api/symbol 'caravan-eval)
-                                                                         ;(api/keyword :layout) (api/symbol 'oasis-layout)
+                                                                         (api/keyword :caravan-eval-inst) (api/symbol 'caravan-eval)
+                                                                         (api/keyword :layout) (api/symbol 'oasis-layout)
                                                                          (api/keyword :init) (api/symbol 'oasis-core-init)
                                                                          (api/keyword :kb) (api/symbol 'oasis-kb)
                                                                          (api/keyword :drag) (api/symbol 'oasis-drag-state)
@@ -2008,13 +2020,13 @@
 
    ;; ;; (pipe 'select-events 'editor-commands)
 
-   ;; (pipe 'caravan-eval 'log-caravan-ev)
-   ;; (pipe 'caravan-eval 'eval-events)
+   (pipe 'caravan-eval 'log-caravan-ev)
+   (pipe 'caravan-eval 'eval-events)
 
-   ;; ;; (pipe 'eval-events 'log-events)
-   ;; (pipe 'eval-events 'eval-reduce)
-   ;; (pipe 'eval-reduce 'eval-raw)
-   ;; (pipe 'eval-raw 'tag-eval 'eval-state)
+   (pipe 'oasis-layout 'log-events)
+   (pipe 'eval-events 'eval-reduce)
+   (pipe 'eval-reduce 'eval-raw)
+   (pipe 'eval-raw 'tag-eval 'eval-state)
 
    (pipe 'oasis-drag-state 'interpret-drag 'editor-commands)
 
@@ -2058,20 +2070,21 @@
    (pipe 'state-dedupe 'filter-state 'oasis-core-out)
    ;; ;; (pipe 'state-dedupe 'oasis-core-out)
 
-   ;; (pipe 'mode-state 'load-reduce)
+   (pipe 'mode-state 'load-reduce)
    ;; ;; (pipe 'scope-state 'load-reduce)
    ;; (pipe 'oasis-hover-state 'load-reduce)
-   ;; (pipe 'eval-state 'load-reduce)
-   ;; (pipe 'load-reduce 'load-state)
-   ;; (pipe 'load-state 'filter-load 'loaded-state)
+   (pipe 'eval-state 'load-reduce)
+   (pipe 'load-reduce 'load-state)
+   (pipe 'load-state 'filter-load 'loaded-state)
+   (pipe 'load-state 'loaded-state)
 
-   ;; (pipe 'loaded-state 'format-state 'oasis-layout)
+   (pipe 'loaded-state 'format-state 'oasis-layout)
    ;; ;; (pipe 'loaded-state 'format-state 'log-layout)
 
    ;; (pipe 'eval-state 'edit-information 'editor-events)
 
-   ;; (pipe 'oasis-layout 'tag-layout 'layout-state)
-   ;; (pipe 'layout-state 'state-dedupe)
+   (pipe 'oasis-layout 'tag-layout 'layout-state)
+   (pipe 'layout-state 'state-dedupe)
 
    ;; ;; (pipe 'select-events 'center-view)
    ;; ;; (pipe 'layout-state 'center-view)
@@ -2089,12 +2102,12 @@
    (pipe 'editor-actions 'handle-state)
    (pipe 'handle-state 'be-commands)
    (pipe 'be-commands 'filter-call 'log-command)
-   ;; (api/pipe (api/symbol 'be-commands)
-   ;;           (api/symbol 'filter-call)
-   ;;           (api/symbol 'm-caravan-actions))
+   (api/pipe (api/symbol 'be-commands)
+             (api/symbol 'filter-call)
+             (api/symbol 'caravan-actions))
 
-   (pipe 'oasis-core-init 'log-state2)
-   ;; (pipe 'oasis-core-init 'm-caravan-actions)
+   ;; (pipe 'oasis-core-init 'log-state2)
+   ;; (pipe 'oasis-core-init 'caravan-actions)
 
    ;; (pipe 'caravan-commands 'log-caravan)
    ])
@@ -3806,7 +3819,7 @@
    (pipe 'condensed-state 'graph 'svg-render)
    (pipe 'condensed-state 'graph-drag 'svg-render)
    (pipe 'condensed-state 'graph-focus 'svg-render)
-   (pipe 'condensed-state 'graph-dialog 'svg-render)
+   ;; (pipe 'condensed-state 'graph-dialog 'svg-render) ;; load done doesn't work
    (pipe 'condensed-state 'render-sink-menu 'svg-render)
    (pipe 'condensed-state 'render-source-menu 'svg-render)
    (pipe 'condensed-state 'render-action-menu 'svg-render)
@@ -4060,7 +4073,7 @@
    ;;                                                                      (api/keyword :mouse) (api/symbol 'oasis-mouse)
    ;;                                                                      (api/keyword :kb) (api/symbol 'oasis-kb)
    ;;                                                                      (api/keyword :eval) (api/symbol 'oasis-eval)
-   ;;                                                                      (api/keyword :layout) (api/symbol 'oasis-layout)
+                                                                        (api/keyword :layout) (api/symbol 'oasis-layout)
    ;;                                                                      })
    ;;                                     ;; (api/keyword :sink) (api/vector [(api/symbol 'oasisp)])
    ;;                                     (api/keyword :tests) (api/map {(api/keyword (api/string "test)
