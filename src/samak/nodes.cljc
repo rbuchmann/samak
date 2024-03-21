@@ -42,7 +42,7 @@
     :default                 (compile-error "unknown token during evaluation: " (str "type: " (or (type value) "nil") " with value: " (str value)))))
 
 (defmethod eval-node ::module [module]
-  (println "modulectx" *ctx*)
+  (println "modulectx" *ctx* (::name module))
   ((:module *manager*) module *manager* *ctx*))
 
 (defmethod eval-node ::map [{:keys [::mapkv-pairs]}]
@@ -85,7 +85,9 @@
       (when (api/is-def? fn)
         (let [res (eval-node fn)]
           ;; (println "evaling" (:db/id fn) "->" res "def" fn)
-          (with-meta res {::id (:db/id fn)})
+          (if (keyword? res) ;; CLJS doesn't support meta on keyword
+            res
+            (with-meta res {::id (:db/id fn)}))
           ))
       ;; (when (api/is-module? fn)
       ;;   (let [res (eval-node fn)]

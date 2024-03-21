@@ -818,14 +818,15 @@
   ""
   [cmd ev sym]
   (prom/let [bundle-id (rt/resolve-name @rt-conn sym)]
+    (println "id" bundle-id)
     (load-lib cmd ev bundle-id)))
 
 
 (defn load-net
   ""
   [cmd ev prog sym]
-  (persist-net prog)
-  (helpers/debounce #(load-bundle cmd ev sym)))
+  (prom/do! (persist-net prog)
+            (load-bundle cmd ev sym)))
 
 (defn test-net
   ""
@@ -848,12 +849,12 @@
 
 (def base-module
   [
-   "(def in (pipes/debug))"
-   "(def out (pipes/debug))"
-   "(def foo (pipes/debug))"
+   "(def in (pipes/station))"
+   "(def out (pipes/station))"
+   "(def foo (pipes/station))"
    "(defmodule base {:sinks {:in in}
                      :sources {:in in :out out :foo foo}})"
-   "(| in out)"
+   "(| in foo out)"
    "(def base-mod (base))"
    ])
 
@@ -993,7 +994,7 @@
 (defn caravan-module
   ""
   []
-  (println "def caravan")
+  (println "[" (:id @rt-conn) "] def caravan")
   (fn []
     (let [inst (helpers/uuid)
           caravan-in (pipes/pipe-chan ::in nil)
@@ -1035,7 +1036,6 @@
                  :sinks {:actions caravan-in-pipe}}]
         (println "caravan is" inst "->" foo)
         foo))))
-
 
 (def symbols
   (merge

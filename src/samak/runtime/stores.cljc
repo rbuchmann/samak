@@ -23,7 +23,7 @@
   (load-network [this id])
   (resolve-name [this db-name]))
 
-(defrecord LocalSamakStore [db]
+(defrecord LocalSamakStore [db rt-id]
   SamakStore
   (persist-tree! [_ tree]
     (p/resolved
@@ -40,7 +40,7 @@
 
 (def resolve-cache (atom {}))
 
-(defrecord RemoteSamakStore [db in out counter]
+(defrecord RemoteSamakStore [db in out counter rt-id]
   SamakStore
 
   (persist-tree! [_ tree]
@@ -144,10 +144,10 @@
 (defn load-builtins! [store builtins]
   (persist-tree! store (mapv (fn [s] (api/defexp s (api/builtin s))) builtins)))
 
-(defn make-local-store []
-  (LocalSamakStore. (db/create-empty-db)))
+(defn make-local-store [id]
+  (LocalSamakStore. (db/create-empty-db) id))
 
 (defn make-piped-store
   ""
-  [in out]
-  (RemoteSamakStore. (db/create-empty-db) in out (atom 0)))
+  [id in out]
+  (RemoteSamakStore. (db/create-empty-db) in out (atom 0) id))

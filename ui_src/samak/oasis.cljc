@@ -561,27 +561,15 @@
                  (api/map {(api/keyword :command) (api/keyword :load)
                            (api/keyword :type) (api/keyword :immediate)
                            (api/keyword :data) (api/keyword :load)
-                           (api/keyword :load) (api/keyword :base)}))
+                           (api/keyword :load) (api/symbol '_)}))
 
                (defncall 'is-kb-load-chuck '->
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "c")]))
 
-               (defncall 'construct-load-chuck '->
-                 (api/map {(api/keyword :command) (api/keyword :load)
-                           (api/keyword :type) (api/keyword :immediate)
-                           (api/keyword :data) (api/keyword :load)
-                           (api/keyword :load) (api/keyword :chuck)}))
-
                (defncall 'is-kb-self '->
                  (api/key-fn :key)
                  (api/fn-call (api/symbol '=) [(api/symbol '_) (api/string "p")]))
-
-               (defncall 'construct-self '->
-                 (api/map {(api/keyword :command) (api/keyword :load)
-                           (api/keyword :type) (api/keyword :immediate)
-                           (api/keyword :data) (api/keyword :load)
-                           (api/keyword :load) (api/keyword :self)}))
 
                (defncall 'is-kb-test '->
                  (api/key-fn :key)
@@ -607,11 +595,11 @@
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-menu)
                                                     (api/symbol 'construct-menu)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-load)
-                                                    (api/symbol 'construct-load [(api/keyword :base)])])
+                                                    (api/fn-call (api/symbol 'construct-load) [(api/keyword :base)])])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-load-chuck)
-                                                    (api/symbol 'construct-load-chuck)])
+                                                    (api/fn-call (api/symbol 'construct-load) [(api/keyword :chuck)])])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-self)
-                                                    (api/symbol 'construct-self)])
+                                                    (api/fn-call (api/symbol 'construct-load) [(api/keyword :self)])])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-test)
                                                     (api/symbol 'construct-test)])
                  (api/fn-call (api/symbol 'incase) [(api/symbol 'is-kb-trace)
@@ -1911,7 +1899,7 @@
                (api/fn-call (api/symbol '=) [(api/symbol '_) (api/keyword :edit)]))
 
              (defncall 'add-focus-actions '->
-               (api/fn-call (api/symbol 'spy) [(api/string "focus")])
+               ;; (api/fn-call (api/symbol 'spy) [(api/string "focus")])
                (api/fn-call (api/symbol 'assoc-in) [(api/symbol '_)
                                                     (api/vector [(api/keyword :next)
                                                                  (api/keyword :actions)])
@@ -2020,10 +2008,9 @@
 
    ;; ;; (pipe 'select-events 'editor-commands)
 
-   (pipe 'caravan-eval 'log-caravan-ev)
+   ;; (pipe 'caravan-eval 'log-caravan-ev)
    (pipe 'caravan-eval 'eval-events)
 
-   (pipe 'oasis-layout 'log-events)
    (pipe 'eval-events 'eval-reduce)
    (pipe 'eval-reduce 'eval-raw)
    (pipe 'eval-raw 'tag-eval 'eval-state)
@@ -2081,14 +2068,14 @@
    (pipe 'loaded-state 'format-state 'oasis-layout)
    ;; ;; (pipe 'loaded-state 'format-state 'log-layout)
 
-   ;; (pipe 'eval-state 'edit-information 'editor-events)
+   (pipe 'eval-state 'edit-information 'editor-events)
 
    (pipe 'oasis-layout 'tag-layout 'layout-state)
    (pipe 'layout-state 'state-dedupe)
 
-   ;; ;; (pipe 'select-events 'center-view)
-   ;; ;; (pipe 'layout-state 'center-view)
-   ;; ;; (pipe 'center-view 'view-events)
+   ;; (pipe 'select-events 'center-view)
+   ;; (pipe 'layout-state 'center-view)
+   ;; (pipe 'center-view 'view-events)
 
    (pipe 'editor-state 'mode-data)
    (pipe 'mode-data 'mode-raw)

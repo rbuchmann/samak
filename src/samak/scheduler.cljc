@@ -10,6 +10,7 @@
      [samak.builtins :as builtins]
      [samak.stdlib :as std]
      [samak.pipes :as pipes]
+     [samak.conveyor :as conv]
      [samak.modules :as modules]
      [samak.runtime :as run])]
    :cljs
@@ -20,6 +21,7 @@
      [samak.api :as api]
      [samak.helpers :as helpers]
      [samak.pipes :as pipes]
+     [samak.conveyor :as conv]
      [samak.modules :as modules]
      [samak.runtime :as run])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
@@ -47,8 +49,8 @@
   [rt [key pipe]]
   (println (:id @rt) "### setup out" key)
   (let [wrap (pipes/transduction-pipe (map (run/wrap-out {:named key} :setup)) (str "scheduler-out-" key))]
-    (pipes/link! pipe wrap)
-    (pipes/link! wrap (:broadcast @rt))))
+    (conv/link! pipe wrap)
+    (conv/link! wrap (:broadcast @rt))))
 
 
 (defn setup-outs

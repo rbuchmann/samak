@@ -48,7 +48,7 @@
 
 (defn load-by-id
   ""
-  [{store :store} id]
+  [{store :store :as rt} id]
   (if (nil? id)
     (fail "tried to load nil")
     (stores/load-by-id store id)))
@@ -80,7 +80,7 @@
 
 (defn resolve-fn
   ([rt id]
-   (println "resolve" (:uuid rt) id)
+   (println "resolve" (:id rt) id)
    (get (servers/get-defined (:server rt)) id)))
 
 (defn wrap-out
@@ -166,9 +166,9 @@
 (defn make-store-internal
   ""
   [conf inbound broadcast builtins]
-  (if conf
-    (stores/make-piped-store inbound broadcast)
-    (let [store (stores/make-local-store)]
+  (if (:store conf)
+    (stores/make-piped-store (:id conf) inbound broadcast)
+    (let [store (stores/make-local-store (:id conf))]
       (stores/load-builtins! store (keys builtins))
       (stores/serve-store store inbound broadcast))))
 
@@ -184,7 +184,7 @@
                  :module instanciate-module}]
     (reset! conv/id id)
     {:id id
-     :store (make-store-internal (:store conf) inbound broadcast builtins)
+     :store (make-store-internal conf inbound broadcast builtins)
      :manager manager
      :server (servers/make-local-server manager)
      :broadcast broadcast
@@ -306,7 +306,10 @@
 (defn load-bundle
   "loads the definition of a bundle by the given id"
   [rt id]
+  (js-debugger)
+
   (p/let [defns (load-by-id rt id)]
+    (println "defns:" defns)
     (load-def-from-bundle rt id defns)))
 
 

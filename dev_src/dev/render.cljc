@@ -60,16 +60,18 @@
 (def tracer (atom {}))
 
 (def main-conf {:id "rt-main"
-                :modules [];; {"oasis-corex" {:depends {}
-                         ;;                :sinks {:state (sched/make-pipe-id {:module :lone :type :sinks :name :state})}
-                         ;;                :sources {
-                         ;;                          :init (sched/make-pipe-id {:module :lone :type :sources :name :init})
-                         ;;                          :kb (sched/make-pipe-id {:module :lone :type :sources :name :kb})
-                         ;;                          :drag (sched/make-pipe-id {:module :lone :type :sources :name :drag})
-                         ;;                          :hover (sched/make-pipe-id {:module :lone :type :sources :name :hover})
-                         ;;                          :events (sched/make-pipe-id {:module :lone :type :sources :name :events})
-                         ;;                          }
-                         ;;                }}
+                :modules {"oasis-core" {:depends {}
+                                        :sinks {:state (sched/make-pipe-id {:module :lone :type :sinks :name :state})}
+                                        :sources {
+                                                  :init (sched/make-pipe-id {:module :lone :type :sources :name :init})
+                                                  :layout (sched/make-pipe-id {:module :lone :type :sources :name :layout})
+                                                  :caravan-eval (sched/make-pipe-id {:module :lone :type :sources :name :caravan-eval})
+                                                  :kb (sched/make-pipe-id {:module :lone :type :sources :name :kb})
+                                                  :drag (sched/make-pipe-id {:module :lone :type :sources :name :drag})
+                                                  :hover (sched/make-pipe-id {:module :lone :type :sources :name :hover})
+                                                  :events (sched/make-pipe-id {:module :lone :type :sources :name :events})
+                                                  }
+                                        }}
                 })
 
 
@@ -157,10 +159,10 @@
       (fn []
         (let [id (str "moasis-" (helpers/uuid))]
           (prom/do!
-           (println "evaluating oasis")
-           (modules/eval-module rt main-conf net nil id)
            (println "init caravan")
            (caravan/init @rt)
+           (println "evaluating oasis")
+           (modules/eval-module rt main-conf net nil id)
            (println "init layout")
            (layout/init)
            (println "renderer loaded oasis")

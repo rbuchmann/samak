@@ -142,7 +142,7 @@
             duration (helpers/duration before (helpers/now))]
         (when passthrough
           (when (nil? res)
-            (throw (ex-info (str "received nil on " from to msg ", with meta: " meta-info) {})))
+            (throw (ex-info (str "received nil on " from "-" to "-" msg ", with meta: " meta-info) {})))
           (if (satisfies? tt/Streamable res)
             (->> res
                  tt/get-items
@@ -234,12 +234,16 @@
     ;; (println "----------")
     res))
 
+(defn fire-raw!
+  [pipe paket]
+  (if (pipes/pipe? pipe)
+      (pipes/fire-raw! pipe paket)
+      (schedule ::fire pipe paket)))
+
 (defn fire!
   [pipe event db-id]
   (let [paket (helpers/make-paket event ::fire)]
-    (if (pipes/pipe? pipe)
-      (pipes/fire-raw! pipe paket)
-      (schedule ::fire pipe paket))
+    (fire-raw! pipe paket)
     paket))
 
 (defn fire? [t]

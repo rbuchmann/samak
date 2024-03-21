@@ -46,10 +46,11 @@
   ""
   [rt bundle-id]
   (prom/let [_ (println "  V" "Bundle id:" bundle-id)
-          ast (run/load-bundle rt bundle-id)
-          bundle (get ast bundle-id)
-          _ (println "### bundle: " bundle)
-          deps (load-deps rt [bundle-id bundle])]
+             ast (run/load-bundle rt bundle-id)
+             _ (println "AST " ast)
+             bundle (get ast bundle-id)
+             _ (println "### bundle: " bundle)
+             deps (load-deps rt [bundle-id bundle])]
     deps))
 
 (defn load-bundle

@@ -8,6 +8,7 @@
      [promesa.core :as p]
      [samak.api :as api]
      [samak.helpers :as helpers]
+     [samak.tools :as tools]
      [samak.runtime :as run]
      [samak.stdlib :as std]
      [samak.builtins :as builtins]
@@ -15,6 +16,7 @@
      [samak.trace :as trace]
      [samak.oasis :as oasis]
      [samak.pipes :as pipes]
+     [samak.conveyor :as conv]
      [samak.scheduler :as sched])]
    :cljs
    [(:require
@@ -24,6 +26,7 @@
      [promesa.core :as p]
      [samak.api :as api]
      [samak.helpers :as helpers]
+     [samak.tools :as tools]
      [samak.runtime :as run]
      [samak.stdlib :as std]
      [samak.builtins :as builtins]
@@ -32,6 +35,7 @@
      [samak.trace :as trace]
      [samak.oasis :as oasis]
      [samak.pipes :as pipes]
+     [samak.conveyor :as conv]
      [samak.scheduler :as sched])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]])]))
 
@@ -46,7 +50,7 @@
   (merge builtins/samak-symbols
          std/pipe-symbols
          caravan/symbols
-         ;; ui-mock-symbols
+         ui-mock-symbols
          #?(:cljs layout/layout-symbols)
          ))
 
@@ -85,12 +89,12 @@
 (def named-modules (atom {}))
 
 (defn get-named-pipe
-  [rt pipe-name]
+  [pipe-name]
   (let [mod-name (sched/module-id (:module pipe-name))
         mod-alias (get @named-modules (:module pipe-name))
         mod (run/resolve-fn @rt (or mod-alias mod-name))
         pipe (get-in mod [(:type pipe-name) (:name pipe-name)])]
-    (if (pipes/pipe? pipe)
+    (if (conv/fire? pipe)
       pipe
       (println "could not find pipe" mod-name "/" pipe-name "->" mod "/" pipe))))
 
@@ -101,9 +105,12 @@
   []
   (println "worker oasis")
   ;; (pipes/link! (pipes/source in) (:scheduler @rt))
-  (p/let [id (sched/start-module rt {} 'oasis 'lone)]
+  (println "init caravan")
+  (caravan/init @rt)
+  (p/let [id (sched/start-module rt {} 'oasis-core 'lone)]
     (swap! named-modules assoc :lone id)
-    (caravan/init @rt)
+    (println "init layout")
+    (layout/init)
     (println "worker started core")))
 
 (defn handle-input
@@ -113,11 +120,11 @@
     (let [p (<! c)
           before (helpers/now)
           content (:samak.runtime/content p)]
-      (println "[" (:id rt) "]" "in paket" p)
+      ;; (println "[" (:id @rt) "]" "in paket" p)
       (when (= :samak.runtime/paket (:samak.runtime/type p))
-        (when-let [pipe (get-named-pipe-memo rt (:samak.runtime/target p))]
-          (println "worker fires" pipe content)
-          (pipes/fire-raw! pipe content))
+        (when-let [pipe (get-named-pipe-memo (:samak.runtime/target p))]
+          ;; (println "worker fires" pipe content)
+          (conv/fire-raw! pipe content))
         (trace/trace ::worker-in
                      (helpers/duration before (helpers/now))
                      content)))
@@ -143,6 +150,6 @@
       (a/tap in-mult paket-c)
       (handle-input rt paket-c)
       ;; do things
-      ;; (start-oasis)
+      (start-oasis)
       (put! @progress 100)
       )))
